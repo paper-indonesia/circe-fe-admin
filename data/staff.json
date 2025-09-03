@@ -1,0 +1,47 @@
+[
+  {
+    "id": "staff_001",
+    "name": "Dr. Maya Sari",
+    "role": "Senior Dermatologist",
+    "skills": ["Laser Treatments", "Chemical Peels", "Anti-aging", "Acne Treatment"],
+    "workingHours": ["09:00-17:00"],
+    "rating": 4.9,
+    "avatar": "/placeholder.svg?height=40&width=40"
+  },
+  {
+    "id": "staff_002",
+    "name": "Nurse Rina",
+    "role": "Senior Aesthetician",
+    "skills": ["Facials", "Microdermabrasion", "Hydrafacial", "Skin Analysis"],
+    "workingHours": ["08:00-16:00"],
+    "rating": 4.8,
+    "avatar": "/placeholder.svg?height=40&width=40"
+  },
+  {
+    "id": "staff_003",
+    "name": "Therapist Sinta",
+    "role": "Beauty Therapist",
+    "skills": ["Basic Facials", "Extractions", "Mask Treatments", "Consultation"],
+    "workingHours": ["10:00-18:00"],
+    "rating": 4.7,
+    "avatar": "/placeholder.svg?height=40&width=40"
+  },
+  {
+    "id": "staff_004",
+    "name": "Dr. Lina Putri",
+    "role": "Dermatologist",
+    "skills": ["Medical Treatments", "Botox", "Fillers", "Consultation"],
+    "workingHours": ["13:00-21:00"],
+    "rating": 4.8,
+    "avatar": "/placeholder.svg?height=40&width=40"
+  },
+  {
+    "id": "staff_005",
+    "name": "Therapist Dewi",
+    "role": "Junior Therapist",
+    "skills": ["Basic Treatments", "Cleansing", "Moisturizing"],
+    "workingHours": ["09:00-17:00"],
+    "rating": 4.5,
+    "avatar": "/placeholder.svg?height=40&width=40"
+  }
+]

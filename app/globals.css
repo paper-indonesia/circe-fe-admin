@@ -1,0 +1,150 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Updated to girly, feminine color palette using provided colors */
+  --background: #fefefe; /* Soft white background */
+  --foreground: #2d2d2d; /* Dark gray text */
+  --card: #ffffff;
+  --card-foreground: #2d2d2d;
+  --popover: #ffffff;
+  --popover-foreground: #2d2d2d;
+  --primary: #ffd6ff; /* Soft pink primary */
+  --primary-foreground: #2d2d2d;
+  --secondary: #e7c6ff; /* Light lavender secondary */
+  --secondary-foreground: #2d2d2d;
+  --muted: #f8f6ff; /* Very light lavender muted */
+  --muted-foreground: #6b6b6b;
+  --accent: #c8b6ff; /* Medium lavender accent */
+  --accent-foreground: #2d2d2d;
+  --destructive: #ff6b9d; /* Soft pink destructive */
+  --destructive-foreground: #ffffff;
+  --border: #e7c6ff; /* Light lavender borders */
+  --input: #f8f6ff;
+  --ring: #c8b6ff;
+  --chart-1: #ffd6ff; /* Soft pink */
+  --chart-2: #e7c6ff; /* Light lavender */
+  --chart-3: #c8b6ff; /* Medium lavender */
+  --chart-4: #b8c0ff; /* Periwinkle blue */
+  --chart-5: #bbd0ff; /* Light blue */
+  --radius: 1rem; /* Increased border radius for softer, more feminine look */
+  --sidebar: #fefefe;
+  --sidebar-foreground: #2d2d2d;
+  --sidebar-primary: #ffd6ff;
+  --sidebar-primary-foreground: #2d2d2d;
+  --sidebar-accent: #e7c6ff;
+  --sidebar-accent-foreground: #2d2d2d;
+  --sidebar-border: #e7c6ff;
+  --sidebar-ring: #c8b6ff;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+.dark {
+  /* Updated dark mode with feminine colors */
+  --background: #1a1a1a;
+  --foreground: #f8f6ff;
+  --card: #2a2a2a;
+  --card-foreground: #f8f6ff;
+  --popover: #2a2a2a;
+  --popover-foreground: #f8f6ff;
+  --primary: #c8b6ff; /* Medium lavender for dark mode */
+  --primary-foreground: #1a1a1a;
+  --secondary: #b8c0ff; /* Periwinkle for dark mode */
+  --secondary-foreground: #f8f6ff;
+  --muted: #3a3a3a;
+  --muted-foreground: #a0a0a0;
+  --accent: #bbd0ff; /* Light blue accent for dark mode */
+  --accent-foreground: #1a1a1a;
+  --destructive: #ff6b9d;
+  --destructive-foreground: #ffffff;
+  --border: #4a4a4a;
+  --input: #3a3a3a;
+  --ring: #c8b6ff;
+  --chart-1: #c8b6ff;
+  --chart-2: #b8c0ff;
+  --chart-3: #bbd0ff;
+  --chart-4: #e7c6ff;
+  --chart-5: #ffd6ff;
+  --sidebar: #2a2a2a;
+  --sidebar-foreground: #f8f6ff;
+  --sidebar-primary: #c8b6ff;
+  --sidebar-primary-foreground: #1a1a1a;
+  --sidebar-accent: #b8c0ff;
+  --sidebar-accent-foreground: #f8f6ff;
+  --sidebar-border: #4a4a4a;
+  --sidebar-ring: #c8b6ff;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+@theme inline {
+  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Added smooth transitions for feminine feel */
+    transition: all 0.3s ease;
+  }
+
+  /* Added custom feminine styling */
+  .feminine-gradient {
+    background: linear-gradient(135deg, #ffd6ff 0%, #e7c6ff 50%, #c8b6ff 100%);
+  }
+
+  .feminine-card {
+    @apply bg-card border border-border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300;
+    backdrop-filter: blur(10px);
+  }
+
+  .feminine-button {
+    @apply bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6 py-3 font-medium transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg;
+  }
+
+  .feminine-input {
+    @apply bg-input border-2 border-border rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300;
+  }
+}

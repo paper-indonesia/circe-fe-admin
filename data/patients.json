@@ -1,0 +1,102 @@
+[
+  {
+    "id": "pat_001",
+    "name": "Sarah Johnson",
+    "phone": "+62 812-3456-7890",
+    "email": "sarah.johnson@email.com",
+    "notes": "Prefers morning appointments, sensitive skin",
+    "lastVisitAt": "2024-12-15T10:00:00Z",
+    "totalVisits": 12,
+    "createdAt": "2024-01-15T08:00:00Z"
+  },
+  {
+    "id": "pat_002",
+    "name": "Maria Santos",
+    "phone": "+62 813-4567-8901",
+    "email": "maria.santos@email.com",
+    "notes": "Regular facial customer",
+    "lastVisitAt": "2024-12-14T14:30:00Z",
+    "totalVisits": 8,
+    "createdAt": "2024-02-20T09:00:00Z"
+  },
+  {
+    "id": "pat_003",
+    "name": "Jessica Chen",
+    "phone": "+62 814-5678-9012",
+    "email": "jessica.chen@email.com",
+    "notes": "Acne treatment program",
+    "lastVisitAt": "2024-12-13T16:00:00Z",
+    "totalVisits": 15,
+    "createdAt": "2024-01-10T10:30:00Z"
+  },
+  {
+    "id": "pat_004",
+    "name": "Amanda Wilson",
+    "phone": "+62 815-6789-0123",
+    "email": "amanda.wilson@email.com",
+    "notes": "Bridal package customer",
+    "lastVisitAt": "2024-12-12T11:00:00Z",
+    "totalVisits": 6,
+    "createdAt": "2024-03-05T11:00:00Z"
+  },
+  {
+    "id": "pat_005",
+    "name": "Lisa Rodriguez",
+    "phone": "+62 816-7890-1234",
+    "email": "lisa.rodriguez@email.com",
+    "notes": "Monthly maintenance treatments",
+    "lastVisitAt": "2024-12-11T13:30:00Z",
+    "totalVisits": 20,
+    "createdAt": "2023-12-01T12:00:00Z"
+  },
+  {
+    "id": "pat_006",
+    "name": "Emma Thompson",
+    "phone": "+62 817-8901-2345",
+    "email": "emma.thompson@email.com",
+    "notes": "Anti-aging treatments",
+    "lastVisitAt": "2024-12-10T15:00:00Z",
+    "totalVisits": 10,
+    "createdAt": "2024-02-14T14:00:00Z"
+  },
+  {
+    "id": "pat_007",
+    "name": "Olivia Davis",
+    "phone": "+62 818-9012-3456",
+    "email": "olivia.davis@email.com",
+    "notes": "Prefers Dr. Maya for treatments",
+    "lastVisitAt": "2024-12-09T09:30:00Z",
+    "totalVisits": 7,
+    "createdAt": "2024-04-01T09:30:00Z"
+  },
+  {
+    "id": "pat_008",
+    "name": "Sophia Martinez",
+    "phone": "+62 819-0123-4567",
+    "email": "sophia.martinez@email.com",
+    "notes": "Laser treatment series",
+    "lastVisitAt": "2024-12-08T12:00:00Z",
+    "totalVisits": 5,
+    "createdAt": "2024-05-10T10:00:00Z"
+  },
+  {
+    "id": "pat_009",
+    "name": "Isabella Garcia",
+    "phone": "+62 820-1234-5678",
+    "email": "isabella.garcia@email.com",
+    "notes": "Chemical peel treatments",
+    "lastVisitAt": "2024-12-07T14:00:00Z",
+    "totalVisits": 9,
+    "createdAt": "2024-03-20T13:00:00Z"
+  },
+  {
+    "id": "pat_010",
+    "name": "Mia Anderson",
+    "phone": "+62 821-2345-6789",
+    "email": "mia.anderson@email.com",
+    "notes": "Hydrafacial regular",
+    "lastVisitAt": "2024-12-06T16:30:00Z",
+    "totalVisits": 11,
+    "createdAt": "2024-01-25T15:30:00Z"
+  }
+]
