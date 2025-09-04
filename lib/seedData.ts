@@ -26,6 +26,7 @@ export const generateBookings = (): Booking[] => {
       startTime.setHours(startHour, Math.floor(Math.random() * 4) * 15, 0, 0) // 15-min intervals
 
       const treatment = treatments[Math.floor(Math.random() * treatments.length)]
+      const patient = patients[Math.floor(Math.random() * patients.length)]
       const endTime = addHours(startTime, treatment.durationMin / 60)
 
       const statuses: Booking["status"][] =
@@ -37,7 +38,8 @@ export const generateBookings = (): Booking[] => {
 
       const booking: Booking = {
         id: `booking_${format(date, "yyyyMMdd")}_${j + 1}`,
-        patientId: patients[Math.floor(Math.random() * patients.length)].id,
+        patientId: patient.id,
+        patientName: patient.name, // Add patient name for easier display
         staffId: staff[Math.floor(Math.random() * staff.length)].id,
         treatmentId: treatment.id,
         startAt: startTime.toISOString(),
@@ -84,19 +86,23 @@ export const generateActivities = (bookings: Booking[]): Activity[] => {
     .slice(0, 20)
 
   recentBookings.forEach((booking, index) => {
-    const patient = patients.find((p) => p.id === booking.patientId)!
-    const treatment = treatments.find((t) => t.id === booking.treatmentId)!
+    const patient = patients.find((p) => p.id === booking.patientId)
+    const treatment = treatments.find((t) => t.id === booking.treatmentId)
 
-    activities.push({
-      id: `activity_${booking.id}`,
-      type: booking.status === "completed" ? "booking_completed" : "booking_created",
-      description:
-        booking.status === "completed"
-          ? `${patient.name} completed ${treatment.name}`
-          : `New booking: ${patient.name} - ${treatment.name}`,
-      relatedId: booking.id,
-      createdAt: booking.createdAt,
-    })
+    if (patient && treatment) {
+      activities.push({
+        id: `activity_${booking.id}`,
+        type: booking.status === "completed" ? "booking_completed" : "booking_created",
+        description:
+          booking.status === "completed"
+            ? `${patient.name} completed ${treatment.name}`
+            : `New booking: ${patient.name} - ${treatment.name}`,
+        relatedId: booking.id,
+        patientId: booking.patientId,
+        timestamp: booking.createdAt,
+        createdAt: booking.createdAt,
+      })
+    }
   })
 
   return activities

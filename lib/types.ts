@@ -33,6 +33,7 @@ export interface Treatment {
 export interface Booking {
   id: string
   patientId: string
+  patientName?: string
   staffId: string
   treatmentId: string
   startAt: string
@@ -56,8 +57,10 @@ export interface Payment {
 
 export interface Activity {
   id: string
-  type: "booking_created" | "booking_completed" | "payment_received" | "client_added" | "booking_cancelled"
+  type: "booking_created" | "booking_completed" | "payment_received" | "client_added" | "booking_cancelled" | "booking_updated" | "staff_added" | "staff_removed"
   description: string
   relatedId?: string
+  patientId?: string
+  timestamp?: string
   createdAt: string
 }

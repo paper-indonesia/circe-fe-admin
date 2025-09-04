@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
+import { formatCurrency } from "@/lib/utils"
 import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO, addHours } from "date-fns"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
@@ -676,7 +677,7 @@ export default function CalendarPage() {
                             </td>
                             <td className="p-3 text-sm">{bookingDetails?.treatment?.durationMin || 60} min</td>
                             <td className="p-3 font-medium">
-                              Rp {bookingDetails?.treatment?.price?.toLocaleString() || "0"}
+                              {formatCurrency(bookingDetails?.treatment?.price || 0)}
                             </td>
                             <td className="p-3">{getStatusBadge(booking.status)}</td>
                             <td className="p-3">
@@ -880,7 +881,7 @@ export default function CalendarPage() {
                     {treatments && treatments.length > 0 ? (
                       treatments.map((treatment) => (
                         <SelectItem key={treatment.id} value={treatment.id}>
-                          {treatment.name} - {treatment.durationMin}min - Rp {treatment.price.toLocaleString()}
+                          {treatment.name} - {treatment.durationMin}min - {formatCurrency(treatment.price)}
                         </SelectItem>
                       ))
                     ) : (

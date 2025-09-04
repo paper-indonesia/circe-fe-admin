@@ -6,21 +6,25 @@ import { usePathname } from "next/navigation"
 import { Home, Calendar, Users, Star, FileText, Settings, UserPlus, Menu, X, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Calendar", href: "/calendar", icon: Calendar },
-  { name: "Clients", href: "/clients", icon: Users },
-  { name: "Staff", href: "/staff", icon: Users },
-  { name: "Treatments", href: "/treatments", icon: Star },
-  { name: "Reports", href: "/reports", icon: FileText },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Walk-in Booking", href: "/walk-in", icon: UserPlus },
-]
+import { useTheme } from "@/lib/theme-context"
+import { useTranslation } from "@/hooks/use-translation"
 
 export function Sidebar() {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { branding } = useTheme()
+  const { t } = useTranslation()
+  
+  const navigation = [
+    { name: t('sidebar.dashboard'), href: "/dashboard", icon: Home },
+    { name: t('sidebar.calendar'), href: "/calendar", icon: Calendar },
+    { name: t('sidebar.clients'), href: "/clients", icon: Users },
+    { name: t('sidebar.staff'), href: "/staff", icon: Users },
+    { name: t('sidebar.treatments'), href: "/treatments", icon: Star },
+    { name: t('sidebar.reports'), href: "/reports", icon: FileText },
+    { name: t('sidebar.settings'), href: "/settings", icon: Settings },
+    { name: t('sidebar.walkIn'), href: "/walk-in", icon: UserPlus },
+  ]
 
   return (
     <>
@@ -46,11 +50,15 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           <div className="flex items-center px-6 py-8 border-b-2 border-sidebar-border feminine-gradient">
             <div className="text-3xl">
-              <Sparkles className="h-8 w-8 text-white drop-shadow-lg" />
+              {branding.logoUrl ? (
+                <img src={branding.logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded-lg bg-white/20 p-1" />
+              ) : (
+                <Sparkles className="h-8 w-8 text-white drop-shadow-lg" />
+              )}
             </div>
             <div className="ml-3">
-              <h1 className="text-xl font-bold text-white drop-shadow-md">Beauty Clinic</h1>
-              <p className="text-sm text-white/80 font-medium">Admin Dashboard</p>
+              <h1 className="text-xl font-bold text-white drop-shadow-md">{branding.clinicName}</h1>
+              <p className="text-sm text-white/80 font-medium">{t('sidebar.adminDashboard')}</p>
             </div>
           </div>
 

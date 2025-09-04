@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(/C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\app\\settings/**)",
+      "Read(/C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\components\\ui/**)",
+      "Read(/C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\app\\walk-in/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

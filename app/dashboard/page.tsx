@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useBookings, useActivities, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { format, isToday } from "date-fns"
 import { useRouter } from "next/navigation"
+import { formatCurrency } from "@/lib/utils"
 import {
   Calendar,
   DollarSign,
@@ -118,7 +119,7 @@ export default function DashboardPage() {
             type: "payment" as const,
             message: `${pendingPayments} payments pending`,
             priority: "medium" as const,
-            details: `${pendingPayments} customers have outstanding payments totaling Rp ${(pendingPayments * 150000).toLocaleString()}`,
+            details: `${pendingPayments} customers have outstanding payments totaling ${formatCurrency(pendingPayments * 150000)}`,
             action: "View Payment Reports",
             actionUrl: "/reports?tab=payments",
           },
@@ -394,7 +395,7 @@ export default function DashboardPage() {
           <div onClick={() => handleKpiClick("revenue")} className="cursor-pointer">
             <KpiCard
               title="Revenue Today"
-              value={`Rp ${todaysRevenue.toLocaleString()}`}
+              value={formatCurrency(todaysRevenue)}
               change={`${completedBookings.length} treatments`}
               changeType="positive"
               icon={DollarSign}

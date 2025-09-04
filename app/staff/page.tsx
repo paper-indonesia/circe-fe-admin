@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useStaff, useBookings, useTreatments } from "@/lib/context"
 import { useToast } from "@/hooks/use-toast"
+import { formatCurrency } from "@/lib/utils"
 import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -860,7 +861,7 @@ export default function StaffPage() {
                                 <Badge variant="outline" className="text-xs">
                                   {treatment.duration}min
                                 </Badge>
-                                <span className="text-muted-foreground">Rp {treatment.price?.toLocaleString()}</span>
+                                <span className="text-muted-foreground">{formatCurrency(treatment.price || 0)}</span>
                               </div>
                             </Label>
                           </div>
@@ -1333,7 +1334,7 @@ export default function StaffPage() {
                           <Badge variant="outline" className="text-xs">
                             {treatment.duration}min
                           </Badge>
-                          <span className="text-muted-foreground">Rp {treatment.price?.toLocaleString()}</span>
+                          <span className="text-muted-foreground">{formatCurrency(treatment.price || 0)}</span>
                         </div>
                       </Label>
                     </div>
