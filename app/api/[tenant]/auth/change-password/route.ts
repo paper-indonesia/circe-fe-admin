@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectMongoDB } from '@/lib/mongodb'
 import User from '@/models/User'
-import { verifyPassword, hashPassword } from '@/lib/auth'
+import { verifyPassword, hashPassword, verifyToken } from '@/lib/auth'
 import { cookies } from 'next/headers'
-import jwt from 'jsonwebtoken'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
 
 export async function POST(
   req: NextRequest,
@@ -23,7 +20,7 @@ export async function POST(
 
     // Get the token from cookies
     const cookieStore = cookies()
-    const token = cookieStore.get('token')
+    const token = cookieStore.get('auth-token')
 
     if (!token) {
       return NextResponse.json(
@@ -33,10 +30,8 @@ export async function POST(
     }
 
     // Verify the token
-    let decoded: any
-    try {
-      decoded = jwt.verify(token.value, JWT_SECRET)
-    } catch (error) {
+    const decoded = verifyToken(token.value)
+    if (!decoded) {
       return NextResponse.json(
         { error: 'Invalid token' },
         { status: 401 }
