@@ -126,8 +126,8 @@ export default function WalkInPage() {
     }
   }, [tenant?.id])
 
-  const selectedTreatment = treatments.find((t) => t.id === formData.treatmentId)
-  const selectedStaff = staff.find((s) => s.id === formData.staffId)
+  const selectedTreatment = treatments.find((t) => t.id === formData.treatmentId || t.id.toString() === formData.treatmentId)
+  const selectedStaff = staff.find((s) => s.id === formData.staffId || s.id.toString() === formData.staffId)
 
   const depositAmount = selectedTreatment ? selectedTreatment.price * 0.5 : 0
   const totalAmount = selectedTreatment ? selectedTreatment.price : 0
@@ -569,9 +569,9 @@ export default function WalkInPage() {
                         .map((treatment) => (
                         <div
                           key={treatment.id}
-                          onClick={() => setFormData({ ...formData, treatmentId: treatment.id.toString() })}
+                          onClick={() => setFormData({ ...formData, treatmentId: treatment.id })}
                           className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
-                            formData.treatmentId === treatment.id.toString() 
+                            formData.treatmentId === treatment.id || formData.treatmentId === treatment.id.toString()
                               ? "border-primary bg-primary/5 shadow-md" 
                               : "border-border hover:border-primary/50"
                           }`}
@@ -589,7 +589,7 @@ export default function WalkInPage() {
                               </p>
                             </div>
                           </div>
-                          {formData.treatmentId === treatment.id.toString() && (
+                          {(formData.treatmentId === treatment.id || formData.treatmentId === treatment.id.toString()) && (
                             <div className="flex items-center gap-1 text-xs text-primary">
                               <Check className="h-3 w-3" />
                               Selected
@@ -611,18 +611,20 @@ export default function WalkInPage() {
                 <CardContent className="space-y-4">
                   <Label>Available Staff *</Label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {staff.map((member) => (
+                    {availableStaff.map((member) => (
                       <div
                         key={member.id}
                         onClick={() => {
-                          if (member.availability === "available") {
-                            setFormData({ ...formData, staffId: member.id.toString() })
+                          // Check if staff is active, default to true if field doesn't exist
+                          const isAvailable = member.isActive !== false
+                          if (isAvailable) {
+                            setFormData({ ...formData, staffId: member.id })
                           }
                         }}
                         className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                          member.availability === "busy" 
+                          member.isActive === false 
                             ? "opacity-60 cursor-not-allowed bg-muted/30" 
-                            : formData.staffId === member.id.toString()
+                            : formData.staffId === member.id
                             ? "border-primary bg-primary/5 shadow-md"
                             : "border-border hover:border-primary/50 hover:shadow-md"
                         }`}
@@ -656,12 +658,12 @@ export default function WalkInPage() {
                           </div>
                           <div className="flex flex-col items-end gap-2">
                             <Badge 
-                              variant={member.availability === "available" ? "outline" : "secondary"}
+                              variant={member.isActive !== false ? "outline" : "secondary"}
                               className="text-xs"
                             >
-                              {member.availability}
+                              {member.isActive === false ? "Inactive" : "Available"}
                             </Badge>
-                            {formData.staffId === member.id.toString() && (
+                            {formData.staffId === member.id && (
                               <div className="flex items-center gap-1 text-xs text-primary">
                                 <Check className="h-3 w-3" />
                                 Selected
