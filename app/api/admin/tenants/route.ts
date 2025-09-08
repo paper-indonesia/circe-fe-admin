@@ -163,6 +163,31 @@ export async function POST(req: NextRequest) {
 
     await tenant.save()
 
+    // Create default admin user for the new tenant
+    try {
+      const User = (await import('@/models/User')).default
+      const { hashPassword } = await import('@/lib/auth')
+      
+      const adminEmail = `admin@${slug}.com`
+      const defaultPassword = 'admin123'
+      
+      const hashedPassword = await hashPassword(defaultPassword)
+      const adminUser = new User({
+        email: adminEmail,
+        password: hashedPassword,
+        name: `${name} Admin`,
+        role: 'admin',
+        tenantId: tenant._id.toString(),
+        isActive: true,
+      })
+      
+      await adminUser.save()
+      console.log(`Created default admin user for tenant ${name}: ${adminEmail}`)
+    } catch (userError) {
+      console.error('Failed to create default admin user:', userError)
+      // Don't fail the tenant creation if user creation fails
+    }
+
     return NextResponse.json({
       success: true,
       tenant: {
@@ -170,6 +195,11 @@ export async function POST(req: NextRequest) {
         name: tenant.name,
         slug: tenant.slug,
         config: tenant.config,
+      },
+      defaultAdmin: {
+        email: `admin@${slug}.com`,
+        password: 'admin123',
+        message: 'Default admin user created. Please change the password after first login.'
       }
     })
   } catch (error) {

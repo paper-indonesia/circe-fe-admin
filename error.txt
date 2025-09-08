@@ -1,0 +1,15 @@
+    at 4086 (/vercel/path0/.next/server/app/api/[tenant]/auth/signin/route.js:1:980)
+    at t (/vercel/path0/.next/server/webpack-runtime.js:1:128)
+    at n (/vercel/path0/.next/server/app/api/[tenant]/auth/signin/route.js:1:5329)
+    at /vercel/path0/.next/server/app/api/[tenant]/auth/signin/route.js:1:5372
+    at t.X (/vercel/path0/.next/server/webpack-runtime.js:1:1206)
+    at /vercel/path0/.next/server/app/api/[tenant]/auth/signin/route.js:1:5342
+    at Object.<anonymous> (/vercel/path0/.next/server/app/api/[tenant]/auth/signin/route.js:1:5399)
+    at Module._compile (node:internal/modules/cjs/loader:1688:14)
+> Build error occurred
+Error: Failed to collect page data for /api/[tenant]/auth/signin
+    at /vercel/path0/node_modules/next/dist/build/utils.js:1268:15
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  type: 'Error'
+}
+Error: Command "npm run build" exited with 1

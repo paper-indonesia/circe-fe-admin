@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { connectMongoDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import Tenant from '@/models/Tenant'
 import { verifyPassword, createToken } from '@/lib/auth'
-import { cookies } from 'next/headers'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(
   req: NextRequest,

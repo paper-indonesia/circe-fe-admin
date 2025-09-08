@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Building, Bell, Palette, Upload, Shield, Database, Globe, Save, Check, X, AlertCircle, Clock, CreditCard, Eye, Loader2, RefreshCw } from "lucide-react"
+import { Building, Bell, Palette, Upload, Shield, Database, Globe, Save, Check, X, AlertCircle, Clock, CreditCard, Eye, Loader2, RefreshCw, User, Key } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useTheme, ThemeColor } from "@/lib/theme-context"
 import { useTranslation } from "@/hooks/use-translation"
@@ -72,6 +72,10 @@ export default function SettingsPage() {
   const [savingRegional, setSavingRegional] = useState(false)
   const [performingBackup, setPerformingBackup] = useState(false)
   const [exportingData, setExportingData] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   
   // Load tenant settings on mount
   const [tenantSettings, setTenantSettings] = useState(() => {
@@ -483,6 +487,75 @@ export default function SettingsPage() {
     })
   }
 
+  const handleChangePassword = async () => {
+    // Validate passwords
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all password fields.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Validation Error",
+        description: "New password must be at least 6 characters long.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Validation Error",
+        description: "New password and confirmation do not match.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setChangingPassword(true)
+
+    try {
+      const response = await fetch(`/api/${tenantSlug}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to change password')
+      }
+
+      // Clear the form
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+
+      toast({
+        title: "Password Changed",
+        description: "Your password has been successfully updated.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to change password",
+        variant: "destructive"
+      })
+    } finally {
+      setChangingPassword(false)
+    }
+  }
+
   const handleExportData = async () => {
     setExportingData(true)
     
@@ -544,6 +617,83 @@ export default function SettingsPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                User Account
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Current User</p>
+                  <p className="font-medium">admin@{tenantSlug}.com</p>
+                  <p className="text-sm text-muted-foreground">Role: Admin</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  Change Password
+                </h3>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="current-password">Current Password</Label>
+                  <Input 
+                    id="current-password" 
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input 
+                    id="new-password" 
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min 6 characters)"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                  <Input 
+                    id="confirm-password" 
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                  />
+                </div>
+                
+                <Button 
+                  onClick={handleChangePassword} 
+                  className="w-full" 
+                  disabled={changingPassword}
+                >
+                  {changingPassword ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Changing Password...</>
+                  ) : (
+                    <><Key className="h-4 w-4 mr-2" />Change Password</>
+                  )}
+                </Button>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <p className="text-xs text-muted-foreground">
+                  Note: For new tenants, the default admin account is created with email: admin@[tenant-slug].com and password: admin123. 
+                  Please change the password after first login for security.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
