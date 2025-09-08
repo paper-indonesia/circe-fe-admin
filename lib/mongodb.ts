@@ -2,12 +2,6 @@ import mongoose from 'mongoose'
 
 const MONGODB_URI = process.env.MONGO_URI || ''
 
-if (!MONGODB_URI) {
-  throw new Error(
-    'Please define the MONGO_URI environment variable inside .env'
-  )
-}
-
 /**
  * Global is used here to maintain a cached connection across hot reloads
  * in development. This prevents connections growing exponentially
@@ -20,6 +14,25 @@ if (!cached) {
 }
 
 async function connectMongoDB() {
+  // Log MONGO_URI for debugging (masking sensitive parts)
+  console.log('🔍 MONGO_URI check:', {
+    exists: !!MONGODB_URI,
+    length: MONGODB_URI?.length,
+    startsWithMongodb: MONGODB_URI?.startsWith('mongodb'),
+    hasAtSign: MONGODB_URI?.includes('@'),
+    // Log masked URI (show only protocol and last part after @)
+    masked: MONGODB_URI ? 
+      MONGODB_URI.replace(/mongodb(\+srv)?:\/\/[^@]+@/, 'mongodb$1://***:***@') : 
+      'NOT SET'
+  })
+
+  // Check for MONGO_URI at runtime, not at module load time
+  if (!MONGODB_URI) {
+    throw new Error(
+      'Please define the MONGO_URI environment variable inside .env'
+    )
+  }
+
   if (cached.conn) {
     return cached.conn
   }

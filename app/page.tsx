@@ -7,6 +7,17 @@ import Tenant from "@/models/Tenant"
 
 async function getTenants() {
   try {
+    // Log environment check untuk debugging
+    console.log('🔍 Landing Page - Environment Check:', {
+      NODE_ENV: process.env.NODE_ENV,
+      MONGO_URI_exists: !!process.env.MONGO_URI,
+      MONGO_URI_length: process.env.MONGO_URI?.length,
+      MONGO_URI_masked: process.env.MONGO_URI ? 
+        process.env.MONGO_URI.replace(/mongodb(\+srv)?:\/\/[^@]+@/, 'mongodb$1://***:***@') : 
+        'NOT SET',
+      JWT_SECRET_exists: !!process.env.JWT_SECRET
+    })
+    
     await connectMongoDB()
     const tenants = await Tenant.findActive()
     

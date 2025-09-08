@@ -3,7 +3,6 @@ import { connectMongoDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import Tenant from '@/models/Tenant'
 import { hashPassword, createToken } from '@/lib/auth'
-import { cookies } from 'next/headers'
 
 export async function POST(
   req: NextRequest,
@@ -29,7 +28,7 @@ export async function POST(
     await connectMongoDB()
 
     // Get tenant information
-    const tenantDoc = await Tenant.findBySlug(params.tenant)
+    const tenantDoc = await Tenant.findOne({ slug: params.tenant })
     if (!tenantDoc) {
       return NextResponse.json(
         { error: 'Invalid tenant' },
@@ -38,7 +37,11 @@ export async function POST(
     }
 
     // Check if user already exists
-    const existingUser = await User.findByEmailAndTenant(email, tenantDoc._id.toString())
+    const existingUser = await User.findOne({ 
+      email: email.toLowerCase(), 
+      tenantId: tenantDoc._id.toString(),
+      isActive: true 
+    })
     if (existingUser) {
       return NextResponse.json(
         { error: 'Email already registered for this tenant' },
@@ -70,17 +73,8 @@ export async function POST(
       name: user.name,
     })
 
-    // Set cookie
-    const cookieStore = cookies()
-    cookieStore.set('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    })
-
-    return NextResponse.json({
+    // Create response with cookie
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user._id.toString(),
@@ -91,6 +85,17 @@ export async function POST(
         tenantName: tenantDoc.name,
       },
     })
+
+    // Set cookie on response
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    })
+
+    return response
   } catch (error) {
     console.error('Sign up error:', error)
     return NextResponse.json(
