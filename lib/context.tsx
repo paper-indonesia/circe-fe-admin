@@ -26,8 +26,8 @@ interface AppContextType {
   deleteStaff: (id: string) => void
 
   addBooking: (booking: Omit<Booking, "id">) => Promise<void>
-  updateBooking: (id: string, updates: Partial<Booking>) => void
-  deleteBooking: (id: string) => void
+  updateBooking: (id: string, updates: Partial<Booking>) => Promise<void>
+  deleteBooking: (id: string) => Promise<void>
 
   addTreatment: (treatment: Omit<Treatment, "id">) => Promise<void>
   updateTreatment: (id: string, updates: Partial<Treatment>) => void
@@ -110,35 +110,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
           assignedStaff: t.assignedStaff || [],
         }))
         
-        const bookings = mongoBookings.map((b: any) => ({
-          id: b._id,
-          tenantId: b.tenantId,
-          patientId: b.patientId,
-          patientName: b.patientName || '',
-          staffId: b.staffId,
-          treatmentId: b.treatmentId,
-          startAt: b.startAt,
-          endAt: b.endAt,
-          status: b.status,
-          source: b.source,
-          paymentStatus: b.paymentStatus,
-          notes: b.notes || '',
-          createdAt: b.createdAt,
-        }))
+        const bookings = mongoBookings.map((b: any) => {
+          // Find patient name from patients array if not in booking
+          const patient = patients.find((p: any) => p.id === b.patientId)
+          const patientName = b.patientName || patient?.name || 'Unknown'
+          
+          // Find staff name from staff array
+          const staffMember = staff.find((s: any) => s.id === b.staffId)
+          const staffName = staffMember?.name || 'Unknown'
+          
+          return {
+            id: b._id,
+            tenantId: b.tenantId,
+            patientId: b.patientId,
+            patientName: patientName,
+            staffId: b.staffId,
+            staffName: staffName,
+            treatmentId: b.treatmentId,
+            startAt: b.startAt,
+            endAt: b.endAt,
+            status: b.status,
+            source: b.source,
+            paymentStatus: b.paymentStatus,
+            notes: b.notes || '',
+            createdAt: b.createdAt,
+          }
+        })
         
         setPatients(patients)
         setStaff(staff)
         setTreatments(treatments)
         setBookings(bookings)
         
-        // Generate activities from bookings
+        // Generate activities from bookings with proper names
         const generatedActivities: Activity[] = bookings.map(booking => ({
           id: booking.id,
           type: booking.status === 'completed' ? 'completion' : booking.status === 'confirmed' ? 'confirmation' : 'booking',
-          description: `${booking.status === 'completed' ? 'Completed' : booking.status === 'confirmed' ? 'Confirmed' : 'New'} booking for ${booking.clientName}`,
+          description: `${booking.status === 'completed' ? 'Completed' : booking.status === 'confirmed' ? 'Confirmed' : 'New'} booking for ${booking.patientName}`,
           user: booking.staffName || 'System',
           relatedId: booking.id,
-          createdAt: booking.date || new Date().toISOString(),
+          createdAt: booking.createdAt || new Date().toISOString(),
         }))
         
         setActivities(generatedActivities)
@@ -351,34 +362,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateBooking = (id: string, updates: Partial<Booking>) => {
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)))
+  const updateBooking = async (id: string, updates: Partial<Booking>) => {
+    try {
+      // Update in backend first
+      await apiClient.updateBooking(id, updates)
+      
+      // If successful, update local state
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)))
 
-    // Add activity for status changes
-    if (updates.status) {
+      // Add activity for status changes
+      if (updates.status) {
+        const booking = bookings.find((b) => b.id === id)
+        if (booking) {
+          addActivity({
+            type: "booking_updated",
+            description: `Booking ${updates.status} for ${booking.patientName}`,
+            timestamp: new Date().toISOString(),
+            patientId: booking.patientId,
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Failed to update booking:", error)
+      throw error
+    }
+  }
+
+  const deleteBooking = async (id: string) => {
+    try {
       const booking = bookings.find((b) => b.id === id)
+      
+      // Delete from backend first
+      await apiClient.deleteBooking(id)
+      
+      // If successful, update local state
+      setBookings((prev) => prev.filter((b) => b.id !== id))
+
       if (booking) {
         addActivity({
-          type: "booking_updated",
-          description: `Booking ${updates.status} for ${booking.patientName}`,
+          type: "booking_cancelled",
+          description: `Booking cancelled for ${booking.patientName}`,
           timestamp: new Date().toISOString(),
           patientId: booking.patientId,
         })
       }
-    }
-  }
-
-  const deleteBooking = (id: string) => {
-    const booking = bookings.find((b) => b.id === id)
-    setBookings((prev) => prev.filter((b) => b.id !== id))
-
-    if (booking) {
-      addActivity({
-        type: "booking_cancelled",
-        description: `Booking cancelled for ${booking.patientName}`,
-        timestamp: new Date().toISOString(),
-        patientId: booking.patientId,
-      })
+    } catch (error) {
+      console.error("Failed to delete booking:", error)
+      throw error
     }
   }
 

@@ -31,6 +31,7 @@ import {
   FilterX,
   Search,
   SlidersHorizontal,
+  AlertTriangle,
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
@@ -122,11 +123,16 @@ export default function CalendarPage() {
 
     if (filter) setFilters((prev) => ({ ...prev, status: filter }))
     if (staffParam) setFilters((prev) => ({ ...prev, staff: staffParam }))
-    if (bookingParam && bookings && bookings.length > 0) {
+    if (bookingParam && bookings && bookings.length > 0 && patients.length > 0 && staff.length > 0 && treatments.length > 0) {
       const booking = bookings.find((b) => b?.id === bookingParam)
-      if (booking) setSelectedBooking(booking)
+      if (booking) {
+        const bookingDetails = getBookingDetails(booking)
+        if (bookingDetails) {
+          setSelectedBooking(bookingDetails)
+        }
+      }
     }
-  }, [searchParams, bookings])
+  }, [searchParams, bookings, patients, staff, treatments])
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -301,24 +307,25 @@ export default function CalendarPage() {
 
       switch (action) {
         case "checkin":
-          updateBooking(bookingId, { status: "confirmed" })
+          await updateBooking(bookingId, { status: "confirmed" })
           toast({ title: "Success", description: "Patient checked in" })
           break
         case "complete":
-          updateBooking(bookingId, { status: "completed" })
+          await updateBooking(bookingId, { status: "completed" })
           toast({ title: "Success", description: "Appointment completed" })
           break
         case "cancel":
-          updateBooking(bookingId, { status: "cancelled" })
+          await updateBooking(bookingId, { status: "cancelled" })
           toast({ title: "Success", description: "Appointment cancelled" })
           break
         case "delete":
-          deleteBooking(bookingId)
+          await deleteBooking(bookingId)
           toast({ title: "Success", description: "Appointment deleted" })
           break
       }
       setSelectedBooking(null)
     } catch (error) {
+      console.error("Failed to update booking:", error)
       toast({ title: "Error", description: "Failed to update appointment", variant: "destructive" })
     }
   }
@@ -969,7 +976,7 @@ export default function CalendarPage() {
         </Dialog>
 
         {/* Booking Details Dialog */}
-        <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
+        <Dialog open={!!selectedBooking && !loading} onOpenChange={() => setSelectedBooking(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -977,13 +984,23 @@ export default function CalendarPage() {
                 Appointment Details
               </DialogTitle>
             </DialogHeader>
-            {selectedBooking && (
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <LiquidLoading />
+                <span className="ml-2 text-sm text-muted-foreground">Loading appointment details...</span>
+              </div>
+            ) : selectedBooking ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold">{selectedBooking.patient?.name || "Unknown Patient"}</h3>
+                    <h3 className="font-semibold">
+                      {selectedBooking.patient?.name || selectedBooking.patientName || "Unknown Patient"}
+                    </h3>
                     <p className="text-sm text-muted-foreground">
                       {selectedBooking.treatment?.name || "Unknown Treatment"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedBooking.startAt ? format(parseISO(selectedBooking.startAt), "EEE, MMM d, yyyy") : "Date not available"}
                     </p>
                   </div>
                   {getStatusBadge(selectedBooking.status)}
@@ -992,19 +1009,21 @@ export default function CalendarPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Time:</span>
-                    <p className="font-medium">{format(parseISO(selectedBooking.startAt), "HH:mm")}</p>
+                    <p className="font-medium">
+                      {selectedBooking.startAt ? format(parseISO(selectedBooking.startAt), "HH:mm") : "--:--"}
+                    </p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Duration:</span>
-                    <p className="font-medium">{selectedBooking.treatment?.durationMin || 60} min</p>
+                    <p className="font-medium">{selectedBooking.treatment?.durationMin || selectedBooking.treatment?.duration || 60} min</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Staff:</span>
-                    <p className="font-medium">{selectedBooking.staff?.name || "Unknown"}</p>
+                    <p className="font-medium">{selectedBooking.staff?.name || selectedBooking.staffName || "Unknown"}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Price:</span>
-                    <p className="font-medium">Rp {selectedBooking.treatment?.price?.toLocaleString() || "0"}</p>
+                    <p className="font-medium">{formatCurrency(selectedBooking.treatment?.price || 0)}</p>
                   </div>
                 </div>
 
@@ -1058,6 +1077,21 @@ export default function CalendarPage() {
                   )}
                   <Button size="sm" variant="outline" onClick={() => handleBookingAction(selectedBooking.id, "delete")}>
                     <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Appointment details not found</p>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="mt-2"
+                    onClick={() => setSelectedBooking(null)}
+                  >
+                    Close
                   </Button>
                 </div>
               </div>

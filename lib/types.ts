@@ -39,6 +39,7 @@ export interface Booking {
   patientId: string
   patientName?: string
   staffId: string
+  staffName?: string
   treatmentId: string
   startAt: string
   endAt: string

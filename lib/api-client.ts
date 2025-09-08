@@ -83,6 +83,19 @@ class ApiClient {
     })
   }
 
+  async updateBooking(id: string, updates: any) {
+    return this.request<any>(`/bookings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    })
+  }
+
+  async deleteBooking(id: string) {
+    return this.request<any>(`/bookings/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
   async getWalkInBookings() {
     return this.getBookings('walk-in')
   }

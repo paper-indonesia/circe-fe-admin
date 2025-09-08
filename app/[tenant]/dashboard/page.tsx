@@ -79,6 +79,26 @@ export default function DashboardPage({ params }: { params: { tenant: string } }
   const avgCustomerSatisfaction = 4.8
   const newCustomersToday = patients?.filter((p) => isToday(new Date(p.createdAt || new Date()))).length || 0
 
+  // Function to enrich activity with full details
+  const enrichActivity = (activity: any) => {
+    if (!activity.relatedId) return activity
+    
+    const booking = bookings?.find(b => b.id === activity.relatedId)
+    if (!booking) return activity
+    
+    const patient = patients?.find(p => p.id === booking.patientId)
+    const staffMember = staff?.find(s => s.id === booking.staffId)
+    const treatment = treatments?.find(t => t.id === booking.treatmentId)
+    
+    return {
+      ...activity,
+      booking,
+      patient: patient || { name: 'Unknown Patient', phone: '-', email: '-' },
+      staff: staffMember || { name: 'Unknown Staff', role: '-' },
+      treatment: treatment || { name: 'Unknown Treatment', price: 0, duration: 0, durationMin: 0 }
+    }
+  }
+
   const amSchedule = todaysBookings
     .filter((booking) => new Date(booking.startAt).getHours() < 12)
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
@@ -666,7 +686,7 @@ export default function DashboardPage({ params }: { params: { tenant: string } }
                     paginatedActivities.map((activity) => (
                       <div
                         key={activity.id}
-                        onClick={() => setSelectedActivity(activity)}
+                        onClick={() => setSelectedActivity(enrichActivity(activity))}
                         className="flex items-start gap-3 cursor-pointer hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-pink-50/50 p-2 rounded-lg transition-all duration-200"
                         title={activity.createdAt && !isNaN(new Date(activity.createdAt).getTime()) ? format(new Date(activity.createdAt), "PPpp") : "No date available"}
                       >
@@ -864,24 +884,130 @@ export default function DashboardPage({ params }: { params: { tenant: string } }
             </DialogHeader>
             {selectedActivity && (
               <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold">{selectedActivity.description}</h3>
-                  <p className="text-xs text-muted-foreground">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-purple-900">{selectedActivity.description}</h3>
+                  <p className="text-xs text-purple-600 mt-1">
                     {format(new Date(selectedActivity.createdAt), "PPpp")}
                   </p>
                 </div>
 
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    if (selectedActivity.relatedId) {
-                      router.push(`/${tenant}/calendar?booking=${selectedActivity.relatedId}`)
-                    }
-                  }}
-                >
-                  View Details
-                </Button>
+                {/* Patient Information */}
+                {selectedActivity.patient && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">Patient Information</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Name:</span>
+                        <span className="text-sm font-medium">{selectedActivity.patient.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Phone:</span>
+                        <span className="text-sm">{selectedActivity.patient.phone || '-'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Email:</span>
+                        <span className="text-sm">{selectedActivity.patient.email || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Treatment Information */}
+                {selectedActivity.treatment && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">Treatment Details</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Treatment:</span>
+                        <span className="text-sm font-medium">{selectedActivity.treatment.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Duration:</span>
+                        <span className="text-sm">{selectedActivity.treatment.duration || selectedActivity.treatment.durationMin || 0} min</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Price:</span>
+                        <span className="text-sm font-medium">{formatCurrency(selectedActivity.treatment.price || 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Staff Information */}
+                {selectedActivity.staff && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">Staff Assigned</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Name:</span>
+                        <span className="text-sm font-medium">{selectedActivity.staff.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Role:</span>
+                        <span className="text-sm">{selectedActivity.staff.role || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Booking Status */}
+                {selectedActivity.booking && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">Booking Status</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Status:</span>
+                        <Badge variant={
+                          selectedActivity.booking.status === 'completed' ? 'default' :
+                          selectedActivity.booking.status === 'confirmed' ? 'secondary' :
+                          selectedActivity.booking.status === 'cancelled' ? 'destructive' :
+                          'outline'
+                        }>
+                          {selectedActivity.booking.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Payment:</span>
+                        <Badge variant={
+                          selectedActivity.booking.paymentStatus === 'paid' ? 'default' :
+                          selectedActivity.booking.paymentStatus === 'deposit' ? 'secondary' :
+                          'outline'
+                        }>
+                          {selectedActivity.booking.paymentStatus}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Time:</span>
+                        <span className="text-sm">
+                          {selectedActivity.booking.startAt ? format(new Date(selectedActivity.booking.startAt), "HH:mm") : '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      if (selectedActivity.relatedId) {
+                        router.push(`/${tenant}/calendar?booking=${selectedActivity.relatedId}`)
+                      }
+                    }}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    View in Calendar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setSelectedActivity(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
             )}
           </DialogContent>
