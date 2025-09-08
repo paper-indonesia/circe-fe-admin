@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectMongoDB } from '@/lib/mongodb'
 import User from '@/models/User'
-import { verifyPassword, hashPassword, verifyToken } from '@/lib/auth'
-import { cookies } from 'next/headers'
+import { verifyPassword, hashPassword, verifyToken, getUserFromRequest } from '@/lib/auth'
 
 export async function POST(
   req: NextRequest,
@@ -18,22 +17,19 @@ export async function POST(
       )
     }
 
-    // Get the token from cookies
-    const cookieStore = cookies()
-    const token = cookieStore.get('auth-token')
-
-    if (!token) {
+    // Get user from request using the helper function
+    const decoded = getUserFromRequest(req)
+    if (!decoded) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    // Verify the token
-    const decoded = verifyToken(token.value)
-    if (!decoded) {
+    // Verify tenant matches
+    if (decoded.tenantId !== params.tenant) {
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Unauthorized - tenant mismatch' },
         { status: 401 }
       )
     }

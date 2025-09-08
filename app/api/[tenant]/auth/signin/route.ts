@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { connectMongoDB } from '@/lib/mongodb'
 import User from '@/models/User'
 import Tenant from '@/models/Tenant'
@@ -26,7 +25,7 @@ export async function POST(
     await connectMongoDB()
 
     // Get tenant information
-    const tenantDoc = await Tenant.findBySlug(params.tenant)
+    const tenantDoc = await Tenant.findOne({ slug: params.tenant })
     
     // If tenant not found in DB, try to find user by email first
     let user
@@ -34,7 +33,11 @@ export async function POST(
     
     if (tenantDoc) {
       tenantId = tenantDoc._id.toString()
-      user = await User.findByEmailAndTenant(email, tenantId)
+      user = await User.findOne({ 
+        email: email.toLowerCase(), 
+        tenantId: tenantId, 
+        isActive: true 
+      })
     } else {
       // Fallback: find user by email only and get their tenant
       user = await User.findOne({ email: email.toLowerCase(), isActive: true })
@@ -74,20 +77,11 @@ export async function POST(
       name: user.name,
     })
 
-    // Set cookie
-    const cookieStore = cookies()
-    cookieStore.set('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    })
-
     // Get tenant name
     const tenantName = tenantDoc?.name || params.tenant.charAt(0).toUpperCase() + params.tenant.slice(1)
 
-    return NextResponse.json({
+    // Create response with cookie
+    const response = NextResponse.json({
       success: true,
       user: {
         id: user._id.toString(),
@@ -99,6 +93,17 @@ export async function POST(
         tenantSlug: params.tenant,
       },
     })
+
+    // Set cookie on response
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    })
+
+    return response
   } catch (error) {
     console.error('Sign in error:', error)
     return NextResponse.json(
