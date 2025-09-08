@@ -1,5 +1,6 @@
 export interface Patient {
   id: string
+  tenantId: string
   name: string
   phone: string
   email?: string
@@ -11,6 +12,7 @@ export interface Patient {
 
 export interface Staff {
   id: string
+  tenantId: string
   name: string
   role: string
   skills?: string[]
@@ -21,6 +23,7 @@ export interface Staff {
 
 export interface Treatment {
   id: string
+  tenantId: string
   name: string
   category: string
   durationMin: number
@@ -32,6 +35,7 @@ export interface Treatment {
 
 export interface Booking {
   id: string
+  tenantId: string
   patientId: string
   patientName?: string
   staffId: string
@@ -47,6 +51,7 @@ export interface Booking {
 
 export interface Payment {
   id: string
+  tenantId: string
   bookingId: string
   method: "cash" | "qris" | "card" | "va"
   amount: number
@@ -57,6 +62,7 @@ export interface Payment {
 
 export interface Activity {
   id: string
+  tenantId: string
   type: "booking_created" | "booking_completed" | "payment_received" | "client_added" | "booking_cancelled" | "booking_updated" | "staff_added" | "staff_removed"
   description: string
   relatedId?: string

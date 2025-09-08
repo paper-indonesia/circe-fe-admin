@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import type { Patient, Staff, Treatment, Booking, Activity } from "./types"
-import { initializeSeedData } from "./seedData"
+import { apiClient } from "./api-client"
+import { usePathname } from "next/navigation"
 
 interface AppContextType {
   // Data
@@ -16,19 +17,19 @@ interface AppContextType {
   loading: boolean
 
   // Actions
-  addPatient: (patient: Omit<Patient, "id">) => void
+  addPatient: (patient: Omit<Patient, "id">) => Promise<void>
   updatePatient: (id: string, updates: Partial<Patient>) => void
   deletePatient: (id: string) => void
 
-  addStaff: (staff: Omit<Staff, "id">) => void
+  addStaff: (staff: Omit<Staff, "id">) => Promise<void>
   updateStaff: (id: string, updates: Partial<Staff>) => void
   deleteStaff: (id: string) => void
 
-  addBooking: (booking: Omit<Booking, "id">) => void
+  addBooking: (booking: Omit<Booking, "id">) => Promise<void>
   updateBooking: (id: string, updates: Partial<Booking>) => void
   deleteBooking: (id: string) => void
 
-  addTreatment: (treatment: Omit<Treatment, "id">) => void
+  addTreatment: (treatment: Omit<Treatment, "id">) => Promise<void>
   updateTreatment: (id: string, updates: Partial<Treatment>) => void
   deleteTreatment: (id: string) => void
 
@@ -44,28 +45,164 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
+  const pathname = usePathname()
 
   useEffect(() => {
-    const loadData = () => {
-      const seedData = initializeSeedData()
-      setPatients(seedData.patients)
-      setStaff(seedData.staff)
-      setTreatments(seedData.treatments)
-      setBookings(seedData.bookings)
-      setActivities(seedData.activities)
+    const loadData = async () => {
+      // Get tenant from pathname
+      const segments = pathname.split('/').filter(Boolean)
+      const tenantSlug = segments[0] || 'default'
+      
+      // Map tenant slugs to IDs
+      const tenantIdMap: Record<string, string> = {
+        'jakarta': 'beauty-clinic-jakarta',
+        'bali': 'beauty-clinic-bali',
+        'surabaya': 'skin-care-surabaya',
+        'default': 'beauty-clinic-jakarta' // Use Jakarta as default
+      }
+      
+      const tenantId = tenantIdMap[tenantSlug] || 'beauty-clinic-jakarta'
+      
+      // Set API client tenant
+      apiClient.setTenant(tenantId)
+      
+      try {
+        // Fetch all data from MongoDB
+        const [mongoPatients, mongoStaff, mongoTreatments, mongoBookings] = await Promise.all([
+          apiClient.getPatients(),
+          apiClient.getStaff(),
+          apiClient.getTreatments(),
+          apiClient.getBookings(),
+        ])
+        
+        // Map MongoDB data to frontend format
+        const patients = mongoPatients.map((p: any) => ({
+          id: p._id,
+          tenantId: p.tenantId,
+          name: p.name,
+          phone: p.phone,
+          email: p.email || '',
+          notes: p.notes || '',
+          totalVisits: p.totalVisits || 0,
+          createdAt: p.createdAt,
+        }))
+        
+        const staff = mongoStaff.map((s: any) => ({
+          id: s._id,
+          tenantId: s.tenantId,
+          name: s.name,
+          role: s.role,
+          skills: s.skills || [],
+          workingHours: s.workingHours || [],
+          rating: s.rating || 0,
+          avatar: s.avatar || '',
+        }))
+        
+        const treatments = mongoTreatments.map((t: any) => ({
+          id: t._id,
+          tenantId: t.tenantId,
+          name: t.name,
+          category: t.category,
+          duration: t.durationMin,
+          price: t.price,
+          description: t.description || '',
+          popularity: t.popularity || 0,
+          assignedStaff: t.assignedStaff || [],
+        }))
+        
+        const bookings = mongoBookings.map((b: any) => ({
+          id: b._id,
+          tenantId: b.tenantId,
+          patientId: b.patientId,
+          patientName: b.patientName || '',
+          staffId: b.staffId,
+          treatmentId: b.treatmentId,
+          startAt: b.startAt,
+          endAt: b.endAt,
+          status: b.status,
+          source: b.source,
+          paymentStatus: b.paymentStatus,
+          notes: b.notes || '',
+          createdAt: b.createdAt,
+        }))
+        
+        setPatients(patients)
+        setStaff(staff)
+        setTreatments(treatments)
+        setBookings(bookings)
+        
+        // Generate activities from bookings
+        const generatedActivities: Activity[] = bookings.map(booking => ({
+          id: booking.id,
+          type: booking.status === 'completed' ? 'completion' : booking.status === 'confirmed' ? 'confirmation' : 'booking',
+          description: `${booking.status === 'completed' ? 'Completed' : booking.status === 'confirmed' ? 'Confirmed' : 'New'} booking for ${booking.clientName}`,
+          user: booking.staffName || 'System',
+          relatedId: booking.id,
+          createdAt: booking.date || new Date().toISOString(),
+        }))
+        
+        setActivities(generatedActivities)
+        
+      } catch (error) {
+        console.error("Failed to load data from MongoDB:", error)
+        // Set empty data on error
+        setPatients([])
+        setStaff([])
+        setTreatments([])
+        setBookings([])
+        setActivities([])
+      }
+      
       setLoading(false)
     }
 
     loadData()
-  }, []) // Empty dependency array to run only once
+  }, [pathname]) // Reload when pathname changes
 
   // Patient actions
-  const addPatient = (patientData: Omit<Patient, "id">) => {
-    const newPatient: Patient = {
-      ...patientData,
-      id: Date.now().toString(),
+  const addPatient = async (patientData: Omit<Patient, "id">) => {
+    const segments = pathname.split('/').filter(Boolean)
+    const tenantSlug = segments[0] || 'default'
+    
+    const tenantIdMap: Record<string, string> = {
+      'jakarta': 'beauty-clinic-jakarta',
+      'bali': 'beauty-clinic-bali',
+      'surabaya': 'skin-care-surabaya',
+      'default': 'beauty-clinic-jakarta'
     }
-    setPatients((prev) => [...prev, newPatient])
+    
+    const tenantId = tenantIdMap[tenantSlug] || 'beauty-clinic-jakarta'
+    
+    // Set API client tenant
+    apiClient.setTenant(tenantId)
+    
+    try {
+      // Save to MongoDB
+      const savedPatient = await apiClient.createPatient({
+        name: patientData.name,
+        phone: patientData.phone,
+        email: patientData.email || '',
+        notes: patientData.notes || '',
+        totalVisits: patientData.totalVisits || 0
+      })
+      
+      // Add to local state with MongoDB ID
+      const newPatient: Patient = {
+        ...patientData,
+        id: savedPatient._id,
+        tenantId,
+      }
+      setPatients((prev) => [...prev, newPatient])
+    } catch (error) {
+      console.error('Failed to add patient to MongoDB:', error)
+      // Fallback: add to local state only
+      const newPatient: Patient = {
+        ...patientData,
+        id: Date.now().toString(),
+        tenantId,
+      }
+      setPatients((prev) => [...prev, newPatient])
+    }
   }
 
   const updatePatient = (id: string, updates: Partial<Patient>) => {
@@ -77,18 +214,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   // Staff actions
-  const addStaff = (staffData: Omit<Staff, "id">) => {
-    const newStaff: Staff = {
-      ...staffData,
-      id: `staff-${Date.now()}`,
+  const addStaff = async (staffData: Omit<Staff, "id">) => {
+    const segments = pathname.split('/').filter(Boolean)
+    const tenantSlug = segments[0] || 'default'
+    
+    const tenantIdMap: Record<string, string> = {
+      'jakarta': 'beauty-clinic-jakarta',
+      'bali': 'beauty-clinic-bali',
+      'surabaya': 'skin-care-surabaya',
+      'default': 'beauty-clinic-jakarta'
     }
-    setStaff((prev) => [...prev, newStaff])
-
-    addActivity({
-      type: "staff_added",
-      description: `New staff member ${staffData.name} added as ${staffData.role}`,
-      timestamp: new Date().toISOString(),
-    })
+    
+    const tenantId = tenantIdMap[tenantSlug] || 'beauty-clinic-jakarta'
+    
+    // Set API client tenant
+    apiClient.setTenant(tenantId)
+    
+    try {
+      // Save to MongoDB
+      const savedStaff = await apiClient.createStaff({
+        name: staffData.name,
+        role: staffData.role,
+        skills: staffData.skills || [],
+        workingHours: staffData.workingHours || [],
+        rating: staffData.rating || 0,
+        avatar: staffData.avatar || '',
+        isActive: true
+      })
+      
+      // Add to local state with MongoDB ID
+      const newStaff: Staff = {
+        ...staffData,
+        id: savedStaff._id,
+        tenantId,
+      }
+      setStaff((prev) => [...prev, newStaff])
+      
+      addActivity({
+        type: "staff_added",
+        description: `New staff member ${staffData.name} added as ${staffData.role}`,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error('Failed to add staff to MongoDB:', error)
+      // Fallback: add to local state only
+      const newStaff: Staff = {
+        ...staffData,
+        id: `staff-${Date.now()}`,
+        tenantId,
+      }
+      setStaff((prev) => [...prev, newStaff])
+    }
   }
 
   const updateStaff = (id: string, updates: Partial<Staff>) => {
@@ -109,20 +285,70 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   // Booking actions
-  const addBooking = (bookingData: Omit<Booking, "id">) => {
-    const newBooking: Booking = {
-      ...bookingData,
-      id: Date.now().toString(),
+  const addBooking = async (bookingData: Omit<Booking, "id">) => {
+    const segments = pathname.split('/').filter(Boolean)
+    const tenantSlug = segments[0] || 'default'
+    
+    const tenantIdMap: Record<string, string> = {
+      'jakarta': 'beauty-clinic-jakarta',
+      'bali': 'beauty-clinic-bali',
+      'surabaya': 'skin-care-surabaya',
+      'default': 'beauty-clinic-jakarta'
     }
-    setBookings((prev) => [...prev, newBooking])
-
-    // Add activity
-    addActivity({
-      type: "booking_created",
-      description: `New booking created for ${bookingData.patientName}`,
-      timestamp: new Date().toISOString(),
-      patientId: bookingData.patientId,
-    })
+    
+    const tenantId = tenantIdMap[tenantSlug] || 'beauty-clinic-jakarta'
+    
+    // Set API client tenant
+    apiClient.setTenant(tenantId)
+    
+    try {
+      // Save to MongoDB
+      const savedBooking = await apiClient.createBooking({
+        patientId: bookingData.patientId,
+        patientName: bookingData.patientName || '',
+        staffId: bookingData.staffId,
+        treatmentId: bookingData.treatmentId,
+        startAt: bookingData.startAt,
+        endAt: bookingData.endAt,
+        status: bookingData.status,
+        source: bookingData.source || 'online',
+        paymentStatus: bookingData.paymentStatus || 'unpaid',
+        notes: bookingData.notes || ''
+      })
+      
+      // Add to local state with MongoDB ID
+      const newBooking: Booking = {
+        ...bookingData,
+        id: savedBooking._id,
+        tenantId,
+      }
+      setBookings((prev) => [...prev, newBooking])
+      
+      // Add activity
+      addActivity({
+        type: "booking_created",
+        description: `New booking created for ${bookingData.patientName}`,
+        timestamp: new Date().toISOString(),
+        patientId: bookingData.patientId,
+      })
+    } catch (error) {
+      console.error('Failed to add booking to MongoDB:', error)
+      // Fallback: add to local state only
+      const newBooking: Booking = {
+        ...bookingData,
+        id: Date.now().toString(),
+        tenantId,
+      }
+      setBookings((prev) => [...prev, newBooking])
+      
+      // Add activity
+      addActivity({
+        type: "booking_created",
+        description: `New booking created for ${bookingData.patientName}`,
+        timestamp: new Date().toISOString(),
+        patientId: bookingData.patientId,
+      })
+    }
   }
 
   const updateBooking = (id: string, updates: Partial<Booking>) => {
@@ -157,12 +383,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   // Treatment actions
-  const addTreatment = (treatmentData: Omit<Treatment, "id">) => {
-    const newTreatment: Treatment = {
-      ...treatmentData,
-      id: Date.now().toString(),
+  const addTreatment = async (treatmentData: Omit<Treatment, "id">) => {
+    const segments = pathname.split('/').filter(Boolean)
+    const tenantSlug = segments[0] || 'default'
+    
+    const tenantIdMap: Record<string, string> = {
+      'jakarta': 'beauty-clinic-jakarta',
+      'bali': 'beauty-clinic-bali',
+      'surabaya': 'skin-care-surabaya',
+      'default': 'beauty-clinic-jakarta'
     }
-    setTreatments((prev) => [...prev, newTreatment])
+    
+    const tenantId = tenantIdMap[tenantSlug] || 'beauty-clinic-jakarta'
+    
+    // Set API client tenant
+    apiClient.setTenant(tenantId)
+    
+    try {
+      // Save to MongoDB
+      const savedTreatment = await apiClient.createTreatment({
+        name: treatmentData.name,
+        category: treatmentData.category,
+        durationMin: treatmentData.duration,
+        price: treatmentData.price,
+        description: treatmentData.description || '',
+        popularity: treatmentData.popularity || 0,
+        assignedStaff: treatmentData.assignedStaff || [],
+        isActive: true
+      })
+      
+      // Add to local state with MongoDB ID
+      const newTreatment: Treatment = {
+        ...treatmentData,
+        id: savedTreatment._id,
+        tenantId,
+      }
+      setTreatments((prev) => [...prev, newTreatment])
+    } catch (error) {
+      console.error('Failed to add treatment to MongoDB:', error)
+      // Fallback: add to local state only
+      const newTreatment: Treatment = {
+        ...treatmentData,
+        id: Date.now().toString(),
+        tenantId,
+      }
+      setTreatments((prev) => [...prev, newTreatment])
+    }
   }
 
   const updateTreatment = (id: string, updates: Partial<Treatment>) => {

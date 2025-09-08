@@ -1,29 +1,52 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Home, Calendar, Users, Star, FileText, Settings, UserPlus, Menu, X, Sparkles } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { Home, Calendar, Users, Star, FileText, Settings, UserPlus, Menu, X, Sparkles, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/lib/theme-context"
 import { useTranslation } from "@/hooks/use-translation"
+import { useTenantContext } from "@/lib/tenant-context"
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
   const { branding } = useTheme()
   const { t } = useTranslation()
+  const { tenant } = useTenantContext()
+  
+  // Load user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch (e) {
+        console.error("Failed to parse user data")
+      }
+    }
+  }, [])
+  
+  // Extract tenant from pathname
+  const getTenantPath = useMemo(() => {
+    const segments = pathname.split('/').filter(Boolean)
+    const tenantSlug = segments[0] || 'default'
+    return `/${tenantSlug}`
+  }, [pathname])
   
   const navigation = [
-    { name: t('sidebar.dashboard'), href: "/dashboard", icon: Home },
-    { name: t('sidebar.calendar'), href: "/calendar", icon: Calendar },
-    { name: t('sidebar.clients'), href: "/clients", icon: Users },
-    { name: t('sidebar.staff'), href: "/staff", icon: Users },
-    { name: t('sidebar.treatments'), href: "/treatments", icon: Star },
-    { name: t('sidebar.reports'), href: "/reports", icon: FileText },
-    { name: t('sidebar.settings'), href: "/settings", icon: Settings },
-    { name: t('sidebar.walkIn'), href: "/walk-in", icon: UserPlus },
+    { name: t('sidebar.dashboard'), href: `${getTenantPath}/dashboard`, icon: Home },
+    { name: t('sidebar.calendar'), href: `${getTenantPath}/calendar`, icon: Calendar },
+    { name: t('sidebar.clients'), href: `${getTenantPath}/clients`, icon: Users },
+    { name: t('sidebar.staff'), href: `${getTenantPath}/staff`, icon: Users },
+    { name: t('sidebar.treatments'), href: `${getTenantPath}/treatments`, icon: Star },
+    { name: t('sidebar.reports'), href: `${getTenantPath}/reports`, icon: FileText },
+    { name: t('sidebar.settings'), href: `${getTenantPath}/settings`, icon: Settings },
+    { name: t('sidebar.walkIn'), href: `${getTenantPath}/walk-in`, icon: UserPlus },
   ]
 
   return (
@@ -48,16 +71,18 @@ export function Sidebar() {
         )}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center px-6 py-8 border-b-2 border-sidebar-border feminine-gradient">
+          <div className="flex items-center px-6 py-8 border-b-2 border-sidebar-border tenant-gradient">
             <div className="text-3xl">
-              {branding.logoUrl ? (
+              {tenant?.theme?.logo ? (
+                <img src={tenant.theme.logo} alt="Logo" className="h-12 w-12 object-contain rounded-lg bg-white/20 p-1" />
+              ) : branding.logoUrl ? (
                 <img src={branding.logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded-lg bg-white/20 p-1" />
               ) : (
                 <Sparkles className="h-8 w-8 text-white drop-shadow-lg" />
               )}
             </div>
             <div className="ml-3">
-              <h1 className="text-xl font-bold text-white drop-shadow-md">{branding.clinicName}</h1>
+              <h1 className="text-xl font-bold text-white drop-shadow-md">{tenant?.name || branding.clinicName}</h1>
               <p className="text-sm text-white/80 font-medium">{t('sidebar.adminDashboard')}</p>
             </div>
           </div>
@@ -87,12 +112,46 @@ export function Sidebar() {
           <div className="p-6 border-t-2 border-sidebar-border">
             <div className="flex items-center p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-all duration-300">
               <div className="w-10 h-10 feminine-gradient rounded-full flex items-center justify-center shadow-md">
-                <span className="text-sm font-bold text-white">A</span>
+                <span className="text-sm font-bold text-white">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                </span>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-semibold text-sidebar-foreground">Admin User</p>
-                <p className="text-xs text-sidebar-foreground/70 font-medium">admin@beautyclinic.com</p>
+              <div className="ml-4 flex-1">
+                <p className="text-sm font-semibold text-sidebar-foreground">
+                  {user?.name || 'User'}
+                </p>
+                <p className="text-xs text-sidebar-foreground/70 font-medium">
+                  {user?.email || 'Not logged in'}
+                </p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-2 text-sidebar-foreground hover:text-red-500 hover:bg-red-50"
+                onClick={async () => {
+                  try {
+                    // Call sign out API
+                    await fetch('/api/auth/signout', { method: 'POST' })
+                    
+                    // Clear localStorage
+                    localStorage.removeItem("user")
+                    
+                    // Get tenant from current path
+                    const segments = pathname.split('/').filter(Boolean)
+                    const tenantSlug = segments[0] || 'jakarta'
+                    
+                    // Force redirect with page reload to clear all state
+                    window.location.href = `/${tenantSlug}/signin`
+                  } catch (error) {
+                    console.error('Logout error:', error)
+                    // Fallback redirect
+                    window.location.href = '/jakarta/signin'
+                  }
+                }}
+                title="Sign Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>

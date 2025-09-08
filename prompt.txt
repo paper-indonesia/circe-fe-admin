@@ -1,0 +1,69 @@
+You are a senior Next.js engineer. Extend the current multitenancy setup by adding authentication and tenant creation features.
+
+Requirements
+
+Sign In / Sign Up (per Tenant)
+
+Add Sign In and Sign Up pages inside each tenant scope (/[tenant]/signin, /[tenant]/signup).
+
+A user must only be able to sign in or sign up under their specific tenant.
+
+On login, store tenantId in the session/token. Prevent users from accessing data from other tenants.
+
+Sign Up flow: new user record is created under the tenant’s user collection/table.
+
+Tenant Creation (Admin Only)
+
+Add a Tenant Management menu for platform admin.
+
+Provide a Create Tenant form with fields: tenant name, slug/subdomain, and optional config (logo, theme).
+
+When a tenant is created:
+
+Save tenant info into the tenants collection/table.
+
+Instantly make the tenant accessible via route (example.com/[tenant] or tenant.example.com).
+
+UI & Navigation
+
+Navigation should include:
+
+Sign In
+
+Sign Up
+
+Tenant Management (admin only)
+
+For Sign In/Sign Up, display the current tenant’s name/branding on the form.
+
+Output Deliverables
+
+Dynamic routes:
+
+app/[tenant]/signin/page.tsx
+
+app/[tenant]/signup/page.tsx
+
+app/admin/tenants/page.tsx (list tenants)
+
+app/admin/tenants/new/page.tsx (form to create tenant)
+
+Middleware update: tenant context passed to auth pages.
+
+Example API routes for:
+
+User registration under tenant
+
+User login under tenant
+
+Tenant creation
+
+User Flow Description
+
+User goes to /tenantA/signup → fills form → new account created under tenantA
+
+User logs in via /tenantA/signin → session includes { tenantId: tenantA, userId: ... }
+
+Platform admin goes to /admin/tenants/new → adds tenantB → system generates route /tenantB
+
+Users can now sign up or sign in at /tenantB/signup and /tenantB/signin.

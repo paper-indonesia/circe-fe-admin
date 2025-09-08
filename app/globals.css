@@ -4,16 +4,16 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated to girly, feminine color palette using provided colors */
+  /* Updated to use tenant colors when available, with fallbacks */
   --background: #fefefe; /* Soft white background */
   --foreground: #2d2d2d; /* Dark gray text */
   --card: #ffffff;
   --card-foreground: #2d2d2d;
   --popover: #ffffff;
   --popover-foreground: #2d2d2d;
-  --primary: #ffd6ff; /* Soft pink primary */
-  --primary-foreground: #2d2d2d;
-  --secondary: #e7c6ff; /* Light lavender secondary */
+  --primary: var(--tenant-primary, #ffd6ff); /* Use tenant primary or soft pink */
+  --primary-foreground: #ffffff;
+  --secondary: var(--tenant-secondary, #e7c6ff); /* Use tenant secondary or light lavender */
   --secondary-foreground: #2d2d2d;
   --muted: #f8f6ff; /* Very light lavender muted */
   --muted-foreground: #6b6b6b;
@@ -32,11 +32,11 @@
   --radius: 1rem; /* Increased border radius for softer, more feminine look */
   --sidebar: #fefefe;
   --sidebar-foreground: #2d2d2d;
-  --sidebar-primary: #ffd6ff;
-  --sidebar-primary-foreground: #2d2d2d;
-  --sidebar-accent: #e7c6ff;
+  --sidebar-primary: var(--tenant-primary, #ffd6ff);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--tenant-secondary, #e7c6ff);
   --sidebar-accent-foreground: #2d2d2d;
-  --sidebar-border: #e7c6ff;
+  --sidebar-border: var(--tenant-secondary, #e7c6ff);
   --sidebar-ring: #c8b6ff;
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
@@ -146,5 +146,26 @@
 
   .feminine-input {
     @apply bg-input border-2 border-border rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300;
+  }
+  
+  /* Tenant-specific styles */
+  .tenant-gradient {
+    background: linear-gradient(135deg, var(--tenant-primary) 0%, var(--tenant-secondary) 100%);
+  }
+  
+  .tenant-header {
+    background: linear-gradient(90deg, var(--tenant-primary) 0%, var(--tenant-secondary) 100%);
+    color: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+  }
+  
+  /* Override button colors with tenant colors */
+  button[data-tenant="true"] {
+    background-color: var(--tenant-primary) !important;
+  }
+  
+  button[data-tenant="true"]:hover {
+    opacity: 0.9;
   }
 }
