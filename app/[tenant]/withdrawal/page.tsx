@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,23 +10,20 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, cn } from "@/lib/utils"
 import { 
   Wallet, 
-  ArrowUpRight, 
-  ArrowDownRight,
-  CreditCard,
+  ArrowUpRight,
   TrendingUp,
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
   Banknote,
-  Building,
   User,
   Hash,
-  DollarSign,
-  Info
+  Info,
+  AlertTriangle
 } from "lucide-react"
 
 interface WithdrawalHistory {
@@ -82,43 +79,52 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
   const [accountName, setAccountName] = useState("")
   const [notes, setNotes] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [amountError, setAmountError] = useState("")
 
   const banks = [
     "BCA", "Mandiri", "BNI", "BRI", "CIMB Niaga", 
     "Danamon", "Permata", "Maybank", "OCBC NISP", "Bank Mega"
   ]
 
-  const handleWithdraw = async () => {
+  const validateAndProceed = () => {
+    // Reset error
+    setAmountError("")
+    
     // Validation
     const amount = parseFloat(withdrawAmount)
     
-    if (!amount || amount < 50000) {
-      toast({
-        title: "Invalid Amount",
-        description: "Minimum withdrawal amount is Rp 50,000",
-        variant: "destructive"
-      })
+    if (!amount || isNaN(amount)) {
+      setAmountError("Masukkan jumlah penarikan yang valid")
+      return
+    }
+    
+    if (amount < 50000) {
+      setAmountError(`Jumlah minimum penarikan adalah ${formatCurrency(50000)}`)
       return
     }
 
     if (amount > balance) {
-      toast({
-        title: "Insufficient Balance",
-        description: "Withdrawal amount exceeds available balance",
-        variant: "destructive"
-      })
+      setAmountError(`Saldo tidak mencukupi. Saldo tersedia: ${formatCurrency(balance)}`)
       return
     }
 
     if (!bankName || !accountNumber || !accountName) {
       toast({
-        title: "Incomplete Information",
-        description: "Please fill in all bank account details",
+        title: "Informasi Tidak Lengkap",
+        description: "Harap lengkapi semua detail rekening bank",
         variant: "destructive"
       })
       return
     }
 
+    // If all validations pass, show confirmation dialog
+    setShowConfirmDialog(true)
+  }
+
+  const handleWithdraw = async () => {
+    const amount = parseFloat(withdrawAmount)
+    
     setLoading(true)
     
     try {
@@ -143,16 +149,17 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
       setBalance(balance - amount)
       
       toast({
-        title: "Withdrawal Request Submitted",
-        description: "Your withdrawal request is being processed",
+        title: "Permintaan Penarikan Berhasil",
+        description: "Permintaan penarikan Anda sedang diproses",
       })
       
       setShowWithdrawDialog(false)
+      setShowConfirmDialog(false)
       resetForm()
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to submit withdrawal request",
+        description: "Gagal mengirim permintaan penarikan",
         variant: "destructive"
       })
     } finally {
@@ -166,6 +173,7 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
     setAccountNumber("")
     setAccountName("")
     setNotes("")
+    setAmountError("")
   }
 
   const getStatusBadge = (status: string) => {
@@ -190,8 +198,8 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Withdrawal</h1>
-          <p className="text-gray-600 mt-1">Manage your earnings and withdrawal requests</p>
+          <h1 className="text-3xl font-bold text-gray-900">Penarikan Saldo</h1>
+          <p className="text-gray-600 mt-1">Kelola penghasilan dan permintaan penarikan Anda</p>
         </div>
 
         {/* Balance Cards */}
@@ -199,39 +207,39 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
           <Card className="border-0 shadow-md bg-gradient-to-br from-pastel-purple to-pastel-lavender text-gray-800">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
-                Available Balance
+                Saldo Tersedia
                 <Wallet className="h-5 w-5 text-gray-700" />
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{formatCurrency(balance)}</div>
-              <p className="text-xs mt-2 text-gray-700">Ready to withdraw</p>
+              <p className="text-xs mt-2 text-gray-700">Siap untuk ditarik</p>
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-md bg-gradient-to-br from-pastel-pink to-pastel-lavender text-gray-800">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
-                Total Earnings
+                Total Penghasilan
                 <TrendingUp className="h-5 w-5 text-gray-700" />
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{formatCurrency(totalEarnings)}</div>
-              <p className="text-xs mt-2 text-gray-700">Lifetime earnings</p>
+              <p className="text-xs mt-2 text-gray-700">Penghasilan seumur hidup</p>
             </CardContent>
           </Card>
 
           <Card className="border-0 shadow-md bg-gradient-to-br from-pastel-periwinkle to-pastel-blue text-gray-800">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
-                Total Withdrawn
+                Total Penarikan
                 <ArrowUpRight className="h-5 w-5 text-gray-700" />
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{formatCurrency(totalWithdrawn)}</div>
-              <p className="text-xs mt-2 text-gray-700">Successfully withdrawn</p>
+              <p className="text-xs mt-2 text-gray-700">Berhasil ditarik</p>
             </CardContent>
           </Card>
         </div>
@@ -239,13 +247,13 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
         {/* Withdrawal Action Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Request Withdrawal</CardTitle>
-            <CardDescription>Withdraw your available balance to your bank account</CardDescription>
+            <CardTitle>Ajukan Penarikan</CardTitle>
+            <CardDescription>Tarik saldo tersedia Anda ke rekening bank</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="space-y-1">
-                <p className="text-sm text-gray-600">Minimum withdrawal amount</p>
+                <p className="text-sm text-gray-600">Jumlah penarikan minimum</p>
                 <p className="text-lg font-semibold text-gray-900">{formatCurrency(50000)}</p>
               </div>
               <Button 
@@ -254,7 +262,7 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
                 disabled={balance < 50000}
               >
                 <Banknote className="mr-2 h-4 w-4" />
-                Withdraw Funds
+                Tarik Dana
               </Button>
             </div>
 
@@ -262,8 +270,8 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
             <div className="mt-4 p-4 bg-pastel-blue/20 rounded-lg flex gap-3">
               <Info className="h-5 w-5 text-blue-600 mt-0.5" />
               <div className="text-sm text-gray-700">
-                <p className="font-medium mb-1">Processing Time</p>
-                <p>Withdrawal requests are typically processed within 1-2 business days. You'll receive a notification once your withdrawal is approved.</p>
+                <p className="font-medium mb-1">Waktu Pemrosesan</p>
+                <p>Permintaan penarikan biasanya diproses dalam 1-2 hari kerja. Anda akan menerima notifikasi setelah penarikan Anda disetujui.</p>
               </div>
             </div>
           </CardContent>
@@ -272,15 +280,15 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
         {/* Withdrawal History */}
         <Card>
           <CardHeader>
-            <CardTitle>Withdrawal History</CardTitle>
-            <CardDescription>Track your withdrawal requests and transactions</CardDescription>
+            <CardTitle>Riwayat Penarikan</CardTitle>
+            <CardDescription>Lacak permintaan penarikan dan transaksi Anda</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {withdrawalHistory.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Wallet className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                  <p>No withdrawal history yet</p>
+                  <p>Belum ada riwayat penarikan</p>
                 </div>
               ) : (
                 withdrawalHistory.map((withdrawal) => (
@@ -304,11 +312,11 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
                           {withdrawal.bankAccount.bankName} - {withdrawal.bankAccount.accountNumber}
                         </p>
                         <p className="text-xs text-gray-500">
-                          Requested: {new Date(withdrawal.requestDate).toLocaleDateString()}
-                          {withdrawal.processedDate && ` • Processed: ${new Date(withdrawal.processedDate).toLocaleDateString()}`}
+                          Diminta: {new Date(withdrawal.requestDate).toLocaleDateString('id-ID')}
+                          {withdrawal.processedDate && ` • Diproses: ${new Date(withdrawal.processedDate).toLocaleDateString('id-ID')}`}
                         </p>
                         {withdrawal.rejectionReason && (
-                          <p className="text-xs text-red-600 mt-1">Reason: {withdrawal.rejectionReason}</p>
+                          <p className="text-xs text-red-600 mt-1">Alasan: {withdrawal.rejectionReason}</p>
                         )}
                       </div>
                     </div>
@@ -324,28 +332,40 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
       <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Request Withdrawal</DialogTitle>
+            <DialogTitle>Ajukan Penarikan</DialogTitle>
             <DialogDescription>
-              Enter the amount and bank account details for withdrawal
+              Masukkan jumlah dan detail rekening bank untuk penarikan
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* Amount Input */}
             <div className="space-y-2">
-              <Label htmlFor="amount">Withdrawal Amount</Label>
+              <Label htmlFor="amount">Jumlah Penarikan</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-500">IDR</span>
                 <Input
                   id="amount"
                   type="number"
-                  placeholder="Enter amount"
+                  placeholder="Masukkan jumlah"
                   value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  className="pl-10"
+                  onChange={(e) => {
+                    setWithdrawAmount(e.target.value)
+                    setAmountError("")
+                  }}
+                  className={cn(
+                    "pl-12",
+                    amountError && "border-red-500 focus:ring-red-500"
+                  )}
                 />
               </div>
-              <div className="flex gap-2 mt-2">
+              {amountError && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {amountError}
+                </p>
+              )}
+              <div className="flex gap-2">
                 {quickAmounts.map((amount) => (
                   <Button
                     key={amount}
@@ -362,10 +382,10 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
 
             {/* Bank Selection */}
             <div className="space-y-2">
-              <Label htmlFor="bank">Bank Name</Label>
+              <Label htmlFor="bank">Nama Bank</Label>
               <Select value={bankName} onValueChange={setBankName}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select your bank" />
+                  <SelectValue placeholder="Pilih bank Anda" />
                 </SelectTrigger>
                 <SelectContent>
                   {banks.map((bank) => (
@@ -379,13 +399,13 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
 
             {/* Account Number */}
             <div className="space-y-2">
-              <Label htmlFor="accountNumber">Account Number</Label>
+              <Label htmlFor="accountNumber">Nomor Rekening</Label>
               <div className="relative">
                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="accountNumber"
                   type="text"
-                  placeholder="Enter account number"
+                  placeholder="Masukkan nomor rekening"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value)}
                   className="pl-10"
@@ -395,13 +415,13 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
 
             {/* Account Name */}
             <div className="space-y-2">
-              <Label htmlFor="accountName">Account Name</Label>
+              <Label htmlFor="accountName">Nama Pemilik Rekening</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="accountName"
                   type="text"
-                  placeholder="Enter account holder name"
+                  placeholder="Masukkan nama pemilik rekening"
                   value={accountName}
                   onChange={(e) => setAccountName(e.target.value)}
                   className="pl-10"
@@ -411,11 +431,11 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Label htmlFor="notes">Catatan (Opsional)</Label>
               <Input
                 id="notes"
                 type="text"
-                placeholder="Add any notes"
+                placeholder="Tambahkan catatan"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
@@ -425,11 +445,11 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
             {withdrawAmount && (
               <div className="p-4 bg-pastel-lavender/20 rounded-lg space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Withdrawal Amount:</span>
+                  <span className="text-gray-600">Jumlah Penarikan:</span>
                   <span className="font-semibold">{formatCurrency(parseFloat(withdrawAmount) || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Remaining Balance:</span>
+                  <span className="text-gray-600">Sisa Saldo:</span>
                   <span className="font-semibold">{formatCurrency(balance - (parseFloat(withdrawAmount) || 0))}</span>
                 </div>
               </div>
@@ -437,15 +457,87 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowWithdrawDialog(false)}>
-              Cancel
+            <Button variant="outline" onClick={() => {
+              setShowWithdrawDialog(false)
+              setAmountError("")
+            }}>
+              Batal
+            </Button>
+            <Button 
+              onClick={validateAndProceed}
+              disabled={loading}
+              className="bg-pastel-purple text-gray-800 hover:opacity-90"
+            >
+              Lanjutkan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              Konfirmasi Penarikan
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+              <p className="font-semibold text-gray-900">Pastikan data untuk transaksi ini sudah BENAR:</p>
+              
+              <div className="space-y-2 pl-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-gray-600 min-w-[120px]">Nama Rekening:</span>
+                  <span className="font-medium text-gray-900">{accountName}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-gray-600 min-w-[120px]">Bank:</span>
+                  <span className="font-medium text-gray-900">{bankName}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-gray-600 min-w-[120px]">Nomor Rekening:</span>
+                  <span className="font-medium text-gray-900">{accountNumber}</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-gray-600 min-w-[120px]">Jumlah:</span>
+                  <span className="font-bold text-gray-900">{formatCurrency(parseFloat(withdrawAmount) || 0)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-gray-700 space-y-2">
+                  <p className="font-semibold">Perhatian:</p>
+                  <p>
+                    Dengan melanjutkan, kamu dianggap menyetujui transaksi ini & saldomu akan terpotong otomatis.
+                  </p>
+                  <p className="font-medium">
+                    Jika ada kekeliruan data dalam pengiriman dana, sepenuhnya itu akan menjadi tanggung jawab pengguna.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowConfirmDialog(false)}
+              disabled={loading}
+            >
+              Periksa Kembali
             </Button>
             <Button 
               onClick={handleWithdraw}
               disabled={loading}
               className="bg-pastel-purple text-gray-800 hover:opacity-90"
             >
-              {loading ? "Processing..." : "Submit Request"}
+              {loading ? "Memproses..." : "Ya, Lanjutkan"}
             </Button>
           </DialogFooter>
         </DialogContent>
