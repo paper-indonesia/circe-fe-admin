@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Calendar, Users, Star, FileText, Settings, UserPlus, Menu, X, Sparkles, LogOut } from "lucide-react"
+import { Home, Calendar, Users, Star, Settings, UserPlus, Menu, X, Sparkles, LogOut, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/lib/theme-context"
@@ -43,10 +43,10 @@ export function Sidebar() {
     { name: t('sidebar.calendar'), href: `${getTenantPath}/calendar`, icon: Calendar },
     { name: t('sidebar.clients'), href: `${getTenantPath}/clients`, icon: Users },
     { name: t('sidebar.staff'), href: `${getTenantPath}/staff`, icon: Users },
-    { name: t('sidebar.treatments'), href: `${getTenantPath}/treatments`, icon: Star },
-    { name: t('sidebar.reports'), href: `${getTenantPath}/reports`, icon: FileText },
-    { name: t('sidebar.settings'), href: `${getTenantPath}/settings`, icon: Settings },
     { name: t('sidebar.walkIn'), href: `${getTenantPath}/walk-in`, icon: UserPlus },
+    { name: t('sidebar.treatments'), href: `${getTenantPath}/treatments`, icon: Star },
+    { name: 'Withdrawal', href: `${getTenantPath}/withdrawal`, icon: Wallet },
+    { name: t('sidebar.settings'), href: `${getTenantPath}/settings`, icon: Settings },
   ]
 
   return (
@@ -57,37 +57,45 @@ export function Sidebar() {
           variant="outline"
           size="icon"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="bg-background rounded-full shadow-lg border-2 border-primary/20 hover:border-primary/40 transition-all duration-300"
+          className="bg-white shadow-lg border-gray-100"
         >
-          {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          {isMobileMenuOpen ? (
+            <X className="h-5 w-5" />
+          ) : (
+            <Menu className="h-5 w-5" />
+          )}
         </Button>
       </div>
 
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-sidebar border-r-2 border-sidebar-border transform transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-xl",
+          "fixed inset-y-0 left-0 z-40 w-64 bg-white/95 backdrop-blur-sm border-r border-gray-100 shadow-lg transform transition-transform duration-200 lg:translate-x-0",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center px-6 py-8 border-b-2 border-sidebar-border tenant-gradient">
-            <div className="text-3xl">
+          {/* Logo Section */}
+          <div className="flex items-center px-6 py-6 border-b border-gray-100">
+            <div className="p-2 rounded-xl bg-pastel-purple">
               {tenant?.theme?.logo ? (
-                <img src={tenant.theme.logo} alt="Logo" className="h-12 w-12 object-contain rounded-lg bg-white/20 p-1" />
+                <img src={tenant.theme.logo} alt="Logo" className="h-6 w-6 object-contain filter brightness-0 invert" />
               ) : branding.logoUrl ? (
-                <img src={branding.logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded-lg bg-white/20 p-1" />
+                <img src={branding.logoUrl} alt="Logo" className="h-6 w-6 object-contain filter brightness-0 invert" />
               ) : (
-                <Sparkles className="h-8 w-8 text-white drop-shadow-lg" />
+                <Sparkles className="h-6 w-6 text-white" />
               )}
             </div>
             <div className="ml-3">
-              <h1 className="text-xl font-bold text-white drop-shadow-md">{tenant?.name || branding.clinicName}</h1>
-              <p className="text-sm text-white/80 font-medium">{t('sidebar.adminDashboard')}</p>
+              <h1 className="text-lg font-semibold text-gray-800">
+                {tenant?.name || branding.clinicName}
+              </h1>
+              <p className="text-xs text-gray-500">Beauty Clinic Admin</p>
             </div>
           </div>
 
-          <nav className="flex-1 px-6 py-8 space-y-3">
+          {/* Navigation */}
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               const isActive = pathname === item.href
               return (
@@ -96,38 +104,42 @@ export function Sidebar() {
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
-                    "flex items-center px-4 py-3 text-sm font-medium rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-md",
+                    "flex items-center px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-lg scale-105"
-                      : "text-sidebar-foreground hover:bg-secondary/50 hover:text-sidebar-accent-foreground",
+                      ? "bg-pastel-lavender text-gray-800 shadow-sm"
+                      : "text-gray-600 hover:bg-pastel-pink/30 hover:text-gray-800",
                   )}
                 >
-                  <item.icon className="mr-4 h-5 w-5" />
-                  {item.name}
+                  <item.icon className={cn(
+                    "h-5 w-5 mr-3 transition-colors",
+                    isActive ? "text-gray-700" : "text-gray-400"
+                  )} />
+                  <span>{item.name}</span>
                 </Link>
               )
             })}
           </nav>
 
-          <div className="p-6 border-t-2 border-sidebar-border">
-            <div className="flex items-center p-4 rounded-2xl bg-muted/50 hover:bg-muted transition-all duration-300">
-              <div className="w-10 h-10 feminine-gradient rounded-full flex items-center justify-center shadow-md">
-                <span className="text-sm font-bold text-white">
+          {/* User Section */}
+          <div className="p-4 border-t border-gray-100">
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-full bg-pastel-blue flex items-center justify-center shadow-sm">
+                <span className="text-sm font-semibold text-gray-800">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </span>
               </div>
-              <div className="ml-4 flex-1">
-                <p className="text-sm font-semibold text-sidebar-foreground">
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-gray-900">
                   {user?.name || 'User'}
                 </p>
-                <p className="text-xs text-sidebar-foreground/70 font-medium">
+                <p className="text-xs text-gray-500">
                   {user?.email || 'Not logged in'}
                 </p>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="ml-2 text-sidebar-foreground hover:text-red-500 hover:bg-red-50"
+                className="text-gray-400 hover:text-red-400 transition-colors"
                 onClick={async () => {
                   try {
                     // Call sign out API
@@ -157,9 +169,10 @@ export function Sidebar() {
         </div>
       </div>
 
+      {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 lg:hidden transition-all duration-300"
+          className="fixed inset-0 bg-black/20 z-30 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

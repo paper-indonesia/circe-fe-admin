@@ -4,11 +4,20 @@ export interface IStaff {
   _id?: string
   tenantId: string
   name: string
+  email?: string
   role: string
   skills: string[]
   workingHours: string[]
   rating?: number
   avatar?: string
+  balance: number
+  totalEarnings: number
+  totalWithdrawn: number
+  bankAccount?: {
+    bankName: string
+    accountNumber: string
+    accountName: string
+  }
   isActive: boolean
   createdAt: Date
   updatedAt: Date
@@ -25,6 +34,11 @@ const StaffSchema = new Schema<IStaff>(
       type: String,
       required: [true, 'Staff name is required'],
       trim: true,
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
     },
     role: {
       type: String,
@@ -46,6 +60,32 @@ const StaffSchema = new Schema<IStaff>(
     },
     avatar: {
       type: String,
+    },
+    balance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalEarnings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalWithdrawn: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    bankAccount: {
+      bankName: {
+        type: String,
+      },
+      accountNumber: {
+        type: String,
+      },
+      accountName: {
+        type: String,
+      },
     },
     isActive: {
       type: Boolean,

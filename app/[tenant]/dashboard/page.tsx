@@ -38,6 +38,7 @@ import {
   ChevronRight,
   Heart,
   Sparkles,
+  Wallet,
 } from "lucide-react"
 
 export default function DashboardPage({ params }: { params: { tenant: string } }) {
@@ -62,6 +63,10 @@ export default function DashboardPage({ params }: { params: { tenant: string } }
   const [selectedStaff, setSelectedStaff] = useState<any>(null)
   const [activityPage, setActivityPage] = useState(0)
   const activitiesPerPage = 5
+  
+  // User balance (in production, this would come from the logged-in user's data)
+  const [userBalance] = useState(2500000)
+  const [userTotalEarnings] = useState(15000000)
 
   const todaysBookings = bookings?.filter((booking) => isToday(new Date(booking.startAt))) || []
 
@@ -428,7 +433,7 @@ export default function DashboardPage({ params }: { params: { tenant: string } }
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <div onClick={() => handleKpiClick("bookings")} className="cursor-pointer">
             <KpiCard
               title="Today's Bookings"
@@ -463,6 +468,15 @@ export default function DashboardPage({ params }: { params: { tenant: string } }
               change={`${newCustomersToday} new customers`}
               changeType="positive"
               icon={Heart}
+            />
+          </div>
+          <div onClick={() => router.push(`/${tenant}/withdrawal`)} className="cursor-pointer">
+            <KpiCard
+              title="Available Balance"
+              value={formatCurrency(userBalance)}
+              change={`Total: ${formatCurrency(userTotalEarnings)}`}
+              changeType="positive"
+              icon={Wallet}
             />
           </div>
         </div>

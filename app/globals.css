@@ -1,87 +1,108 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./animations.css";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated to use tenant colors when available, with fallbacks */
-  --background: #fefefe; /* Soft white background */
-  --foreground: #2d2d2d; /* Dark gray text */
+  /* Modern Clean Design with Pastel Palette */
+  --background: #ffffff;
+  --foreground: #1f2937;
   --card: #ffffff;
-  --card-foreground: #2d2d2d;
+  --card-foreground: #1f2937;
   --popover: #ffffff;
-  --popover-foreground: #2d2d2d;
-  --primary: var(--tenant-primary, #ffd6ff); /* Use tenant primary or soft pink */
-  --primary-foreground: #ffffff;
-  --secondary: var(--tenant-secondary, #e7c6ff); /* Use tenant secondary or light lavender */
-  --secondary-foreground: #2d2d2d;
-  --muted: #f8f6ff; /* Very light lavender muted */
-  --muted-foreground: #6b6b6b;
-  --accent: #c8b6ff; /* Medium lavender accent */
-  --accent-foreground: #2d2d2d;
-  --destructive: #ff6b9d; /* Soft pink destructive */
+  --popover-foreground: #1f2937;
+  
+  /* Pastel Colors */
+  --primary: #C8B6FF;
+  --primary-hover: #B8A6EF;
+  --primary-foreground: #1f2937;
+  
+  --secondary: #FFD6FF;
+  --secondary-hover: #FFCCFF;
+  --secondary-foreground: #1f2937;
+  
+  --accent: #E7C6FF;
+  --accent-hover: #DDC0F5;
+  --accent-foreground: #1f2937;
+  
+  --info: #B8C0FF;
+  --info-hover: #A8B0EF;
+  --info-foreground: #1f2937;
+  
+  --success: #BBD0FF;
+  --success-hover: #ABC0EF;
+  --success-foreground: #1f2937;
+  
+  /* Utility colors */
+  --muted: #f8f9fa;
+  --muted-foreground: #4b5563;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e7c6ff; /* Light lavender borders */
-  --input: #f8f6ff;
-  --ring: #c8b6ff;
-  --chart-1: #ffd6ff; /* Soft pink */
-  --chart-2: #e7c6ff; /* Light lavender */
-  --chart-3: #c8b6ff; /* Medium lavender */
-  --chart-4: #b8c0ff; /* Periwinkle blue */
-  --chart-5: #bbd0ff; /* Light blue */
-  --radius: 1rem; /* Increased border radius for softer, more feminine look */
-  --sidebar: #fefefe;
-  --sidebar-foreground: #2d2d2d;
-  --sidebar-primary: var(--tenant-primary, #ffd6ff);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--tenant-secondary, #e7c6ff);
-  --sidebar-accent-foreground: #2d2d2d;
-  --sidebar-border: var(--tenant-secondary, #e7c6ff);
-  --sidebar-ring: #c8b6ff;
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  --warning: #f59e0b;
+  --warning-foreground: #ffffff;
+  
+  /* Borders and inputs */
+  --border: #e5e7eb;
+  --input: #ffffff;
+  --ring: #C8B6FF;
+  --radius: 0.75rem;
+  
+  /* Charts */
+  --chart-1: #C8B6FF;
+  --chart-2: #FFD6FF;
+  --chart-3: #E7C6FF;
+  --chart-4: #B8C0FF;
+  --chart-5: #BBD0FF;
 }
 
 .dark {
-  /* Updated dark mode with feminine colors */
-  --background: #1a1a1a;
-  --foreground: #f8f6ff;
-  --card: #2a2a2a;
-  --card-foreground: #f8f6ff;
-  --popover: #2a2a2a;
-  --popover-foreground: #f8f6ff;
-  --primary: #c8b6ff; /* Medium lavender for dark mode */
-  --primary-foreground: #1a1a1a;
-  --secondary: #b8c0ff; /* Periwinkle for dark mode */
-  --secondary-foreground: #f8f6ff;
-  --muted: #3a3a3a;
-  --muted-foreground: #a0a0a0;
-  --accent: #bbd0ff; /* Light blue accent for dark mode */
-  --accent-foreground: #1a1a1a;
-  --destructive: #ff6b9d;
-  --destructive-foreground: #ffffff;
-  --border: #4a4a4a;
-  --input: #3a3a3a;
-  --ring: #c8b6ff;
-  --chart-1: #c8b6ff;
-  --chart-2: #b8c0ff;
-  --chart-3: #bbd0ff;
-  --chart-4: #e7c6ff;
-  --chart-5: #ffd6ff;
-  --sidebar: #2a2a2a;
-  --sidebar-foreground: #f8f6ff;
-  --sidebar-primary: #c8b6ff;
-  --sidebar-primary-foreground: #1a1a1a;
-  --sidebar-accent: #b8c0ff;
-  --sidebar-accent-foreground: #f8f6ff;
-  --sidebar-border: #4a4a4a;
-  --sidebar-ring: #c8b6ff;
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+  --popover: #1e293b;
+  --popover-foreground: #f1f5f9;
+  
+  --primary: #C8B6FF;
+  --primary-hover: #B8A6EF;
+  --primary-foreground: #0f172a;
+  
+  --secondary: #FFD6FF;
+  --secondary-hover: #FFCCFF;
+  --secondary-foreground: #0f172a;
+  
+  --accent: #E7C6FF;
+  --accent-hover: #DDC0F5;
+  --accent-foreground: #0f172a;
+  
+  --info: #B8C0FF;
+  --info-hover: #A8B0EF;
+  --info-foreground: #0f172a;
+  
+  --success: #BBD0FF;
+  --success-hover: #ABC0EF;
+  --success-foreground: #0f172a;
+  
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --destructive: #f87171;
+  --destructive-foreground: #0f172a;
+  --warning: #fbbf24;
+  --warning-foreground: #0f172a;
+  
+  --border: #334155;
+  --input: #1e293b;
+  --ring: #C8B6FF;
+  
+  --chart-1: #C8B6FF;
+  --chart-2: #FFD6FF;
+  --chart-3: #E7C6FF;
+  --chart-4: #B8C0FF;
+  --chart-5: #BBD0FF;
 }
 
 @theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -110,62 +131,128 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Define custom pastel colors */
+  --color-pastel-purple: #C8B6FF;
+  --color-pastel-pink: #FFD6FF;
+  --color-pastel-lavender: #E7C6FF;
+  --color-pastel-periwinkle: #B8C0FF;
+  --color-pastel-blue: #BBD0FF;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
+  
   body {
-    @apply bg-background text-foreground;
-    /* Added smooth transitions for feminine feel */
-    transition: all 0.3s ease;
-  }
-
-  /* Added custom feminine styling */
-  .feminine-gradient {
-    background: linear-gradient(135deg, #ffd6ff 0%, #e7c6ff 50%, #c8b6ff 100%);
-  }
-
-  .feminine-card {
-    @apply bg-card border border-border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300;
-    backdrop-filter: blur(10px);
-  }
-
-  .feminine-button {
-    @apply bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6 py-3 font-medium transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg;
-  }
-
-  .feminine-input {
-    @apply bg-input border-2 border-border rounded-xl px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300;
+    @apply bg-background text-foreground antialiased;
   }
   
-  /* Tenant-specific styles */
-  .tenant-gradient {
-    background: linear-gradient(135deg, var(--tenant-primary) 0%, var(--tenant-secondary) 100%);
+  /* Pastel color utilities */
+  .bg-pastel-purple { background-color: #C8B6FF; }
+  .bg-pastel-pink { background-color: #FFD6FF; }
+  .bg-pastel-lavender { background-color: #E7C6FF; }
+  .bg-pastel-periwinkle { background-color: #B8C0FF; }
+  .bg-pastel-blue { background-color: #BBD0FF; }
+  
+  .text-pastel-purple { color: #C8B6FF; }
+  .text-pastel-pink { color: #FFD6FF; }
+  .text-pastel-lavender { color: #E7C6FF; }
+  .text-pastel-periwinkle { color: #B8C0FF; }
+  .text-pastel-blue { color: #BBD0FF; }
+  
+  .border-pastel-purple { border-color: #C8B6FF; }
+  .border-pastel-pink { border-color: #FFD6FF; }
+  .border-pastel-lavender { border-color: #E7C6FF; }
+  .border-pastel-periwinkle { border-color: #B8C0FF; }
+  .border-pastel-blue { border-color: #BBD0FF; }
+  
+  /* Gradient utilities */
+  .gradient-purple-lavender {
+    background: linear-gradient(135deg, #C8B6FF 0%, #E7C6FF 100%);
   }
   
-  .tenant-header {
-    background: linear-gradient(90deg, var(--tenant-primary) 0%, var(--tenant-secondary) 100%);
-    color: white;
-    padding: 1rem;
-    border-radius: 0.5rem;
+  .gradient-pink-lavender {
+    background: linear-gradient(135deg, #FFD6FF 0%, #E7C6FF 100%);
   }
   
-  /* Override button colors with tenant colors */
-  button[data-tenant="true"] {
-    background-color: var(--tenant-primary) !important;
+  .gradient-periwinkle-blue {
+    background: linear-gradient(135deg, #B8C0FF 0%, #BBD0FF 100%);
   }
   
-  button[data-tenant="true"]:hover {
-    opacity: 0.9;
+  /* Modern components */
+  .btn-primary {
+    background-color: #C8B6FF;
+    color: #1f2937;
+    transition: all 0.2s;
+  }
+  
+  .btn-primary:hover {
+    background-color: #B8A6EF;
+  }
+  
+  .btn-secondary {
+    background-color: #FFD6FF;
+    color: #1f2937;
+    transition: all 0.2s;
+  }
+  
+  .btn-secondary:hover {
+    background-color: #FFCCFF;
+  }
+  
+  /* Card styles */
+  .card-modern {
+    @apply bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow;
+  }
+  
+  /* Input styles */
+  .input-modern {
+    @apply bg-input border border-border rounded-md px-3 py-2 transition-all;
+  }
+  
+  .input-modern:focus {
+    border-color: #C8B6FF;
+    box-shadow: 0 0 0 3px rgba(200, 182, 255, 0.1);
+  }
+  
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+  
+  /* Focus styles */
+  :focus-visible {
+    outline: 2px solid #C8B6FF;
+    outline-offset: 2px;
+  }
+  
+  /* Selection */
+  ::selection {
+    background: #E7C6FF;
+    color: #1f2937;
   }
 }
