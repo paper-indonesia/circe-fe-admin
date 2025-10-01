@@ -15,7 +15,11 @@ import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/context"
 import { format, parseISO, isValid } from "date-fns"
+import LiquidLoading from "@/components/ui/liquid-loader"
 import { useRouter } from "next/navigation"
+import { EmptyState } from "@/components/ui/empty-state"
+import { useTerminology } from "@/hooks/use-terminology"
+import { Star } from "lucide-react"
 import {
   Users,
   Plus,
@@ -38,12 +42,14 @@ import {
 export default function ClientsPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const terminology = useTerminology()
 
   const {
     patients = [],
     bookings = [],
     treatments = [],
     staff = [],
+    loading,
     addPatient,
     updatePatient,
     deletePatient,
@@ -325,8 +331,47 @@ export default function ClientsPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex min-h-[600px] w-full items-center justify-center">
+          <LiquidLoading />
+        </div>
+      </MainLayout>
+    )
+  }
+
+  // Check if data is completely empty
+  const hasNoData = !loading && (!patients || patients.length === 0)
+
   return (
     <MainLayout>
+      {hasNoData ? (
+        <EmptyState
+          icon={Users}
+          title={`No ${terminology.patient} Yet`}
+          description={`Start building your ${terminology.patient.toLowerCase()} database. Add your first ${terminology.patient.toLowerCase()} to track their appointments and history.`}
+          actionLabel={`Add ${terminology.patient}`}
+          onAction={openAddDialog}
+          tips={[
+            {
+              icon: UserPlus,
+              title: `Add ${terminology.patient}`,
+              description: "Manually add client info"
+            },
+            {
+              icon: CalendarIcon,
+              title: "First Booking",
+              description: `Create ${terminology.booking.toLowerCase()} to auto-add ${terminology.patient.toLowerCase()}`
+            },
+            {
+              icon: Star,
+              title: "Build Relationships",
+              description: "Track preferences and history"
+            }
+          ]}
+        />
+      ) : (
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -603,9 +648,11 @@ export default function ClientsPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+      )}
 
-        {/* Add Client Dialog */}
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      {/* Add Client Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -942,7 +989,6 @@ export default function ClientsPage() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
     </MainLayout>
   )
 }

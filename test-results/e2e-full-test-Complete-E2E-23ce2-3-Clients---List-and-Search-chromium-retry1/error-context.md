@@ -1,0 +1,67 @@
+# Page snapshot
+
+```yaml
+- dialog "Unhandled Runtime Error" [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - navigation [ref=e7]:
+          - button "previous" [disabled] [ref=e8]:
+            - img "previous" [ref=e9]
+          - button "next" [disabled] [ref=e11]:
+            - img "next" [ref=e12]
+          - generic [ref=e14]:
+            - generic [ref=e15]: "1"
+            - text: of
+            - generic [ref=e16]: "1"
+            - text: error
+          - generic [ref=e17]:
+            - generic "An outdated version detected (latest is 15.5.4), upgrade is highly recommended!" [ref=e19]: Next.js (14.2.16) is outdated
+            - link "(learn more)" [ref=e20] [cursor=pointer]:
+              - /url: https://nextjs.org/docs/messages/version-staleness
+        - button "Close" [ref=e21] [cursor=pointer]:
+          - img [ref=e23] [cursor=pointer]
+      - heading "Unhandled Runtime Error" [level=1] [ref=e26]
+      - paragraph [ref=e27]: "TypeError: (0 , _lib_context__WEBPACK_IMPORTED_MODULE_14__.useAppContext) is not a function"
+    - generic [ref=e28]:
+      - heading "Source" [level=2] [ref=e29]
+      - generic [ref=e30]:
+        - link "app\\clients\\page.tsx (52:20) @ useAppContext" [ref=e32] [cursor=pointer]:
+          - generic [ref=e33] [cursor=pointer]: app\clients\page.tsx (52:20) @ useAppContext
+          - img [ref=e34] [cursor=pointer]
+        - generic [ref=e38]:
+          - generic [ref=e40]: 50 |
+          - generic [ref=e41]: updatePatient
+          - generic [ref=e42]: ","
+          - generic [ref=e44]: 51 |
+          - generic [ref=e45]: deletePatient
+          - generic [ref=e46]: ","
+          - generic [ref=e47]: ">"
+          - generic [ref=e48]: 52 |
+          - generic [ref=e49]: "}"
+          - generic [ref=e50]: =
+          - generic [ref=e51]: useAppContext()
+          - generic [ref=e53]: "|"
+          - generic [ref=e55]: ^
+          - generic [ref=e57]: 53 |
+          - generic [ref=e59]: 54 |
+          - generic [ref=e61]: const
+          - generic [ref=e62]: "[searchQuery"
+          - generic [ref=e63]: ","
+          - generic [ref=e64]: setSearchQuery]
+          - generic [ref=e65]: =
+          - generic [ref=e66]: useState(
+          - generic [ref=e67]: "\"\""
+          - generic [ref=e68]: )
+          - generic [ref=e70]: 55 |
+          - generic [ref=e72]: const
+          - generic [ref=e73]: "[statusFilter"
+          - generic [ref=e74]: ","
+          - generic [ref=e75]: setStatusFilter]
+          - generic [ref=e76]: =
+          - generic [ref=e77]: useState(
+          - generic [ref=e78]: "\"all\""
+          - generic [ref=e79]: )
+      - heading "Call Stack" [level=2] [ref=e80]
+      - button "Show collapsed frames" [ref=e81] [cursor=pointer]
+```

@@ -245,14 +245,14 @@ This database uses MongoDB for a multi-tenant beauty clinic management system. E
         │       │ name     │  │   │
         │       │ category │  │   │
         │       │ price    │  │   │
-        │       │assignedStaff  │
+        │       │assignedStaff    │
         │       │tenantId  │  │   │
         │       └──────────┘  │   │
         │            │        │   │
         │            │        │   │
         └────────────┼────────┼───┼────────┐
                      │        │   │        │
-               ┌─────▼────────▼───▼────────▼─┐
+               ┌─────▼────────▼───▼──────▼─┐
                │         bookings          │
                ├───────────────────────────┤
                │ _id                       │

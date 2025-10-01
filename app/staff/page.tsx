@@ -14,9 +14,13 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useStaff, useBookings, useTreatments } from "@/lib/context"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
-import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter } from "lucide-react"
+import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
+import LiquidLoading from "@/components/ui/liquid-loader"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { EmptyState } from "@/components/ui/empty-state"
+import { useTerminology } from "@/hooks/use-terminology"
+import { useRouter } from "next/navigation"
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -25,11 +29,15 @@ export default function StaffPage() {
   const { bookings } = useBookings()
   const { treatments } = useTreatments()
   const { toast } = useToast()
+  const terminology = useTerminology()
+  const router = useRouter()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [availabilityFilter, setAvailabilityFilter] = useState("all")
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
 
   const [selectedStaff, setSelectedStaff] = useState<any>(null)
   const [showStaffDialog, setShowStaffDialog] = useState(false)
@@ -41,6 +49,7 @@ export default function StaffPage() {
     role: "",
     email: "",
     phone: "",
+    photo: "",
     skills: [] as string[],
     workingSchedule: {} as Record<string, string[]>, // Changed from workingHours to workingSchedule
     workingDays: [] as string[],
@@ -52,6 +61,7 @@ export default function StaffPage() {
     role: "",
     email: "",
     phone: "",
+    photo: "",
     skills: [] as string[],
     workingSchedule: {} as Record<string, string[]>, // Changed from workingHours to workingSchedule
     workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
@@ -78,6 +88,10 @@ export default function StaffPage() {
   })
 
   const uniqueRoles = Array.from(new Set(staff.map((s) => s.role)))
+
+  // Pagination
+  const totalPages = Math.ceil(filteredStaff.length / pageSize)
+  const paginatedStaff = filteredStaff.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const getStaffPerformance = (staffId: string) => {
     const staffBookings = bookings.filter((b) => b.staffId === staffId)
@@ -298,7 +312,7 @@ export default function StaffPage() {
     }
   }
 
-  const handleAddStaff = () => {
+  const handleAddStaff = async () => {
     if (!newStaffForm.name || !newStaffForm.role || !newStaffForm.email) {
       toast({
         title: "Error",
@@ -314,6 +328,7 @@ export default function StaffPage() {
       role: newStaffForm.role,
       email: newStaffForm.email,
       phone: newStaffForm.phone,
+      photo: newStaffForm.photo,
       skills: newStaffForm.skills,
       workingSchedule: newStaffForm.workingSchedule,
       workingDays: newStaffForm.workingDays,
@@ -324,12 +339,13 @@ export default function StaffPage() {
       assignedTreatments: newStaffForm.assignedTreatments,
     }
 
-    addStaff(newStaff)
+    await addStaff(newStaff)
     setNewStaffForm({
       name: "",
       role: "",
       email: "",
       phone: "",
+      photo: "",
       skills: [],
       workingSchedule: {},
       workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
@@ -396,8 +412,47 @@ export default function StaffPage() {
     setShowStaffDialog(true)
   }
 
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex min-h-[600px] w-full items-center justify-center">
+          <LiquidLoading />
+        </div>
+      </MainLayout>
+    )
+  }
+
+  // Check if data is completely empty
+  const hasNoData = !loading && (!staff || staff.length === 0)
+
   return (
     <MainLayout>
+      {hasNoData ? (
+        <EmptyState
+          icon={Users}
+          title={`No ${terminology.staff} Members`}
+          description={`Add your ${terminology.staff.toLowerCase()} members to assign ${terminology.booking.toLowerCase()} and manage schedules.`}
+          actionLabel={`Add ${terminology.staff}`}
+          onAction={() => setShowAddStaffDialog(true)}
+          tips={[
+            {
+              icon: UserPlus,
+              title: `Add ${terminology.staff}`,
+              description: "Create staff profiles"
+            },
+            {
+              icon: Calendar,
+              title: "Assign Bookings",
+              description: `Assign ${terminology.booking.toLowerCase()} to ${terminology.staff.toLowerCase()}`
+            },
+            {
+              icon: Star,
+              title: "Track Performance",
+              description: "Monitor staff metrics"
+            }
+          ]}
+        />
+      ) : (
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -472,7 +527,14 @@ export default function StaffPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStaff.map((staffMember) => {
+              {paginatedStaff.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    No staff members found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedStaff.map((staffMember) => {
                 const performance = getStaffPerformance(staffMember.id)
 
                 return (
@@ -556,10 +618,70 @@ export default function StaffPage() {
                     </TableCell>
                   </TableRow>
                 )
-              })}
+              }))}
             </TableBody>
           </Table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-[#E7C6FF]/30 bg-white rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredStaff.length)} of {filteredStaff.length} staff members
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="border-[#E7C6FF] text-purple-600 hover:bg-[#FFD6FF]/30"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={currentPage === pageNum
+                        ? "bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-purple-800 border-0"
+                        : "border-[#E7C6FF] text-purple-600 hover:bg-[#FFD6FF]/30"
+                      }
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="border-[#E7C6FF] text-purple-600 hover:bg-[#FFD6FF]/30"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
 
         {filteredStaff.length === 0 && (
           <div className="text-center py-12">
@@ -607,9 +729,11 @@ export default function StaffPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+      )}
 
-        {/* Staff Profile Dialog */}
-        <Dialog open={showStaffDialog} onOpenChange={setShowStaffDialog}>
+      {/* Staff Profile Dialog */}
+      <Dialog open={showStaffDialog} onOpenChange={setShowStaffDialog}>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -748,7 +872,23 @@ export default function StaffPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setIsEditMode(true)}>
+                      <Button variant="outline" className="flex-1 bg-transparent" onClick={() => {
+                        setEditStaffForm({
+                          name: selectedStaff.name,
+                          role: selectedStaff.role,
+                          email: selectedStaff.email,
+                          phone: selectedStaff.phone || "",
+                          photo: selectedStaff.photo || "",
+                          skills: selectedStaff.skills || [],
+                          workingSchedule: selectedStaff.workingSchedule || {},
+                          workingDays: selectedStaff.workingDays || [],
+                          notes: selectedStaff.notes || "",
+                          assignedTreatments: treatments
+                            .filter(t => t.assignedStaff?.includes(selectedStaff.id))
+                            .map(t => t.id),
+                        })
+                        setIsEditMode(true)
+                      }}>
                         <Edit className="h-4 w-4 mr-2" />
                         Edit Profile
                       </Button>
@@ -827,6 +967,22 @@ export default function StaffPage() {
                           className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-photo" className="text-sm font-medium">
+                        Photo URL
+                      </Label>
+                      <Input
+                        id="edit-photo"
+                        value={editStaffForm.photo}
+                        onChange={(e) => setEditStaffForm((prev) => ({ ...prev, photo: e.target.value }))}
+                        placeholder="https://example.com/photo.jpg"
+                        className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Enter a URL to the staff member's photo
+                      </p>
                     </div>
 
                     <div>
@@ -1176,6 +1332,22 @@ export default function StaffPage() {
               </div>
 
               <div>
+                <Label htmlFor="photo" className="text-sm font-medium">
+                  Photo URL
+                </Label>
+                <Input
+                  id="photo"
+                  value={newStaffForm.photo}
+                  onChange={(e) => setNewStaffForm((prev) => ({ ...prev, photo: e.target.value }))}
+                  placeholder="https://example.com/photo.jpg"
+                  className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter a URL to the staff member's photo
+                </p>
+              </div>
+
+              <div>
                 <Label className="text-sm font-medium">Working Days & Hours</Label>
                 <div className="space-y-4 mt-2">
                   {daysOfWeek.map((day) => (
@@ -1374,7 +1546,6 @@ export default function StaffPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
     </MainLayout>
   )
 }

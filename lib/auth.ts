@@ -11,8 +11,6 @@ const TOKEN_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
 export interface JWTPayload {
   userId: string
   email: string
-  tenantId: string
-  role: string
   name: string
 }
 
@@ -59,6 +57,39 @@ export const getAuthCookie = (req: NextRequest): string | undefined => {
   return cookie as string | undefined
 }
 
+// Verify authentication from request
+export const verifyAuth = async (req: NextRequest): Promise<JWTPayload | null> => {
+  try {
+    // Try to get token from cookie first
+    const tokenFromCookie = req.cookies.get('auth-token')?.value
+
+    if (tokenFromCookie) {
+      const payload = verifyToken(tokenFromCookie)
+      if (payload) {
+        console.log('verifyAuth: Token verified from cookie, userId:', payload.userId)
+        return payload
+      }
+    }
+
+    // Try Authorization header as fallback
+    const authHeader = req.headers.get('authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      const payload = verifyToken(token)
+      if (payload) {
+        console.log('verifyAuth: Token verified from header, userId:', payload.userId)
+        return payload
+      }
+    }
+
+    console.log('verifyAuth: No valid token found')
+    return null
+  } catch (error) {
+    console.error('verifyAuth error:', error)
+    return null
+  }
+}
+
 export const removeAuthCookie = (res: NextResponse) => {
   deleteCookie(TOKEN_NAME, {
     req: res as any,
@@ -81,12 +112,25 @@ export const getUserFromCookies = (cookies: RequestCookie[]): JWTPayload | null 
   return verifyToken(authCookie.value)
 }
 
-// Check if user has required role
-export const hasRole = (userRole: string, requiredRoles: string[]): boolean => {
-  return requiredRoles.includes(userRole)
+
+// Helper for API routes to get current user for data scoping
+export const requireAuth = (req: NextRequest): JWTPayload => {
+  const user = getUserFromRequest(req)
+  if (!user) {
+    throw new Error('Unauthorized: No valid authentication token')
+  }
+  return user
 }
 
-// Check if user is platform admin
-export const isPlatformAdmin = (userRole: string): boolean => {
-  return userRole === 'platform_admin'
+// Helper to create scoped query for user's data
+export const getScopedQuery = (userId: string, additionalFilters: Record<string, any> = {}) => {
+  return {
+    ownerId: userId,
+    ...additionalFilters
+  }
+}
+
+// Helper to verify ownership before operations
+export const verifyOwnership = (document: any, userId: string): boolean => {
+  return document?.ownerId === userId || document?.userId === userId
 }

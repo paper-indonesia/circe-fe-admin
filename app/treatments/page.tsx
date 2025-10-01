@@ -13,10 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/context"
-import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users } from "lucide-react"
+import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, DollarSign, AlertCircle } from "lucide-react"
+import LiquidLoading from "@/components/ui/liquid-loader"
+import { EmptyState } from "@/components/ui/empty-state"
+import { useTerminology } from "@/hooks/use-terminology"
 
 export default function TreatmentsPage() {
   const { toast } = useToast()
+  const terminology = useTerminology()
 
   const {
     treatments = [],
@@ -33,6 +37,7 @@ export default function TreatmentsPage() {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [staffFilter, setStaffFilter] = useState("all")
+  const [staffAssignSearchQuery, setStaffAssignSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
@@ -41,6 +46,7 @@ export default function TreatmentsPage() {
     category: "",
     durationMin: 60,
     price: 0,
+    photo: "",
     description: "",
     assignedStaff: [] as string[], // Staff IDs who can perform this treatment
   })
@@ -118,6 +124,7 @@ export default function TreatmentsPage() {
         category: treatmentForm.category,
         durationMin: treatmentForm.durationMin,
         price: treatmentForm.price,
+        photo: treatmentForm.photo,
         description: treatmentForm.description,
         assignedStaff: treatmentForm.assignedStaff,
       })
@@ -144,6 +151,7 @@ export default function TreatmentsPage() {
         category: treatmentForm.category,
         durationMin: treatmentForm.durationMin,
         price: treatmentForm.price,
+        photo: treatmentForm.photo,
         description: treatmentForm.description,
         assignedStaff: treatmentForm.assignedStaff,
       })
@@ -190,6 +198,7 @@ export default function TreatmentsPage() {
       category: treatment.category,
       durationMin: treatment.durationMin,
       price: treatment.price,
+      photo: treatment.photo || "",
       description: treatment.description || "",
       assignedStaff: treatment.assignedStaff || [],
     })
@@ -202,6 +211,7 @@ export default function TreatmentsPage() {
       category: "",
       durationMin: 60,
       price: 0,
+      photo: "",
       description: "",
       assignedStaff: [],
     })
@@ -230,8 +240,47 @@ export default function TreatmentsPage() {
   const averageDuration =
     treatments.length > 0 ? Math.round(treatments.reduce((sum, t) => sum + t.durationMin, 0) / treatments.length) : 0
 
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex min-h-[600px] w-full items-center justify-center">
+          <LiquidLoading />
+        </div>
+      </MainLayout>
+    )
+  }
+
+  // Check if data is completely empty
+  const hasNoData = !loading && (!treatments || treatments.length === 0)
+
   return (
     <MainLayout>
+      {hasNoData ? (
+        <EmptyState
+          icon={Star}
+          title={`No ${terminology.treatment} Defined`}
+          description={`Create your ${terminology.treatment.toLowerCase()} to offer services to your ${terminology.patient.toLowerCase()}.`}
+          actionLabel={`Add ${terminology.treatment}`}
+          onAction={openAddDialog}
+          tips={[
+            {
+              icon: Star,
+              title: `Define ${terminology.treatment}`,
+              description: "Set prices and duration"
+            },
+            {
+              icon: Users,
+              title: `Assign ${terminology.staff}`,
+              description: `Link ${terminology.treatment.toLowerCase()} to ${terminology.staff.toLowerCase()}`
+            },
+            {
+              icon: DollarSign,
+              title: "Pricing Strategy",
+              description: "Competitive pricing"
+            }
+          ]}
+        />
+      ) : (
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -491,202 +540,194 @@ export default function TreatmentsPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+      )}
 
-        <Dialog
-          open={showAddDialog || !!editingTreatment}
-          onOpenChange={() => {
-            setShowAddDialog(false)
-            setEditingTreatment(null)
-            resetForm()
-          }}
-        >
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Scissors className="h-5 w-5" />
-                {editingTreatment ? "Edit Treatment" : "Add New Treatment"}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Treatment Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g., HydraFacial"
-                    value={treatmentForm.name}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select
-                    value={treatmentForm.category}
-                    onValueChange={(value) => setTreatmentForm((prev) => ({ ...prev, category: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Facial">Facial</SelectItem>
-                      <SelectItem value="Injectable">Injectable</SelectItem>
-                      <SelectItem value="Laser">Laser</SelectItem>
-                      <SelectItem value="Medical">Medical</SelectItem>
-                      <SelectItem value="Exfoliation">Exfoliation</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (minutes) *</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    min="15"
-                    max="240"
-                    step="15"
-                    value={treatmentForm.durationMin}
-                    onChange={(e) =>
-                      setTreatmentForm((prev) => ({ ...prev, durationMin: Number.parseInt(e.target.value) || 60 }))
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price (Rp) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="50000"
-                    value={treatmentForm.price}
-                    onChange={(e) =>
-                      setTreatmentForm((prev) => ({ ...prev, price: Number.parseInt(e.target.value) || 0 }))
-                    }
-                  />
-                </div>
-              </div>
-
+      {/* Dialog is outside conditional to always be in DOM */}
+      <Dialog
+        open={showAddDialog || !!editingTreatment}
+        onOpenChange={() => {
+          setShowAddDialog(false)
+          setEditingTreatment(null)
+          setStaffAssignSearchQuery("")
+          resetForm()
+        }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Scissors className="h-5 w-5" />
+              {editingTreatment ? "Edit Treatment" : "Add New Treatment"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Brief description of the treatment..."
-                  value={treatmentForm.description}
-                  onChange={(e) => setTreatmentForm((prev) => ({ ...prev, description: e.target.value }))}
+                <Label htmlFor="name">Treatment Name *</Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., HydraFacial"
+                  value={treatmentForm.name}
+                  onChange={(e) => setTreatmentForm((prev) => ({ ...prev, name: e.target.value }))}
                 />
               </div>
 
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Assign Staff Members
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto border rounded-lg p-3 bg-gray-50/30">
-                  {staff.map((staffMember) => (
-                    <div
-                      key={staffMember.id}
-                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/80 border border-transparent hover:border-[#E7C6FF]/30 transition-all"
-                    >
+              <div className="space-y-2">
+                <Label htmlFor="category">Category *</Label>
+                <Select
+                  value={treatmentForm.category}
+                  onValueChange={(value) => setTreatmentForm((prev) => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Facial">Facial</SelectItem>
+                    <SelectItem value="Injectable">Injectable</SelectItem>
+                    <SelectItem value="Laser">Laser</SelectItem>
+                    <SelectItem value="Medical">Medical</SelectItem>
+                    <SelectItem value="Exfoliation">Exfoliation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration (minutes) *</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  min="15"
+                  step="15"
+                  value={treatmentForm.durationMin}
+                  onChange={(e) =>
+                    setTreatmentForm((prev) => ({ ...prev, durationMin: parseInt(e.target.value) || 60 }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="price">Price (Rp) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="10000"
+                  value={treatmentForm.price}
+                  onChange={(e) => setTreatmentForm((prev) => ({ ...prev, price: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Describe the treatment..."
+                value={treatmentForm.description}
+                onChange={(e) => setTreatmentForm((prev) => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Assign Staff Members</Label>
+                <Badge variant="secondary" className="text-xs">
+                  {treatmentForm.assignedStaff.length} selected
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">Select staff members who can perform this treatment</p>
+
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search staff by name or role..."
+                  value={staffAssignSearchQuery}
+                  onChange={(e) => setStaffAssignSearchQuery(e.target.value)}
+                  className="pl-10 border-pink-200 focus:border-pink-400"
+                />
+              </div>
+
+              <div className="max-h-60 overflow-y-auto border border-border rounded-lg p-4 space-y-3 bg-muted/30">
+                {staff
+                  .filter(
+                    (s) =>
+                      s.name.toLowerCase().includes(staffAssignSearchQuery.toLowerCase()) ||
+                      s.role.toLowerCase().includes(staffAssignSearchQuery.toLowerCase()),
+                  )
+                  .map((staffMember) => (
+                    <div key={staffMember.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-background/80 transition-colors border border-transparent hover:border-primary/20">
                       <Checkbox
                         id={`staff-${staffMember.id}`}
                         checked={treatmentForm.assignedStaff.includes(staffMember.id)}
                         onCheckedChange={(checked) => {
-                          console.log("[v0] Staff assignment changed:", staffMember.name, checked)
-                          setTreatmentForm((prev) => {
-                            const newAssignedStaff = checked
-                              ? [...prev.assignedStaff, staffMember.id]
-                              : prev.assignedStaff.filter((id) => id !== staffMember.id)
-                            console.log("[v0] New assigned staff:", newAssignedStaff)
-                            return {
+                          if (checked) {
+                            setTreatmentForm((prev) => ({
                               ...prev,
-                              assignedStaff: newAssignedStaff,
-                            }
-                          })
+                              assignedStaff: [...prev.assignedStaff, staffMember.id],
+                            }))
+                          } else {
+                            setTreatmentForm((prev) => ({
+                              ...prev,
+                              assignedStaff: prev.assignedStaff.filter((id) => id !== staffMember.id),
+                            }))
+                          }
                         }}
-                        className="data-[state=checked]:bg-[#C8B6FF] data-[state=checked]:border-[#C8B6FF]"
                       />
-                      <div
-                        className="flex items-center gap-3 flex-1 cursor-pointer"
-                        onClick={() => {
-                          const isChecked = treatmentForm.assignedStaff.includes(staffMember.id)
-                          const checkbox = document.getElementById(`staff-${staffMember.id}`) as HTMLButtonElement
-                          if (checkbox) checkbox.click()
-                        }}
-                      >
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex-shrink-0">
-                          <img
-                            src={`/abstract-geometric-shapes.png?key=staff&height=40&width=40&query=${encodeURIComponent(`${staffMember.name} professional portrait`)}`}
-                            alt={staffMember.name}
-                            className="w-full h-full object-cover"
-                          />
+                      <Label htmlFor={`staff-${staffMember.id}`} className="flex-1 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">{staffMember.name}</div>
+                            <div className="text-xs text-muted-foreground">{staffMember.role}</div>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {staffMember.role}
+                          </Badge>
                         </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-900">{staffMember.name}</div>
-                          <div className="text-xs text-gray-500">{staffMember.role}</div>
-                          {staffMember.skills && staffMember.skills.length > 0 && (
-                            <div className="text-xs text-[#C8B6FF] mt-1">
-                              {staffMember.skills.slice(0, 2).join(", ")}
-                              {staffMember.skills.length > 2 && "..."}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      </Label>
                     </div>
                   ))}
-                </div>
-                {treatmentForm.assignedStaff.length > 0 && (
-                  <div className="bg-gradient-to-r from-[#FFD6FF]/20 to-[#E7C6FF]/20 rounded-lg p-3 border border-[#E7C6FF]/30">
-                    <div className="text-sm font-medium text-gray-700 mb-2">
-                      Selected Staff ({treatmentForm.assignedStaff.length})
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {treatmentForm.assignedStaff.map((staffId) => {
-                        const staffMember = staff.find((s) => s.id === staffId)
-                        return staffMember ? (
-                          <div
-                            key={staffId}
-                            className="flex items-center gap-2 bg-white rounded-full px-3 py-1 border border-[#E7C6FF]/50"
-                          >
-                            <div className="w-5 h-5 rounded-full overflow-hidden bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF]">
-                              <img
-                                src={`/abstract-geometric-shapes.png?key=staff&height=20&width=20&query=${encodeURIComponent(`${staffMember.name} portrait`)}`}
-                                alt={staffMember.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <span className="text-xs font-medium text-gray-700">{staffMember.name}</span>
-                          </div>
-                        ) : null
-                      })}
-                    </div>
+                {staff.filter(
+                  (s) =>
+                    s.name.toLowerCase().includes(staffAssignSearchQuery.toLowerCase()) ||
+                    s.role.toLowerCase().includes(staffAssignSearchQuery.toLowerCase()),
+                ).length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No staff found matching your search</p>
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={editingTreatment ? handleEditTreatment : handleAddTreatment}
-                  className="flex-1 bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-gray-800 hover:from-[#E7C6FF] hover:to-[#C8B6FF] border-0"
-                >
-                  {editingTreatment ? "Update Treatment" : "Add Treatment"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowAddDialog(false)
-                    setEditingTreatment(null)
-                    resetForm()
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
+              {treatmentForm.assignedStaff.length === 0 && (
+                <p className="text-sm text-yellow-600 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  No staff assigned. This treatment will not be available for booking.
+                </p>
+              )}
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+
+            <div className="flex gap-2 pt-4 border-t">
+              <Button
+                onClick={editingTreatment ? handleEditTreatment : handleAddTreatment}
+                className="flex-1 bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-gray-800 hover:from-[#E7C6FF] hover:to-[#C8B6FF] border-0"
+              >
+                {editingTreatment ? "Update Treatment" : "Add Treatment"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddDialog(false)
+                  setEditingTreatment(null)
+                  resetForm()
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   )
 }

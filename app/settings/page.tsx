@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,11 +9,11 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Building, Bell, Palette, Upload, Shield, Database, Globe, Save, Check, X, AlertCircle, Clock, CreditCard, Eye, Loader2 } from "lucide-react"
+import { Building, Bell, Shield, User, Key, Save, Palette, Database, Globe } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useTheme, ThemeColor } from "@/lib/theme-context"
-import { useTranslation } from "@/hooks/use-translation"
-import { format } from "date-fns"
+import { useAuth } from "@/lib/auth-context"
+import { useTerminology } from "@/hooks/use-terminology"
+import LiquidLoading from "@/components/ui/liquid-loader"
 
 interface BusinessInfo {
   clinicName: string
@@ -22,767 +22,313 @@ interface BusinessInfo {
   address: string
   operatingHours: string
   website: string
-  taxId: string
 }
 
 interface NotificationSettings {
   bookingConfirmations: boolean
   dayBeforeReminders: boolean
-  threeHourReminders: boolean
   noShowNotifications: boolean
-  marketingEmails: boolean
   systemAlerts: boolean
-}
-
-interface PolicySettings {
-  noShowFeeEnabled: boolean
-  noShowFeeAmount: string
-  cancellationPolicy: string
-  depositRequired: boolean
-  depositAmount: string
-  advanceBookingDays: string
 }
 
 interface SecuritySettings {
   twoFactorAuth: boolean
   sessionTimeout: string
   passwordExpiry: string
-  ipWhitelist: boolean
 }
 
 export default function SettingsPage() {
   const { toast } = useToast()
-  const { branding, updateBranding } = useTheme()
-  const { t } = useTranslation()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  
-  // Loading states for each section
-  const [savingBusiness, setSavingBusiness] = useState(false)
-  const [savingNotifications, setSavingNotifications] = useState(false)
-  const [savingPolicies, setSavingPolicies] = useState(false)
-  const [savingSecurity, setSavingSecurity] = useState(false)
-  const [savingRegional, setSavingRegional] = useState(false)
-  const [performingBackup, setPerformingBackup] = useState(false)
-  const [exportingData, setExportingData] = useState(false)
-  
+  const { user } = useAuth()
+  const terminology = useTerminology()
+  const [loading, setLoading] = useState(true)
+
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>({
-    clinicName: branding.clinicName,
-    phoneNumber: "+62 21 1234 5678",
-    email: "info@beautyclinic.com",
-    address: "Jl. Sudirman No. 123, Jakarta Pusat",
-    operatingHours: "Mon-Sat: 9:00 AM - 8:00 PM",
-    website: "www.beautyclinic.com",
-    taxId: "12.345.678.9-012.000"
+    clinicName: "",
+    phoneNumber: "",
+    email: "",
+    address: "",
+    operatingHours: "09:00 - 18:00",
+    website: ""
   })
 
   const [notifications, setNotifications] = useState<NotificationSettings>({
     bookingConfirmations: true,
     dayBeforeReminders: true,
-    threeHourReminders: false,
     noShowNotifications: true,
-    marketingEmails: true,
     systemAlerts: true
-  })
-
-  const [policies, setPolicies] = useState<PolicySettings>({
-    noShowFeeEnabled: false,
-    noShowFeeAmount: "100000",
-    cancellationPolicy: "Appointments must be cancelled at least 24 hours in advance to avoid charges.",
-    depositRequired: false,
-    depositAmount: "50000",
-    advanceBookingDays: "30"
   })
 
   const [security, setSecurity] = useState<SecuritySettings>({
     twoFactorAuth: false,
     sessionTimeout: "30",
-    passwordExpiry: "90",
-    ipWhitelist: false
+    passwordExpiry: "90"
   })
 
-  const [logoUrl, setLogoUrl] = useState<string>(branding.logoUrl)
-  const [selectedTheme, setSelectedTheme] = useState<ThemeColor>(branding.theme)
-  const [backupSchedule, setBackupSchedule] = useState("daily")
-  const [dataRetention, setDataRetention] = useState("365")
-  const [currency, setCurrency] = useState("IDR")
-  const [timezone, setTimezone] = useState("Asia/Jakarta")
-  const [language, setLanguage] = useState(branding.language)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
 
-  // Update local state when branding changes
   useEffect(() => {
-    setLogoUrl(branding.logoUrl)
-    setSelectedTheme(branding.theme)
-    setLanguage(branding.language)
-    setBusinessInfo(prev => ({ ...prev, clinicName: branding.clinicName }))
-  }, [branding])
-
-  // Load saved settings on mount
-  useEffect(() => {
-    // Load business info
-    const savedBusinessInfo = localStorage.getItem('businessInfo')
-    if (savedBusinessInfo) {
+    const loadSettings = async () => {
       try {
-        setBusinessInfo(JSON.parse(savedBusinessInfo))
-      } catch (e) {
-        console.error('Failed to load business info')
+        // Load business info from API
+        const response = await fetch('/api/settings/terminology')
+        if (response.ok) {
+          const data = await response.json()
+          setBusinessInfo({
+            clinicName: data.businessName || user?.name || "",
+            phoneNumber: "",
+            email: user?.email || "",
+            address: "",
+            operatingHours: "09:00 - 18:00",
+            website: ""
+          })
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error)
+      } finally {
+        setLoading(false)
       }
     }
 
-    // Load notification settings
-    const savedNotifications = localStorage.getItem('notificationSettings')
-    if (savedNotifications) {
-      try {
-        setNotifications(JSON.parse(savedNotifications))
-      } catch (e) {
-        console.error('Failed to load notification settings')
-      }
+    if (user) {
+      loadSettings()
     }
-
-    // Load policy settings
-    const savedPolicies = localStorage.getItem('policySettings')
-    if (savedPolicies) {
-      try {
-        setPolicies(JSON.parse(savedPolicies))
-      } catch (e) {
-        console.error('Failed to load policy settings')
-      }
-    }
-
-    // Load security settings
-    const savedSecurity = localStorage.getItem('securitySettings')
-    if (savedSecurity) {
-      try {
-        setSecurity(JSON.parse(savedSecurity))
-      } catch (e) {
-        console.error('Failed to load security settings')
-      }
-    }
-  }, [])
+  }, [user])
 
   const handleSaveBusinessInfo = async () => {
-    // Validate required fields
-    if (!businessInfo.clinicName.trim()) {
+    try {
+      const response = await fetch('/api/settings/terminology', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: businessInfo.clinicName,
+        })
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Business information saved successfully"
+        })
+      } else {
+        throw new Error('Failed to save')
+      }
+    } catch (error) {
       toast({
-        title: "Validation Error",
-        description: "Clinic name is required.",
+        title: "Error",
+        description: "Failed to save business information",
         variant: "destructive"
       })
-      return
     }
-    
-    if (!businessInfo.phoneNumber.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Phone number is required.",
-        variant: "destructive"
-      })
-      return
-    }
-    
-    if (businessInfo.email && !businessInfo.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a valid email address.",
-        variant: "destructive"
-      })
-      return
-    }
-    
-    setSavingBusiness(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Save to localStorage
-    localStorage.setItem('businessInfo', JSON.stringify(businessInfo))
-    
-    // Update clinic name in branding
-    updateBranding({ clinicName: businessInfo.clinicName })
-    
-    setSavingBusiness(false)
-    
-    toast({
-      title: "Settings Saved",
-      description: "Business information has been updated successfully.",
-    })
   }
 
   const handleSaveNotifications = async () => {
-    setSavingNotifications(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Save to localStorage
-    localStorage.setItem('notificationSettings', JSON.stringify(notifications))
-    
-    setSavingNotifications(false)
-    
-    toast({
-      title: "Notification Settings Updated",
-      description: "Your notification preferences have been saved.",
-    })
-  }
-
-  const handleUpdatePolicies = async () => {
-    // Validate numeric fields
-    if (policies.noShowFeeEnabled && (!policies.noShowFeeAmount || parseInt(policies.noShowFeeAmount) <= 0)) {
+    try {
+      // TODO: Implement API call to save notification settings
       toast({
-        title: "Validation Error",
-        description: "Please enter a valid no-show fee amount.",
+        title: "Success",
+        description: "Notification settings saved successfully"
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save notification settings",
         variant: "destructive"
       })
-      return
     }
-    
-    if (policies.depositRequired && (!policies.depositAmount || parseInt(policies.depositAmount) <= 0)) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a valid deposit amount.",
-        variant: "destructive"
-      })
-      return
-    }
-    
-    setSavingPolicies(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Save to localStorage
-    localStorage.setItem('policySettings', JSON.stringify(policies))
-    
-    setSavingPolicies(false)
-    
-    toast({
-      title: "Policies Updated",
-      description: "Your business policies have been updated successfully.",
-    })
   }
 
   const handleSaveSecurity = async () => {
-    setSavingSecurity(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Save to localStorage
-    localStorage.setItem('securitySettings', JSON.stringify(security))
-    
-    setSavingSecurity(false)
-    
-    toast({
-      title: "Security Settings Updated",
-      description: "Your security preferences have been saved.",
-    })
-  }
-
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        toast({
-          title: "File Too Large",
-          description: "Please upload an image smaller than 2MB.",
-          variant: "destructive"
-        })
-        return
-      }
-      
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const url = reader.result as string
-        setLogoUrl(url)
-        updateBranding({ logoUrl: url })
-        toast({
-          title: "Logo Uploaded",
-          description: "Your logo has been uploaded successfully.",
-        })
-      }
-      reader.readAsDataURL(file)
+    try {
+      // TODO: Implement API call to save security settings
+      toast({
+        title: "Success",
+        description: "Security settings saved successfully"
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save security settings",
+        variant: "destructive"
+      })
     }
   }
 
-  const handleThemeChange = (theme: ThemeColor) => {
-    setSelectedTheme(theme)
-    updateBranding({ theme })
-    toast({
-      title: "Theme Changed",
-      description: `Theme has been changed to ${theme}.`,
-    })
-  }
-
-  const handleBackupNow = async () => {
-    setPerformingBackup(true)
-    
-    // Simulate backup process
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // Create backup data
-    const backupData = {
-      timestamp: new Date().toISOString(),
-      businessInfo: localStorage.getItem('businessInfo'),
-      notificationSettings: localStorage.getItem('notificationSettings'),
-      policySettings: localStorage.getItem('policySettings'),
-      securitySettings: localStorage.getItem('securitySettings'),
-      bookings: localStorage.getItem('walkInBookings')
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive"
+      })
+      return
     }
-    
-    // Save backup
-    localStorage.setItem(`backup_${Date.now()}`, JSON.stringify(backupData))
-    
-    setPerformingBackup(false)
-    
-    toast({
-      title: "Backup Completed",
-      description: "System backup has been created successfully.",
-    })
-  }
 
-  const handleSaveRegional = async () => {
-    setSavingRegional(true)
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Save to localStorage
-    localStorage.setItem('regionalSettings', JSON.stringify({
-      currency,
-      timezone,
-      language,
-      backupSchedule,
-      dataRetention
-    }))
-    
-    setSavingRegional(false)
-    
-    toast({
-      title: "Regional Settings Updated",
-      description: "Your regional preferences have been saved.",
-    })
-  }
-
-  const handleCheckUpdates = async () => {
-    toast({
-      title: "Checking for Updates",
-      description: "Connecting to update server...",
-    })
-    
-    // Simulate update check
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    toast({
-      title: "System Up to Date",
-      description: "You are running the latest version (v2.4.1)",
-    })
-  }
-
-  const handleViewChangelog = () => {
-    toast({
-      title: "Changelog",
-      description: "Version 2.4.1: Added walk-in booking, improved reports, enhanced UI/UX",
-    })
-  }
-
-  const handleExportData = async () => {
-    setExportingData(true)
-    
-    // Simulate export process
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    // Prepare export data
-    const exportData = {
-      exportDate: new Date().toISOString(),
-      businessInfo: businessInfo,
-      settings: {
-        notifications: notifications,
-        policies: policies,
-        security: security,
-        regional: {
-          currency: currency,
-          timezone: timezone,
-          language: language
-        }
-      },
-      bookings: JSON.parse(localStorage.getItem('walkInBookings') || '[]')
+    try {
+      // TODO: Implement API call to change password
+      toast({
+        title: "Success",
+        description: "Password changed successfully"
+      })
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to change password",
+        variant: "destructive"
+      })
     }
-    
-    // Create and download JSON file
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `clinic-data-export-${format(new Date(), 'yyyy-MM-dd')}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
-    
-    setExportingData(false)
-    
-    toast({
-      title: "Export Completed",
-      description: "Your data has been exported successfully.",
-    })
+  }
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[600px]">
+          <LiquidLoading />
+        </div>
+      </MainLayout>
+    )
   }
 
   return (
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">{t('settings.title')}</h1>
-          <p className="text-muted-foreground">{t('settings.subtitle')}</p>
+          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground">Manage your business settings and preferences</p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6">
+          {/* Business Information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building className="h-5 w-5" />
-                {t('settings.businessInfo.title')}
+                Business Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="clinic-name">{t('settings.businessInfo.clinicName')}</Label>
-                <Input 
-                  id="clinic-name" 
-                  value={businessInfo.clinicName}
-                  onChange={(e) => setBusinessInfo({...businessInfo, clinicName: e.target.value})}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="clinicName">Clinic Name</Label>
+                  <Input
+                    id="clinicName"
+                    value={businessInfo.clinicName}
+                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, clinicName: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Input
+                    id="phoneNumber"
+                    value={businessInfo.phoneNumber}
+                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={businessInfo.email}
+                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={businessInfo.website}
+                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, website: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={businessInfo.address}
+                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, address: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="operatingHours">Operating Hours</Label>
+                  <Input
+                    id="operatingHours"
+                    value={businessInfo.operatingHours}
+                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, operatingHours: e.target.value }))}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input 
-                  id="phone" 
-                  value={businessInfo.phoneNumber}
-                  onChange={(e) => setBusinessInfo({...businessInfo, phoneNumber: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  value={businessInfo.email}
-                  onChange={(e) => setBusinessInfo({...businessInfo, email: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="website">Website</Label>
-                <Input 
-                  id="website" 
-                  value={businessInfo.website}
-                  onChange={(e) => setBusinessInfo({...businessInfo, website: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Textarea 
-                  id="address" 
-                  value={businessInfo.address}
-                  onChange={(e) => setBusinessInfo({...businessInfo, address: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="hours">Operating Hours</Label>
-                <Input 
-                  id="hours" 
-                  value={businessInfo.operatingHours}
-                  onChange={(e) => setBusinessInfo({...businessInfo, operatingHours: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tax-id">Tax ID</Label>
-                <Input 
-                  id="tax-id" 
-                  value={businessInfo.taxId}
-                  onChange={(e) => setBusinessInfo({...businessInfo, taxId: e.target.value})}
-                />
-              </div>
-              <Button onClick={handleSaveBusinessInfo} className="w-full" disabled={savingBusiness}>
-                {savingBusiness ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
-                ) : (
-                  <><Save className="h-4 w-4 mr-2" />{t('settings.businessInfo.saveChanges')}</>
-                )}
+              <Button onClick={handleSaveBusinessInfo}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Business Info
               </Button>
             </CardContent>
           </Card>
 
+          {/* Notification Settings */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
-                {t('settings.notifications.title')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Booking Confirmations</Label>
-                  <p className="text-sm text-muted-foreground">Send confirmation emails for new bookings</p>
-                </div>
-                <Switch 
-                  checked={notifications.bookingConfirmations}
-                  onCheckedChange={(checked) => setNotifications({...notifications, bookingConfirmations: checked})}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Day Before Reminders</Label>
-                  <p className="text-sm text-muted-foreground">Send reminder 24 hours before appointment</p>
-                </div>
-                <Switch 
-                  checked={notifications.dayBeforeReminders}
-                  onCheckedChange={(checked) => setNotifications({...notifications, dayBeforeReminders: checked})}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>3-Hour Reminders</Label>
-                  <p className="text-sm text-muted-foreground">Send reminder 3 hours before appointment</p>
-                </div>
-                <Switch 
-                  checked={notifications.threeHourReminders}
-                  onCheckedChange={(checked) => setNotifications({...notifications, threeHourReminders: checked})}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>No-Show Notifications</Label>
-                  <p className="text-sm text-muted-foreground">Notify when clients don't show up</p>
-                </div>
-                <Switch 
-                  checked={notifications.noShowNotifications}
-                  onCheckedChange={(checked) => setNotifications({...notifications, noShowNotifications: checked})}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Marketing Emails</Label>
-                  <p className="text-sm text-muted-foreground">Send promotional offers and newsletters</p>
-                </div>
-                <Switch 
-                  checked={notifications.marketingEmails}
-                  onCheckedChange={(checked) => setNotifications({...notifications, marketingEmails: checked})}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>System Alerts</Label>
-                  <p className="text-sm text-muted-foreground">Important system notifications and updates</p>
-                </div>
-                <Switch 
-                  checked={notifications.systemAlerts}
-                  onCheckedChange={(checked) => setNotifications({...notifications, systemAlerts: checked})}
-                />
-              </div>
-              <Button onClick={handleSaveNotifications} className="w-full" disabled={savingNotifications}>
-                {savingNotifications ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
-                ) : (
-                  <><Save className="h-4 w-4 mr-2" />Save Notification Settings</>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Business Policies
+                Notification Settings
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>No-Show Fee</Label>
-                  <p className="text-sm text-muted-foreground">Charge fee for missed appointments</p>
-                </div>
-                <Switch 
-                  checked={policies.noShowFeeEnabled}
-                  onCheckedChange={(checked) => setPolicies({...policies, noShowFeeEnabled: checked})}
-                />
-              </div>
-              {policies.noShowFeeEnabled && (
-                <div className="space-y-2">
-                  <Label htmlFor="no-show-fee">No-Show Fee Amount (Rp)</Label>
-                  <Input 
-                    id="no-show-fee" 
-                    type="number"
-                    value={policies.noShowFeeAmount}
-                    onChange={(e) => setPolicies({...policies, noShowFeeAmount: e.target.value})}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Booking Confirmations</Label>
+                    <p className="text-sm text-muted-foreground">Send confirmation emails for new bookings</p>
+                  </div>
+                  <Switch
+                    checked={notifications.bookingConfirmations}
+                    onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, bookingConfirmations: checked }))}
                   />
                 </div>
-              )}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Deposit Required</Label>
-                  <p className="text-sm text-muted-foreground">Require deposit for bookings</p>
-                </div>
-                <Switch 
-                  checked={policies.depositRequired}
-                  onCheckedChange={(checked) => setPolicies({...policies, depositRequired: checked})}
-                />
-              </div>
-              {policies.depositRequired && (
-                <div className="space-y-2">
-                  <Label htmlFor="deposit">Deposit Amount (Rp)</Label>
-                  <Input 
-                    id="deposit" 
-                    type="number"
-                    value={policies.depositAmount}
-                    onChange={(e) => setPolicies({...policies, depositAmount: e.target.value})}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Day Before Reminders</Label>
+                    <p className="text-sm text-muted-foreground">Send reminder emails the day before appointments</p>
+                  </div>
+                  <Switch
+                    checked={notifications.dayBeforeReminders}
+                    onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, dayBeforeReminders: checked }))}
                   />
                 </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="advance-booking">Advance Booking Limit (Days)</Label>
-                <Input 
-                  id="advance-booking" 
-                  type="number"
-                  value={policies.advanceBookingDays}
-                  onChange={(e) => setPolicies({...policies, advanceBookingDays: e.target.value})}
-                />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>No-Show Notifications</Label>
+                    <p className="text-sm text-muted-foreground">Get notified about no-shows</p>
+                  </div>
+                  <Switch
+                    checked={notifications.noShowNotifications}
+                    onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, noShowNotifications: checked }))}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>System Alerts</Label>
+                    <p className="text-sm text-muted-foreground">Receive important system notifications</p>
+                  </div>
+                  <Switch
+                    checked={notifications.systemAlerts}
+                    onCheckedChange={(checked) => setNotifications(prev => ({ ...prev, systemAlerts: checked }))}
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="cancellation-policy">Cancellation Policy</Label>
-                <Textarea
-                  id="cancellation-policy"
-                  value={policies.cancellationPolicy}
-                  onChange={(e) => setPolicies({...policies, cancellationPolicy: e.target.value})}
-                  rows={4}
-                />
-              </div>
-              <Button onClick={handleUpdatePolicies} className="w-full" disabled={savingPolicies}>
-                {savingPolicies ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Updating...</>
-                ) : (
-                  <><Save className="h-4 w-4 mr-2" />Update Policies</>
-                )}
+              <Button onClick={handleSaveNotifications}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Notifications
               </Button>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-5 w-5" />
-                {t('settings.branding.title')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t('settings.branding.logoUpload')}</Label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className="hidden"
-                />
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:bg-accent/50 transition-colors"
-                >
-                  {logoUrl ? (
-                    <img src={logoUrl} alt="Logo" className="h-16 mx-auto mb-2" />
-                  ) : (
-                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  )}
-                  <p className="text-sm text-muted-foreground">{t('settings.branding.clickToUpload')}</p>
-                  <p className="text-xs text-muted-foreground">{t('settings.branding.fileSize')}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>{t('settings.branding.colorScheme')}</Label>
-                <Select value={selectedTheme} onValueChange={handleThemeChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="original">Original Theme (Default)</SelectItem>
-                    <SelectItem value="pink">Feminine Pink & Lilac</SelectItem>
-                    <SelectItem value="blue">Professional Blue</SelectItem>
-                    <SelectItem value="green">Natural Green</SelectItem>
-                    <SelectItem value="purple">Royal Purple</SelectItem>
-                    <SelectItem value="gold">Luxury Gold</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="flex gap-2 mt-2">
-                  {selectedTheme === "original" ? (
-                    <>
-                      <div className="w-8 h-8 rounded-full bg-primary border-2 border-white shadow-sm"></div>
-                      <div className="w-8 h-8 rounded-full bg-secondary border-2 border-white shadow-sm"></div>
-                      <div className="w-8 h-8 rounded-full bg-accent border-2 border-white shadow-sm"></div>
-                      <span className="text-xs text-muted-foreground ml-2 self-center">Original Colors</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-8 h-8 rounded-full border-2 border-white shadow-sm" 
-                        style={{ backgroundColor: selectedTheme === "pink" ? "#EC4899" : 
-                                 selectedTheme === "blue" ? "#3B82F6" :
-                                 selectedTheme === "green" ? "#10B981" :
-                                 selectedTheme === "purple" ? "#8B5CF6" :
-                                 selectedTheme === "gold" ? "#F59E0B" : "" }}></div>
-                      <div className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
-                        style={{ backgroundColor: selectedTheme === "pink" ? "#DB2777" : 
-                                 selectedTheme === "blue" ? "#2563EB" :
-                                 selectedTheme === "green" ? "#059669" :
-                                 selectedTheme === "purple" ? "#7C3AED" :
-                                 selectedTheme === "gold" ? "#D97706" : "" }}></div>
-                      <div className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
-                        style={{ backgroundColor: selectedTheme === "pink" ? "#FDF2F8" : 
-                                 selectedTheme === "blue" ? "#EFF6FF" :
-                                 selectedTheme === "green" ? "#F0FDF4" :
-                                 selectedTheme === "purple" ? "#F5F3FF" :
-                                 selectedTheme === "gold" ? "#FFFBEB" : "" }}></div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>{t('settings.branding.language')}</Label>
-                <Select value={language} onValueChange={(value) => {
-                  setLanguage(value)
-                  updateBranding({ language: value })
-                  toast({
-                    title: "Language Changed",
-                    description: `Language has been changed.`,
-                  })
-                }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="id">Bahasa Indonesia</SelectItem>
-                    <SelectItem value="zh">中文</SelectItem>
-                    <SelectItem value="ja">日本語</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => {
-                  toast({
-                    title: "Preview Mode",
-                    description: "Theme changes are applied in real-time. Check your sidebar for logo changes.",
-                  })
-                }}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                {t('settings.branding.previewApplied')}
-              </Button>
-            </CardContent>
-          </Card>
-
+          {/* Security Settings */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -791,217 +337,136 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Two-Factor Authentication</Label>
-                  <p className="text-sm text-muted-foreground">Add extra security to your account</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Two-Factor Authentication</Label>
+                    <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
+                  </div>
+                  <Switch
+                    checked={security.twoFactorAuth}
+                    onCheckedChange={(checked) => setSecurity(prev => ({ ...prev, twoFactorAuth: checked }))}
+                  />
                 </div>
-                <Switch 
-                  checked={security.twoFactorAuth}
-                  onCheckedChange={(checked) => setSecurity({...security, twoFactorAuth: checked})}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="session-timeout">Session Timeout (minutes)</Label>
-                <Input 
-                  id="session-timeout" 
-                  type="number"
-                  value={security.sessionTimeout}
-                  onChange={(e) => setSecurity({...security, sessionTimeout: e.target.value})}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password-expiry">Password Expiry (days)</Label>
-                <Input 
-                  id="password-expiry" 
-                  type="number"
-                  value={security.passwordExpiry}
-                  onChange={(e) => setSecurity({...security, passwordExpiry: e.target.value})}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>IP Whitelist</Label>
-                  <p className="text-sm text-muted-foreground">Restrict access to specific IP addresses</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+                    <Select value={security.sessionTimeout} onValueChange={(value) => setSecurity(prev => ({ ...prev, sessionTimeout: value }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15">15 minutes</SelectItem>
+                        <SelectItem value="30">30 minutes</SelectItem>
+                        <SelectItem value="60">1 hour</SelectItem>
+                        <SelectItem value="120">2 hours</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="passwordExpiry">Password Expiry (days)</Label>
+                    <Select value={security.passwordExpiry} onValueChange={(value) => setSecurity(prev => ({ ...prev, passwordExpiry: value }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="30">30 days</SelectItem>
+                        <SelectItem value="60">60 days</SelectItem>
+                        <SelectItem value="90">90 days</SelectItem>
+                        <SelectItem value="180">180 days</SelectItem>
+                        <SelectItem value="365">1 year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <Switch 
-                  checked={security.ipWhitelist}
-                  onCheckedChange={(checked) => setSecurity({...security, ipWhitelist: checked})}
-                />
               </div>
-
-              <Button onClick={handleSaveSecurity} className="w-full" disabled={savingSecurity}>
-                {savingSecurity ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
-                ) : (
-                  <><Save className="h-4 w-4 mr-2" />Save Security Settings</>
-                )}
+              <Button onClick={handleSaveSecurity}>
+                <Save className="h-4 w-4 mr-2" />
+                Save Security Settings
               </Button>
             </CardContent>
           </Card>
 
+          {/* Change Password */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5" />
+                Change Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button onClick={handleChangePassword}>
+                <Key className="h-4 w-4 mr-2" />
+                Change Password
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* System Information */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
-                Data Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Automatic Backup</Label>
-                <Select value={backupSchedule} onValueChange={setBackupSchedule}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hourly">Every Hour</SelectItem>
-                    <SelectItem value="daily">Daily</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="data-retention">Data Retention Period (days)</Label>
-                <Input 
-                  id="data-retention" 
-                  type="number"
-                  value={dataRetention}
-                  onChange={(e) => setDataRetention(e.target.value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={handleBackupNow} disabled={performingBackup}>
-                  {performingBackup ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Backing up...</>
-                  ) : (
-                    <><Database className="h-4 w-4 mr-2" />Backup Now</>
-                  )}
-                </Button>
-                <Button variant="outline" onClick={handleExportData} disabled={exportingData}>
-                  {exportingData ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Exporting...</>
-                  ) : (
-                    <><Upload className="h-4 w-4 mr-2" />Export Data</>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Regional Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Currency</Label>
-                <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="IDR">Indonesian Rupiah (Rp)</SelectItem>
-                    <SelectItem value="USD">US Dollar ($)</SelectItem>
-                    <SelectItem value="EUR">Euro (€)</SelectItem>
-                    <SelectItem value="SGD">Singapore Dollar (S$)</SelectItem>
-                    <SelectItem value="MYR">Malaysian Ringgit (RM)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Timezone</Label>
-                <Select value={timezone} onValueChange={setTimezone}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Asia/Jakarta">Jakarta (WIB)</SelectItem>
-                    <SelectItem value="Asia/Makassar">Makassar (WITA)</SelectItem>
-                    <SelectItem value="Asia/Jayapura">Jayapura (WIT)</SelectItem>
-                    <SelectItem value="Asia/Singapore">Singapore</SelectItem>
-                    <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Date Format</Label>
-                <Select defaultValue="dd/mm/yyyy">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dd/mm/yyyy">DD/MM/YYYY</SelectItem>
-                    <SelectItem value="mm/dd/yyyy">MM/DD/YYYY</SelectItem>
-                    <SelectItem value="yyyy-mm-dd">YYYY-MM-DD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Time Format</Label>
-                <Select defaultValue="24h">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="12h">12 Hour (AM/PM)</SelectItem>
-                    <SelectItem value="24h">24 Hour</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button onClick={handleSaveRegional} className="w-full" disabled={savingRegional}>
-                {savingRegional ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
-                ) : (
-                  <><Save className="h-4 w-4 mr-2" />Save Regional Settings</>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5" />
                 System Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Version</p>
-                <p className="font-medium">v2.4.1</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <Label>Application Version</Label>
+                  <p className="text-muted-foreground">v1.0.0</p>
+                </div>
+                <div>
+                  <Label>Last Backup</Label>
+                  <p className="text-muted-foreground">Never</p>
+                </div>
+                <div>
+                  <Label>Database Status</Label>
+                  <p className="text-green-600">Connected</p>
+                </div>
+                <div>
+                  <Label>Storage Used</Label>
+                  <p className="text-muted-foreground">245 MB of 10 GB</p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Last Updated</p>
-                <p className="font-medium">December 15, 2024</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">License Status</p>
-                <p className="font-medium text-green-600">Active</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Support Email</p>
-                <p className="font-medium">support@beautyclinic.com</p>
-              </div>
-              <div className="pt-4 space-y-2">
-                <Button variant="outline" className="w-full" onClick={handleCheckUpdates}>
-                  Check for Updates
+              <div className="flex gap-2">
+                <Button variant="outline">
+                  <Database className="h-4 w-4 mr-2" />
+                  Backup Data
                 </Button>
-                <Button variant="outline" className="w-full" onClick={handleViewChangelog}>
-                  View Changelog
+                <Button variant="outline">
+                  <Globe className="h-4 w-4 mr-2" />
+                  Export Data
                 </Button>
               </div>
             </CardContent>

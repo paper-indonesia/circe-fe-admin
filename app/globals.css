@@ -13,23 +13,23 @@
   --popover: #ffffff;
   --popover-foreground: #1f2937;
   
-  /* Pastel Colors */
+  /* Pastel Colors - Updated from palete.pdf */
   --primary: #C8B6FF;
   --primary-hover: #B8A6EF;
-  --primary-foreground: #1f2937;
-  
+  --primary-foreground: #1f2937; /* Dark text for good contrast */
+
   --secondary: #FFD6FF;
   --secondary-hover: #FFCCFF;
   --secondary-foreground: #1f2937;
-  
+
   --accent: #E7C6FF;
   --accent-hover: #DDC0F5;
   --accent-foreground: #1f2937;
-  
+
   --info: #B8C0FF;
   --info-hover: #A8B0EF;
   --info-foreground: #1f2937;
-  
+
   --success: #BBD0FF;
   --success-hover: #ABC0EF;
   --success-foreground: #1f2937;

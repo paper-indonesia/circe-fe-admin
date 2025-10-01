@@ -7,18 +7,13 @@ export interface ApiResponse<T> {
 }
 
 class ApiClient {
-  private tenantId: string = ''
-
-  setTenant(tenantId: string) {
-    this.tenantId = tenantId
-  }
-
   private async request<T>(
     endpoint: string,
     options?: RequestInit
   ): Promise<T> {
-    const url = `/api/${this.tenantId}${endpoint}`
-    
+    // Remove /api prefix if already present
+    const url = endpoint.startsWith('/api') ? endpoint : `/api${endpoint}`
+
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -28,10 +23,16 @@ class ApiClient {
     })
 
     if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`)
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `API Error: ${response.statusText}`)
     }
 
     return response.json()
+  }
+
+  // Generic method for any endpoint
+  async call<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, options)
   }
 
   // Patient endpoints

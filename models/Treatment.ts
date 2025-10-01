@@ -2,7 +2,7 @@ import mongoose, { Schema, model, models } from 'mongoose'
 
 export interface ITreatment {
   _id?: string
-  tenantId: string
+  ownerId: string
   name: string
   category: string
   durationMin: number
@@ -17,9 +17,9 @@ export interface ITreatment {
 
 const TreatmentSchema = new Schema<ITreatment>(
   {
-    tenantId: {
+    ownerId: {
       type: String,
-      required: [true, 'Tenant ID is required'],
+      required: [true, 'Owner ID is required'],
       index: true,
     },
     name: {
@@ -68,22 +68,22 @@ const TreatmentSchema = new Schema<ITreatment>(
 )
 
 // Indexes
-TreatmentSchema.index({ tenantId: 1, category: 1 })
-TreatmentSchema.index({ tenantId: 1, price: 1 })
-TreatmentSchema.index({ tenantId: 1, popularity: -1 })
-TreatmentSchema.index({ tenantId: 1, name: 1 }, { unique: true })
+TreatmentSchema.index({ ownerId: 1, category: 1 })
+TreatmentSchema.index({ ownerId: 1, price: 1 })
+TreatmentSchema.index({ ownerId: 1, popularity: -1 })
+TreatmentSchema.index({ ownerId: 1, name: 1 }, { unique: true })
 
 // Static methods
-TreatmentSchema.statics.findByTenant = function(tenantId: string) {
-  return this.find({ tenantId, isActive: true }).sort({ popularity: -1 })
+TreatmentSchema.statics.findByOwner = function(ownerId: string) {
+  return this.find({ ownerId, isActive: true }).sort({ popularity: -1 })
 }
 
-TreatmentSchema.statics.findByTenantAndCategory = function(tenantId: string, category: string) {
-  return this.find({ tenantId, category, isActive: true })
+TreatmentSchema.statics.findByOwnerAndCategory = function(ownerId: string, category: string) {
+  return this.find({ ownerId, category, isActive: true })
 }
 
-TreatmentSchema.statics.findByTenantAndStaff = function(tenantId: string, staffId: string) {
-  return this.find({ tenantId, assignedStaff: staffId, isActive: true })
+TreatmentSchema.statics.findByOwnerAndStaff = function(ownerId: string, staffId: string) {
+  return this.find({ ownerId, assignedStaff: staffId, isActive: true })
 }
 
 const Treatment = models.Treatment || model<ITreatment>('Treatment', TreatmentSchema)

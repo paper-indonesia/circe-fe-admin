@@ -7,19 +7,14 @@ interface User {
   id: string
   email: string
   name: string
-  role: string
-  tenantId: string
-  tenantName?: string
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  signin: (email: string, password: string, tenant: string) => Promise<void>
-  signup: (name: string, email: string, password: string, tenant: string) => Promise<void>
+  signin: (email: string, password: string) => Promise<void>
+  signup: (name: string, email: string, password: string) => Promise<void>
   signout: () => void
-  isPlatformAdmin: () => boolean
-  canAccessTenant: (tenantSlug: string) => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -32,20 +27,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Load user from localStorage on mount
-    const storedUser = localStorage.getItem('user')
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (error) {
-        console.error('Failed to parse stored user:', error)
-        localStorage.removeItem('user')
+    try {
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser))
+        } catch (error) {
+          console.error('Failed to parse stored user:', error)
+          localStorage.removeItem('user')
+        }
       }
+    } catch (error) {
+      console.error('localStorage not available:', error)
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
-  const signin = async (email: string, password: string, tenant: string) => {
-    const response = await fetch(`/api/${tenant}/auth/signin`, {
+  const signin = async (email: string, password: string) => {
+    const response = await fetch('/api/auth/signin', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,16 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user)
     localStorage.setItem('user', JSON.stringify(data.user))
 
-    // Redirect based on role
-    if (data.user.role === 'platform_admin') {
-      router.push('/admin/tenants')
-    } else {
-      router.push(`/${tenant}/dashboard`)
-    }
+    // Always redirect to dashboard
+    router.push('/dashboard')
   }
 
-  const signup = async (name: string, email: string, password: string, tenant: string) => {
-    const response = await fetch(`/api/${tenant}/auth/signup`, {
+  const signup = async (name: string, email: string, password: string) => {
+    const response = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -87,32 +83,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await response.json()
     setUser(data.user)
     localStorage.setItem('user', JSON.stringify(data.user))
-    router.push(`/${tenant}/dashboard`)
+
+    // Use window.location for hard reload to ensure all providers re-initialize
+    window.location.href = '/dashboard'
   }
 
   const signout = () => {
     setUser(null)
     localStorage.removeItem('user')
-    
-    // Get current tenant from pathname
-    const segments = pathname.split('/').filter(Boolean)
-    const tenant = segments[0] || 'jakarta'
-    
-    router.push(`/${tenant}/signin`)
+    router.push('/signin')
   }
 
-  const isPlatformAdmin = () => {
-    return user?.role === 'platform_admin'
-  }
 
-  const canAccessTenant = (tenantSlug: string) => {
-    if (!user) return false
-    if (isPlatformAdmin()) return true
-    
-    // In a real app, you'd check if user.tenantId matches the tenant's ID
-    // For now, we'll use a simple check
-    return true
-  }
 
   return (
     <AuthContext.Provider
@@ -122,8 +104,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signin,
         signup,
         signout,
-        isPlatformAdmin,
-        canAccessTenant,
       }}
     >
       {children}

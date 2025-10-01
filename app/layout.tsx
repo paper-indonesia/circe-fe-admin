@@ -1,8 +1,10 @@
+"use client"
+
 import type React from "react"
-import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
 import { AppProvider } from "@/lib/context"
+import { AuthProvider } from "@/lib/auth-context"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/lib/theme-context"
 
@@ -18,12 +20,6 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
 })
 
-export const metadata: Metadata = {
-  title: "Beauty Clinic Admin",
-  description: "Admin dashboard for beauty clinic management",
-    generator: 'v0.app'
-}
-
 export default function RootLayout({
   children,
 }: {
@@ -31,13 +27,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}>
+      <head>
+        <title>Reserva - Business Management Platform</title>
+        <meta name="description" content="Complete booking and appointment management system for service-based businesses" />
+        <meta name="generator" content="v0.app" />
+        <link rel="icon" href="/reserva_logo.webp" />
+        <link rel="shortcut icon" href="/reserva_logo.webp" />
+        <link rel="apple-touch-icon" href="/reserva_logo.webp" />
+      </head>
       <body>
-        <AppProvider>
-          <ThemeProvider>
-            {children}
-            <Toaster />
-          </ThemeProvider>
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <ThemeProvider>
+              {children}
+              <Toaster />
+            </ThemeProvider>
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   )

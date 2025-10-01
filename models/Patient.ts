@@ -2,7 +2,7 @@ import mongoose, { Schema, model, models } from 'mongoose'
 
 export interface IPatient {
   _id?: string
-  tenantId: string
+  ownerId: string
   name: string
   phone: string
   email?: string
@@ -15,9 +15,9 @@ export interface IPatient {
 
 const PatientSchema = new Schema<IPatient>(
   {
-    tenantId: {
+    ownerId: {
       type: String,
-      required: [true, 'Tenant ID is required'],
+      required: [true, 'Owner ID is required'],
       index: true,
     },
     name: {
@@ -59,10 +59,10 @@ const PatientSchema = new Schema<IPatient>(
   }
 )
 
-// Compound index for tenant isolation
-PatientSchema.index({ tenantId: 1, phone: 1 }, { unique: true })
-PatientSchema.index({ tenantId: 1, email: 1 }, { sparse: true })
-PatientSchema.index({ tenantId: 1, createdAt: -1 })
+// Compound index for user isolation
+PatientSchema.index({ ownerId: 1, phone: 1 }, { unique: true })
+PatientSchema.index({ ownerId: 1, email: 1 }, { sparse: true })
+PatientSchema.index({ ownerId: 1, createdAt: -1 })
 
 // Instance methods
 PatientSchema.methods.incrementVisits = function() {
@@ -71,13 +71,13 @@ PatientSchema.methods.incrementVisits = function() {
   return this.save()
 }
 
-// Static methods for tenant-scoped queries
-PatientSchema.statics.findByTenant = function(tenantId: string) {
-  return this.find({ tenantId }).sort({ createdAt: -1 })
+// Static methods for user-scoped queries
+PatientSchema.statics.findByOwner = function(ownerId: string) {
+  return this.find({ ownerId }).sort({ createdAt: -1 })
 }
 
-PatientSchema.statics.findByTenantAndPhone = function(tenantId: string, phone: string) {
-  return this.findOne({ tenantId, phone })
+PatientSchema.statics.findByOwnerAndPhone = function(ownerId: string, phone: string) {
+  return this.findOne({ ownerId, phone })
 }
 
 const Patient = models.Patient || model<IPatient>('Patient', PatientSchema)

@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Types } from 'mongoose'
 
 export interface IWithdrawal extends Document {
   _id: Types.ObjectId
+  ownerId: string
   staffId: Types.ObjectId
   amount: number
   status: 'pending' | 'approved' | 'rejected' | 'completed'
@@ -15,13 +16,17 @@ export interface IWithdrawal extends Document {
   processedBy?: Types.ObjectId
   notes?: string
   rejectionReason?: string
-  tenant: string
   createdAt: Date
   updatedAt: Date
 }
 
 const WithdrawalSchema = new Schema<IWithdrawal>(
   {
+    ownerId: {
+      type: String,
+      required: [true, 'Owner ID is required'],
+      index: true,
+    },
     staffId: {
       type: Schema.Types.ObjectId,
       ref: 'Staff',
@@ -68,10 +73,6 @@ const WithdrawalSchema = new Schema<IWithdrawal>(
     rejectionReason: {
       type: String,
     },
-    tenant: {
-      type: String,
-      required: true,
-    },
   },
   {
     timestamps: true,
@@ -79,7 +80,8 @@ const WithdrawalSchema = new Schema<IWithdrawal>(
 )
 
 // Index for faster queries
-WithdrawalSchema.index({ staffId: 1, tenant: 1 })
-WithdrawalSchema.index({ status: 1, tenant: 1 })
+WithdrawalSchema.index({ ownerId: 1, staffId: 1 })
+WithdrawalSchema.index({ ownerId: 1, status: 1 })
+WithdrawalSchema.index({ ownerId: 1, requestDate: -1 })
 
 export default mongoose.models.Withdrawal || mongoose.model<IWithdrawal>('Withdrawal', WithdrawalSchema)

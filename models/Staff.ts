@@ -2,7 +2,7 @@ import mongoose, { Schema, model, models } from 'mongoose'
 
 export interface IStaff {
   _id?: string
-  tenantId: string
+  ownerId: string
   name: string
   email?: string
   role: string
@@ -13,6 +13,7 @@ export interface IStaff {
   balance: number
   totalEarnings: number
   totalWithdrawn: number
+  capacity?: number // Number of clients staff can handle simultaneously
   bankAccount?: {
     bankName: string
     accountNumber: string
@@ -25,9 +26,9 @@ export interface IStaff {
 
 const StaffSchema = new Schema<IStaff>(
   {
-    tenantId: {
+    ownerId: {
       type: String,
-      required: [true, 'Tenant ID is required'],
+      required: [true, 'Owner ID is required'],
       index: true,
     },
     name: {
@@ -66,6 +67,12 @@ const StaffSchema = new Schema<IStaff>(
       default: 0,
       min: 0,
     },
+    capacity: {
+      type: Number,
+      default: 1,
+      min: 1,
+      max: 50, // Maximum capacity for group classes
+    },
     totalEarnings: {
       type: Number,
       default: 0,
@@ -98,21 +105,21 @@ const StaffSchema = new Schema<IStaff>(
 )
 
 // Indexes for performance
-StaffSchema.index({ tenantId: 1, isActive: 1 })
-StaffSchema.index({ tenantId: 1, role: 1 })
-StaffSchema.index({ tenantId: 1, rating: -1 })
+StaffSchema.index({ ownerId: 1, isActive: 1 })
+StaffSchema.index({ ownerId: 1, role: 1 })
+StaffSchema.index({ ownerId: 1, rating: -1 })
 
 // Static methods
-StaffSchema.statics.findByTenant = function(tenantId: string) {
-  return this.find({ tenantId, isActive: true }).sort({ rating: -1 })
+StaffSchema.statics.findByOwner = function(ownerId: string) {
+  return this.find({ ownerId, isActive: true }).sort({ rating: -1 })
 }
 
-StaffSchema.statics.findByTenantAndRole = function(tenantId: string, role: string) {
-  return this.find({ tenantId, role, isActive: true })
+StaffSchema.statics.findByOwnerAndRole = function(ownerId: string, role: string) {
+  return this.find({ ownerId, role, isActive: true })
 }
 
-StaffSchema.statics.findByTenantAndSkill = function(tenantId: string, skill: string) {
-  return this.find({ tenantId, skills: skill, isActive: true })
+StaffSchema.statics.findByOwnerAndSkill = function(ownerId: string, skill: string) {
+  return this.find({ ownerId, skills: skill, isActive: true })
 }
 
 const Staff = models.Staff || model<IStaff>('Staff', StaffSchema)

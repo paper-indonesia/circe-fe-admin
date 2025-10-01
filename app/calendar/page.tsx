@@ -15,6 +15,7 @@ import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context
 import { formatCurrency } from "@/lib/utils"
 import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO, addHours } from "date-fns"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useTerminology } from "@/hooks/use-terminology"
 import {
   Calendar,
   Plus,
@@ -31,9 +32,14 @@ import {
   FilterX,
   Search,
   SlidersHorizontal,
+  AlertTriangle,
+  Users,
+  Star,
 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import LiquidLoading from "@/components/ui/liquid-loader"
+import { EmptyState } from "@/components/ui/empty-state"
 
 const timeSlots = [
   "09:00",
@@ -62,8 +68,9 @@ export default function CalendarPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { toast } = useToast()
+  const terminology = useTerminology()
 
-  const { bookings = [], addBooking, updateBooking, deleteBooking } = useBookings() || {}
+  const { bookings = [], loading, addBooking, updateBooking, deleteBooking } = useBookings() || {}
   const { patients = [], addPatient } = usePatients() || {}
   const { staff = [] } = useStaff() || {}
   const { treatments = [] } = useTreatments() || {}
@@ -72,9 +79,12 @@ export default function CalendarPage() {
   const [viewMode, setViewMode] = useState<"calendar" | "table">("calendar")
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null)
   const [selectedBooking, setSelectedBooking] = useState<any>(null)
+  const [selectedMultipleBookings, setSelectedMultipleBookings] = useState<any[]>([])
   const [showBookingDialog, setShowBookingDialog] = useState(false)
+  const [showMultipleBookingsDialog, setShowMultipleBookingsDialog] = useState(false)
   const [showFilterDialog, setShowFilterDialog] = useState(false)
   const [showNewPatientDialog, setShowNewPatientDialog] = useState(false)
+  const [multipleBookingsSearch, setMultipleBookingsSearch] = useState("")
 
   const [filters, setFilters] = useState({
     status: "all",
@@ -121,11 +131,16 @@ export default function CalendarPage() {
 
     if (filter) setFilters((prev) => ({ ...prev, status: filter }))
     if (staffParam) setFilters((prev) => ({ ...prev, staff: staffParam }))
-    if (bookingParam && bookings && bookings.length > 0) {
+    if (bookingParam && bookings && bookings.length > 0 && patients.length > 0 && staff.length > 0 && treatments.length > 0) {
       const booking = bookings.find((b) => b?.id === bookingParam)
-      if (booking) setSelectedBooking(booking)
+      if (booking) {
+        const bookingDetails = getBookingDetails(booking)
+        if (bookingDetails) {
+          setSelectedBooking(bookingDetails)
+        }
+      }
     }
-  }, [searchParams, bookings])
+  }, [searchParams, bookings, patients, staff, treatments])
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -201,14 +216,19 @@ export default function CalendarPage() {
     return bookingDate >= weekStart && bookingDate <= endOfWeek(currentWeek, { weekStartsOn: 1 })
   })
 
-  const getBookingForSlot = (date: Date, time: string) => {
-    return weekBookings.find((booking) => {
+  const getBookingsForSlot = (date: Date, time: string) => {
+    return weekBookings.filter((booking) => {
       if (!booking?.startAt) return false
 
       const bookingDate = parseISO(booking.startAt)
       const bookingTime = format(bookingDate, "HH:mm")
       return isSameDay(bookingDate, date) && bookingTime === time
     })
+  }
+
+  const getBookingForSlot = (date: Date, time: string) => {
+    const bookings = getBookingsForSlot(date, time)
+    return bookings.length > 0 ? bookings[0] : null
   }
 
   const getBookingDetails = (booking: any) => {
@@ -227,12 +247,22 @@ export default function CalendarPage() {
   }
 
   const handleSlotClick = (date: Date, time: string) => {
-    const existingBooking = getBookingForSlot(date, time)
+    const existingBookings = getBookingsForSlot(date, time)
 
-    if (existingBooking) {
-      const bookingDetails = getBookingDetails(existingBooking)
-      if (bookingDetails) {
-        setSelectedBooking(bookingDetails)
+    if (existingBookings.length > 0) {
+      if (existingBookings.length === 1) {
+        // Single booking - show details
+        const bookingDetails = getBookingDetails(existingBookings[0])
+        if (bookingDetails) {
+          setSelectedBooking(bookingDetails)
+        }
+      } else {
+        // Multiple bookings - show list dialog
+        const allBookingDetails = existingBookings
+          .map(b => getBookingDetails(b))
+          .filter(b => b !== null)
+        setSelectedMultipleBookings(allBookingDetails)
+        setShowMultipleBookingsDialog(true)
       }
     } else {
       setSelectedSlot({ date, time })
@@ -300,24 +330,25 @@ export default function CalendarPage() {
 
       switch (action) {
         case "checkin":
-          updateBooking(bookingId, { status: "confirmed" })
+          await updateBooking(bookingId, { status: "confirmed" })
           toast({ title: "Success", description: "Patient checked in" })
           break
         case "complete":
-          updateBooking(bookingId, { status: "completed" })
+          await updateBooking(bookingId, { status: "completed" })
           toast({ title: "Success", description: "Appointment completed" })
           break
         case "cancel":
-          updateBooking(bookingId, { status: "cancelled" })
+          await updateBooking(bookingId, { status: "cancelled" })
           toast({ title: "Success", description: "Appointment cancelled" })
           break
         case "delete":
-          deleteBooking(bookingId)
+          await deleteBooking(bookingId)
           toast({ title: "Success", description: "Appointment deleted" })
           break
       }
       setSelectedBooking(null)
     } catch (error) {
+      console.error("Failed to update booking:", error)
       toast({ title: "Error", description: "Failed to update appointment", variant: "destructive" })
     }
   }
@@ -395,8 +426,54 @@ export default function CalendarPage() {
     filters.dateRange !== "week" ||
     filters.searchQuery !== ""
 
+  // Check if data is completely empty (no bookings, patients, staff, or treatments)
+  const hasNoData = !loading && (
+    (!bookings || bookings.length === 0) &&
+    (!patients || patients.length === 0) &&
+    (!staff || staff.length === 0) &&
+    (!treatments || treatments.length === 0)
+  )
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex min-h-[600px] w-full items-center justify-center">
+          <LiquidLoading />
+        </div>
+      </MainLayout>
+    )
+  }
+
   return (
     <MainLayout>
+      {hasNoData ? (
+        <EmptyState
+          icon={Calendar}
+          title={`No ${terminology.booking} Scheduled`}
+          description={`You don't have any ${terminology.booking.toLowerCase()} yet. Start by adding ${terminology.staff.toLowerCase()}, ${terminology.treatment.toLowerCase()}, and ${terminology.patient.toLowerCase()}, then create your first ${terminology.booking.toLowerCase()} to manage your schedule.`}
+          actionLabel={`Add ${terminology.staff}`}
+          onAction={() => router.push('/staff')}
+          secondaryActionLabel={`Add ${terminology.treatment}`}
+          onSecondaryAction={() => router.push('/treatments')}
+          tips={[
+            {
+              icon: Users,
+              title: `Setup ${terminology.staff}`,
+              description: "Add staff members first"
+            },
+            {
+              icon: Star,
+              title: `Create ${terminology.treatment}`,
+              description: "Define services to offer"
+            },
+            {
+              icon: UserPlus,
+              title: `Add ${terminology.patient}`,
+              description: "Build client database"
+            }
+          ]}
+        />
+      ) : (
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -587,24 +664,47 @@ export default function CalendarPage() {
                       <div key={time} className="grid grid-cols-8 gap-2">
                         <div className="p-2 text-sm text-muted-foreground font-medium">{time}</div>
                         {weekDays.map((day) => {
-                          const booking = getBookingForSlot(day, time)
-                          const bookingDetails = booking ? getBookingDetails(booking) : null
+                          const bookings = getBookingsForSlot(day, time)
+                          const hasMultiple = bookings.length > 1
 
                           return (
                             <div
                               key={`${time}-${day.toISOString()}`}
-                              className="p-2 min-h-[60px] border border-border rounded-md hover:bg-muted/30 cursor-pointer transition-colors"
+                              className="p-2 min-h-[60px] border border-border rounded-md hover:bg-muted/30 cursor-pointer transition-colors relative"
                               onClick={() => handleSlotClick(day, time)}
                             >
-                              {bookingDetails && (
-                                <div className="bg-primary/20 border border-primary/30 rounded p-2 text-xs h-full">
-                                  <div className="font-medium truncate">
-                                    {bookingDetails.patient?.name || "Unknown"}
-                                  </div>
-                                  <div className="text-muted-foreground truncate">
-                                    {bookingDetails.treatment?.name || "Unknown"}
-                                  </div>
-                                  <div className="mt-1">{getStatusBadge(booking.status)}</div>
+                              {bookings.length > 0 && (
+                                <div className={`bg-primary/20 border border-primary/30 rounded p-2 text-xs h-full ${
+                                  hasMultiple ? 'bg-orange-100 border-orange-300' : ''
+                                }`}>
+                                  {hasMultiple ? (
+                                    <>
+                                      <div className="font-medium text-orange-700">
+                                        {bookings.length} appointments
+                                      </div>
+                                      <div className="text-xs text-orange-600 mt-1">
+                                        {bookings.map((b, i) => {
+                                          const details = getBookingDetails(b)
+                                          return details?.patient?.name || 'Unknown'
+                                        }).join(', ')}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="font-medium truncate">
+                                        {getBookingDetails(bookings[0])?.patient?.name || "Unknown"}
+                                      </div>
+                                      <div className="text-muted-foreground truncate">
+                                        {getBookingDetails(bookings[0])?.treatment?.name || "Unknown"}
+                                      </div>
+                                      <div className="mt-1">{getStatusBadge(bookings[0].status)}</div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                              {hasMultiple && (
+                                <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                  {bookings.length}
                                 </div>
                               )}
                             </div>
@@ -815,9 +915,11 @@ export default function CalendarPage() {
             </CardContent>
           </Card>
         )}
+      </div>
+      )}
 
-        {/* Create Booking Dialog */}
-        <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
+      {/* Create Booking Dialog */}
+      <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Create New Booking</DialogTitle>
@@ -847,7 +949,7 @@ export default function CalendarPage() {
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="no-patients" disabled>
                           No patients available
                         </SelectItem>
                       )}
@@ -885,7 +987,7 @@ export default function CalendarPage() {
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="no-treatments" disabled>
                         No treatments available
                       </SelectItem>
                     )}
@@ -910,7 +1012,7 @@ export default function CalendarPage() {
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="" disabled>
+                      <SelectItem value="no-staff" disabled>
                         No staff available
                       </SelectItem>
                     )}
@@ -958,7 +1060,7 @@ export default function CalendarPage() {
         </Dialog>
 
         {/* Booking Details Dialog */}
-        <Dialog open={!!selectedBooking} onOpenChange={() => setSelectedBooking(null)}>
+        <Dialog open={!!selectedBooking && !loading} onOpenChange={() => setSelectedBooking(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -966,13 +1068,23 @@ export default function CalendarPage() {
                 Appointment Details
               </DialogTitle>
             </DialogHeader>
-            {selectedBooking && (
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <LiquidLoading />
+                <span className="ml-2 text-sm text-muted-foreground">Loading appointment details...</span>
+              </div>
+            ) : selectedBooking ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold">{selectedBooking.patient?.name || "Unknown Patient"}</h3>
+                    <h3 className="font-semibold">
+                      {selectedBooking.patient?.name || selectedBooking.patientName || "Unknown Patient"}
+                    </h3>
                     <p className="text-sm text-muted-foreground">
                       {selectedBooking.treatment?.name || "Unknown Treatment"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedBooking.startAt ? format(parseISO(selectedBooking.startAt), "EEE, MMM d, yyyy") : "Date not available"}
                     </p>
                   </div>
                   {getStatusBadge(selectedBooking.status)}
@@ -981,19 +1093,21 @@ export default function CalendarPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Time:</span>
-                    <p className="font-medium">{format(parseISO(selectedBooking.startAt), "HH:mm")}</p>
+                    <p className="font-medium">
+                      {selectedBooking.startAt ? format(parseISO(selectedBooking.startAt), "HH:mm") : "--:--"}
+                    </p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Duration:</span>
-                    <p className="font-medium">{selectedBooking.treatment?.durationMin || 60} min</p>
+                    <p className="font-medium">{selectedBooking.treatment?.durationMin || selectedBooking.treatment?.duration || 60} min</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Staff:</span>
-                    <p className="font-medium">{selectedBooking.staff?.name || "Unknown"}</p>
+                    <p className="font-medium">{selectedBooking.staff?.name || selectedBooking.staffName || "Unknown"}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Price:</span>
-                    <p className="font-medium">Rp {selectedBooking.treatment?.price?.toLocaleString() || "0"}</p>
+                    <p className="font-medium">{formatCurrency(selectedBooking.treatment?.price || 0)}</p>
                   </div>
                 </div>
 
@@ -1050,7 +1164,152 @@ export default function CalendarPage() {
                   </Button>
                 </div>
               </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Appointment details not found</p>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="mt-2"
+                    onClick={() => setSelectedBooking(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Multiple Bookings Dialog */}
+        <Dialog open={showMultipleBookingsDialog} onOpenChange={(open) => {
+          setShowMultipleBookingsDialog(open)
+          if (!open) setMultipleBookingsSearch("")
+        }}>
+          <DialogContent className="max-w-3xl border-none shadow-2xl">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="flex items-center gap-3 text-2xl">
+                <div className="h-10 w-1 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
+                <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  {selectedMultipleBookings.length} Appointments
+                </span>
+              </DialogTitle>
+            </DialogHeader>
+
+            {/* Search Bar */}
+            {selectedMultipleBookings.length > 3 && (
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by patient name, treatment, or staff..."
+                  value={multipleBookingsSearch}
+                  onChange={(e) => setMultipleBookingsSearch(e.target.value)}
+                  className="pl-10 border-border/50 focus:border-primary/50 transition-colors"
+                />
+              </div>
+            )}
+
+            <div className="space-y-3 overflow-y-auto max-h-[68vh] pr-2">
+              {(() => {
+                const filteredBookings = selectedMultipleBookings.filter((booking) => {
+                  if (!multipleBookingsSearch) return true
+                  const search = multipleBookingsSearch.toLowerCase()
+                  const patientName = (booking.patient?.name || booking.patientName || "").toLowerCase()
+                  const treatmentName = (booking.treatment?.name || "").toLowerCase()
+                  const staffName = (booking.staff?.name || "").toLowerCase()
+                  return patientName.includes(search) || treatmentName.includes(search) || staffName.includes(search)
+                })
+
+                if (filteredBookings.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                      <p className="text-lg font-medium text-muted-foreground mb-2">No appointments found</p>
+                      <p className="text-sm text-muted-foreground">
+                        Try adjusting your search query
+                      </p>
+                    </div>
+                  )
+                }
+
+                return filteredBookings.map((booking, index) => (
+                  <div
+                    key={booking.id || index}
+                    className="group relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm p-5 hover:border-primary/50 hover:shadow-lg hover:scale-[1.01] transition-all duration-300 cursor-pointer"
+                    onClick={() => {
+                      setShowMultipleBookingsDialog(false)
+                      setSelectedBooking(booking)
+                    }}
+                  >
+                    {/* Gradient overlay on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                    {/* Number indicator */}
+                    <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                      {index + 1}
+                    </div>
+
+                    <div className="relative flex items-start justify-between gap-6">
+                      <div className="flex-1 space-y-3">
+                        {/* Patient & Status */}
+                        <div className="flex items-center gap-3">
+                          <h4 className="text-lg font-semibold tracking-tight">
+                            {booking.patient?.name || booking.patientName || "Unknown Patient"}
+                          </h4>
+                          {getStatusBadge(booking.status)}
+                        </div>
+
+                        {/* Treatment */}
+                        <p className="text-sm font-medium text-primary">
+                          {booking.treatment?.name || "Unknown Treatment"}
+                        </p>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-4 gap-4 pt-2">
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Staff</p>
+                            <p className="text-sm font-medium truncate">{booking.staff?.name || "Unknown"}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Time</p>
+                            <p className="text-sm font-medium">
+                              {booking.startAt ? format(parseISO(booking.startAt), "HH:mm") : "--:--"}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Duration</p>
+                            <p className="text-sm font-medium">{booking.treatment?.durationMin || 60}m</p>
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Price</p>
+                            <p className="text-sm font-semibold text-foreground">
+                              {formatCurrency(booking.treatment?.price || 0)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-primary/10"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowMultipleBookingsDialog(false)
+                          setSelectedBooking(booking)
+                        }}
+                      >
+                        View
+                        <ChevronRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
           </DialogContent>
         </Dialog>
 
@@ -1494,7 +1753,6 @@ export default function CalendarPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
     </MainLayout>
   )
 }

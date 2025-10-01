@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getTenantFromHost, getTenantFromPath } from './lib/tenant-dynamic'
 import { getUserFromCookies } from './lib/auth'
 
 export function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
-  const host = request.headers.get('host') || ''
   const pathname = url.pathname
 
+  // Skip middleware for static files and Next.js internals
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/_next') ||
@@ -18,55 +17,78 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // LEGACY REDIRECT: Remove tenant from URL path
+  const segments = pathname.split('/').filter(Boolean)
+  const firstSegment = segments[0]
+
+  // Check if first segment looks like a tenant slug (old URL pattern)
+  // Redirect /:tenant/path to /path
+  if (firstSegment && !pathname.startsWith('/api')) {
+    // Common tenant slugs to redirect
+    const possibleTenants = ['default', 'jakarta', 'bandung', 'surabaya', 'bali', 'medan']
+
+    if (possibleTenants.includes(firstSegment) ||
+        (firstSegment.length < 20 && !['signin', 'signup', 'dashboard', 'calendar', 'clients', 'staff', 'treatments', 'walk-in', 'withdrawal', 'reports', 'settings'].includes(firstSegment))) {
+
+      // Build new path without tenant
+      const newPath = '/' + segments.slice(1).join('/')
+      const redirectUrl = url.clone()
+      redirectUrl.pathname = newPath || '/'
+
+      console.log(`Redirecting from ${pathname} to ${redirectUrl.pathname}`)
+      return NextResponse.redirect(redirectUrl, { status: 301 })
+    }
+  }
+
+  // LEGACY API REDIRECT: /api/:tenant/* to /api/*
+  if (pathname.startsWith('/api/')) {
+    const apiSegments = pathname.replace('/api/', '').split('/')
+    const firstApiSegment = apiSegments[0]
+
+    // Check if it looks like a tenant in API path
+    const possibleTenants = ['default', 'jakarta', 'bandung', 'surabaya', 'bali', 'medan']
+    if (possibleTenants.includes(firstApiSegment)) {
+      const newApiPath = '/api/' + apiSegments.slice(1).join('/')
+      const redirectUrl = url.clone()
+      redirectUrl.pathname = newApiPath
+
+      console.log(`API Redirect from ${pathname} to ${redirectUrl.pathname}`)
+      return NextResponse.redirect(redirectUrl, { status: 301 })
+    }
+  }
+
   const isApiRoute = pathname.startsWith('/api')
   const isAdminRoute = pathname.startsWith('/admin')
 
-  // Skip middleware for API and Admin routes
-  if (isApiRoute || isAdminRoute) {
+  // Skip auth check for API routes
+  if (isApiRoute) {
     return NextResponse.next()
   }
 
-  const segments = pathname.split('/').filter(Boolean)
-  const firstSegment = segments[0]
-  
-  // Get tenant from path - any first segment is considered a potential tenant
-  let tenantSlug = firstSegment || 'default'
-  
-  // Don't process if already has tenant in path
-  const isAlreadyTenantPath = !!firstSegment
-
   // Check authentication for protected routes
-  const publicPaths = ['/signin', '/signup', '/forgot-password', '/admin/login']
+  const publicPaths = ['/signin', '/signup', '/forgot-password']
   const isPublicPath = publicPaths.some(path => pathname.includes(path))
-  
+
   // Skip auth check for public paths and root
   if (!isPublicPath && pathname !== '/') {
     const cookies = request.cookies.getAll()
     const authToken = cookies.find(c => c.name === 'auth-token')
-    
+
     // Simple check - just verify token exists
     if (!authToken) {
       console.log('No auth token found, redirecting to signin from:', pathname)
       const signinUrl = url.clone()
-      signinUrl.pathname = `/${tenantSlug || 'jakarta'}/signin`
+      signinUrl.pathname = '/signin'
       return NextResponse.redirect(signinUrl)
     }
-    
   }
 
   // Pass through - Next.js will handle the routing
-  const response = NextResponse.next()
-  
-  // Add tenant info to headers if available
-  if (tenantSlug) {
-    response.headers.set('x-tenant-slug', tenantSlug)
-  }
-
-  return response
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|tenants/).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }

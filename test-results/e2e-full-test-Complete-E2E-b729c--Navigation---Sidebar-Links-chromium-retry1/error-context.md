@@ -1,0 +1,663 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - button "Reserva Reserva" [ref=e6] [cursor=pointer]:
+        - img "Reserva" [ref=e7] [cursor=pointer]
+        - img "Reserva" [ref=e8] [cursor=pointer]
+      - navigation [ref=e9]:
+        - link "Dashboard" [ref=e10] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e11] [cursor=pointer]
+          - generic [ref=e14] [cursor=pointer]: Dashboard
+        - link "Calendar" [ref=e15] [cursor=pointer]:
+          - /url: /calendar
+          - img [ref=e16] [cursor=pointer]
+          - generic [ref=e18] [cursor=pointer]: Calendar
+        - link "Clients" [ref=e19] [cursor=pointer]:
+          - /url: /clients
+          - img [ref=e20] [cursor=pointer]
+          - generic [ref=e25] [cursor=pointer]: Clients
+        - link "Staff" [ref=e26] [cursor=pointer]:
+          - /url: /staff
+          - img [ref=e27] [cursor=pointer]
+          - generic [ref=e32] [cursor=pointer]: Staff
+        - link "Walk-in" [ref=e33] [cursor=pointer]:
+          - /url: /walk-in
+          - img [ref=e34] [cursor=pointer]
+          - generic [ref=e37] [cursor=pointer]: Walk-in
+        - link "Treatments" [ref=e38] [cursor=pointer]:
+          - /url: /treatments
+          - img [ref=e39] [cursor=pointer]
+          - generic [ref=e41] [cursor=pointer]: Treatments
+        - link "Withdrawal" [ref=e42] [cursor=pointer]:
+          - /url: /withdrawal
+          - img [ref=e43] [cursor=pointer]
+          - generic [ref=e46] [cursor=pointer]: Withdrawal
+        - link "Settings" [ref=e47] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e48] [cursor=pointer]
+          - generic [ref=e51] [cursor=pointer]: Settings
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e55]: B
+          - generic [ref=e56]:
+            - paragraph [ref=e57]: Beauty Clinic Jakarta
+            - paragraph [ref=e58]: clinic1@reserva.app
+        - button "Sign Out" [ref=e59]:
+          - img
+          - generic [ref=e60]: Sign Out
+    - main [ref=e62]:
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - generic [ref=e65]:
+            - img "Reserva" [ref=e66]
+            - generic [ref=e67]:
+              - heading "Dashboard" [level=1] [ref=e68]
+              - paragraph [ref=e69]: Welcome back! Here's what's happening today.
+          - generic [ref=e70]:
+            - button "New Booking" [ref=e71]:
+              - img
+              - text: New Booking
+            - button "Export Report" [ref=e72]:
+              - img
+              - text: Export Report
+            - button "View Calendar" [ref=e73]:
+              - img
+              - text: View Calendar
+        - generic [ref=e74]:
+          - generic [ref=e76] [cursor=pointer]:
+            - generic [ref=e77] [cursor=pointer]:
+              - generic [ref=e78] [cursor=pointer]: Today's Bookings
+              - img [ref=e80] [cursor=pointer]
+            - generic [ref=e82] [cursor=pointer]:
+              - generic [ref=e83] [cursor=pointer]: "24"
+              - generic [ref=e84] [cursor=pointer]:
+                - img [ref=e86] [cursor=pointer]
+                - paragraph [ref=e89] [cursor=pointer]: 7 completed
+          - generic [ref=e91] [cursor=pointer]:
+            - generic [ref=e92] [cursor=pointer]:
+              - generic [ref=e93] [cursor=pointer]: Revenue Today
+              - img [ref=e95] [cursor=pointer]
+            - generic [ref=e97] [cursor=pointer]:
+              - generic [ref=e98] [cursor=pointer]: Rp 5.010.000
+              - generic [ref=e99] [cursor=pointer]:
+                - img [ref=e101] [cursor=pointer]
+                - paragraph [ref=e104] [cursor=pointer]: 7 treatments
+          - generic [ref=e106] [cursor=pointer]:
+            - generic [ref=e107] [cursor=pointer]:
+              - generic [ref=e108] [cursor=pointer]: Attendance Rate
+              - img [ref=e110] [cursor=pointer]
+            - generic [ref=e114] [cursor=pointer]:
+              - generic [ref=e115] [cursor=pointer]: 29%
+              - generic [ref=e116] [cursor=pointer]:
+                - img [ref=e118] [cursor=pointer]
+                - paragraph [ref=e121] [cursor=pointer]: 7/24 attended
+          - generic [ref=e123] [cursor=pointer]:
+            - generic [ref=e124] [cursor=pointer]:
+              - generic [ref=e125] [cursor=pointer]: Customer Satisfaction
+              - img [ref=e127] [cursor=pointer]
+            - generic [ref=e129] [cursor=pointer]:
+              - generic [ref=e130] [cursor=pointer]: 4.8/5
+              - generic [ref=e131] [cursor=pointer]:
+                - img [ref=e133] [cursor=pointer]
+                - paragraph [ref=e136] [cursor=pointer]: 65 new customers
+          - generic [ref=e138] [cursor=pointer]:
+            - generic [ref=e139] [cursor=pointer]:
+              - generic [ref=e140] [cursor=pointer]: Available Balance
+              - img [ref=e142] [cursor=pointer]
+            - generic [ref=e145] [cursor=pointer]:
+              - generic [ref=e146] [cursor=pointer]: Rp 2.500.000
+              - generic [ref=e147] [cursor=pointer]:
+                - img [ref=e149] [cursor=pointer]
+                - paragraph [ref=e152] [cursor=pointer]: "Total: Rp 15.000.000"
+        - generic [ref=e153]:
+          - generic [ref=e155]:
+            - img [ref=e156]
+            - text: Alerts & Reminders
+          - generic [ref=e159]:
+            - generic [ref=e160] [cursor=pointer]:
+              - img [ref=e161] [cursor=pointer]
+              - generic [ref=e163] [cursor=pointer]: 78 payments pending
+            - generic [ref=e164] [cursor=pointer]:
+              - img [ref=e165] [cursor=pointer]
+              - generic [ref=e167] [cursor=pointer]: 26 appointments need confirmation
+        - generic [ref=e168]:
+          - generic [ref=e171]:
+            - generic [ref=e172]:
+              - paragraph [ref=e173]: Peak Hours
+              - paragraph [ref=e174]: 2-4 PM
+              - paragraph [ref=e175]: Busiest time today
+            - img [ref=e176]
+          - generic [ref=e181]:
+            - generic [ref=e182]:
+              - paragraph [ref=e183]: Avg Treatment Time
+              - paragraph [ref=e184]: 45 min
+              - paragraph [ref=e185]: 5 min faster than usual
+            - img [ref=e186]
+          - generic [ref=e191]:
+            - generic [ref=e192]:
+              - paragraph [ref=e193]: Repeat Customers
+              - paragraph [ref=e194]: 78%
+              - paragraph [ref=e195]: +5% from last week
+            - img [ref=e196]
+          - generic [ref=e203]:
+            - generic [ref=e204]:
+              - paragraph [ref=e205]: Revenue Goal
+              - paragraph [ref=e206]: 85%
+              - paragraph [ref=e207]: Rp 2.1M of Rp 2.5M
+            - img [ref=e208]
+        - generic [ref=e210]:
+          - generic [ref=e211]:
+            - generic [ref=e213]:
+              - img [ref=e214]
+              - text: Today's Schedule
+            - generic [ref=e217]:
+              - generic [ref=e218]:
+                - heading "Morning (AM)" [level=3] [ref=e219]
+                - generic [ref=e220]:
+                  - generic [ref=e221] [cursor=pointer]:
+                    - generic [ref=e222] [cursor=pointer]:
+                      - generic [ref=e223] [cursor=pointer]: 10:15
+                      - generic [ref=e224] [cursor=pointer]:
+                        - generic [ref=e225] [cursor=pointer]: Rina Slamet
+                        - generic [ref=e226] [cursor=pointer]: Brightening Facial
+                        - generic [ref=e227] [cursor=pointer]: with Farhan Gunawan
+                    - generic [ref=e228] [cursor=pointer]:
+                      - generic [ref=e229] [cursor=pointer]: Completed
+                      - button [ref=e230]:
+                        - img
+                  - generic [ref=e231] [cursor=pointer]:
+                    - generic [ref=e232] [cursor=pointer]:
+                      - generic [ref=e233] [cursor=pointer]: 10:30
+                      - generic [ref=e234] [cursor=pointer]:
+                        - generic [ref=e235] [cursor=pointer]: Hendra Kusuma
+                        - generic [ref=e236] [cursor=pointer]: Brightening Facial
+                        - generic [ref=e237] [cursor=pointer]: with Bambang Lestari
+                    - generic [ref=e238] [cursor=pointer]:
+                      - generic [ref=e239] [cursor=pointer]: Completed
+                      - button [ref=e240]:
+                        - img
+                  - generic [ref=e241] [cursor=pointer]:
+                    - generic [ref=e242] [cursor=pointer]:
+                      - generic [ref=e243] [cursor=pointer]: 10:30
+                      - generic [ref=e244] [cursor=pointer]:
+                        - generic [ref=e245] [cursor=pointer]: Agus Gunawan
+                        - generic [ref=e246] [cursor=pointer]: Detox Package
+                        - generic [ref=e247] [cursor=pointer]: with Dian Permana
+                    - generic [ref=e248] [cursor=pointer]:
+                      - generic [ref=e249] [cursor=pointer]: Pending
+                      - button [ref=e250]:
+                        - img
+                  - generic [ref=e251] [cursor=pointer]:
+                    - generic [ref=e252] [cursor=pointer]:
+                      - generic [ref=e253] [cursor=pointer]: 10:45
+                      - generic [ref=e254] [cursor=pointer]:
+                        - generic [ref=e255] [cursor=pointer]: Wati Wibowo
+                        - generic [ref=e256] [cursor=pointer]: Couples Spa Package
+                        - generic [ref=e257] [cursor=pointer]: with Dian Permana
+                    - generic [ref=e258] [cursor=pointer]:
+                      - generic [ref=e259] [cursor=pointer]: Completed
+                      - button [ref=e260]:
+                        - img
+                  - generic [ref=e261] [cursor=pointer]:
+                    - generic [ref=e262] [cursor=pointer]:
+                      - generic [ref=e263] [cursor=pointer]: 11:00
+                      - generic [ref=e264] [cursor=pointer]:
+                        - generic [ref=e265] [cursor=pointer]: Ratna Wijaya
+                        - generic [ref=e266] [cursor=pointer]: Couples Spa Package
+                        - generic [ref=e267] [cursor=pointer]: with Farhan Hakim
+                    - generic [ref=e268] [cursor=pointer]:
+                      - generic [ref=e269] [cursor=pointer]: Pending
+                      - button [ref=e270]:
+                        - img
+                  - generic [ref=e271] [cursor=pointer]:
+                    - generic [ref=e272] [cursor=pointer]:
+                      - generic [ref=e273] [cursor=pointer]: 11:00
+                      - generic [ref=e274] [cursor=pointer]:
+                        - generic [ref=e275] [cursor=pointer]: Farhan Permana
+                        - generic [ref=e276] [cursor=pointer]: Mani-Pedi Combo
+                        - generic [ref=e277] [cursor=pointer]: with Irfan Pratama
+                    - generic [ref=e278] [cursor=pointer]:
+                      - generic [ref=e279] [cursor=pointer]: Completed
+                      - button [ref=e280]:
+                        - img
+                  - generic [ref=e281] [cursor=pointer]:
+                    - generic [ref=e282] [cursor=pointer]:
+                      - generic [ref=e283] [cursor=pointer]: 11:00
+                      - generic [ref=e284] [cursor=pointer]:
+                        - generic [ref=e285] [cursor=pointer]: Joko Setiawan
+                        - generic [ref=e286] [cursor=pointer]: Hair Coloring
+                        - generic [ref=e287] [cursor=pointer]: with Irfan Wibowo
+                    - generic [ref=e288] [cursor=pointer]:
+                      - generic [ref=e289] [cursor=pointer]: Pending
+                      - button [ref=e290]:
+                        - img
+                  - generic [ref=e291] [cursor=pointer]:
+                    - generic [ref=e292] [cursor=pointer]:
+                      - generic [ref=e293] [cursor=pointer]: 11:30
+                      - generic [ref=e294] [cursor=pointer]:
+                        - generic [ref=e295] [cursor=pointer]: Agus Gunawan
+                        - generic [ref=e296] [cursor=pointer]: Deep Cleansing Facial
+                        - generic [ref=e297] [cursor=pointer]: with Eko Handoko
+                    - generic [ref=e298] [cursor=pointer]:
+                      - generic [ref=e299] [cursor=pointer]: Confirmed
+                      - button [ref=e300]:
+                        - img
+              - generic [ref=e301]:
+                - heading "Afternoon (PM)" [level=3] [ref=e302]
+                - generic [ref=e303]:
+                  - generic [ref=e304] [cursor=pointer]:
+                    - generic [ref=e305] [cursor=pointer]:
+                      - generic [ref=e306] [cursor=pointer]: 12:30
+                      - generic [ref=e307] [cursor=pointer]:
+                        - generic [ref=e308] [cursor=pointer]: Sari Kusuma
+                        - generic [ref=e309] [cursor=pointer]: Mani-Pedi Combo
+                        - generic [ref=e310] [cursor=pointer]: with Andi Hidayat
+                    - generic [ref=e311] [cursor=pointer]:
+                      - generic [ref=e312] [cursor=pointer]: Pending
+                      - button [ref=e313]:
+                        - img
+                  - generic [ref=e314] [cursor=pointer]:
+                    - generic [ref=e315] [cursor=pointer]:
+                      - generic [ref=e316] [cursor=pointer]: 12:45
+                      - generic [ref=e317] [cursor=pointer]:
+                        - generic [ref=e318] [cursor=pointer]: Hadi Handoko
+                        - generic [ref=e319] [cursor=pointer]: Basic Facial
+                        - generic [ref=e320] [cursor=pointer]: with Bambang Lestari
+                    - generic [ref=e321] [cursor=pointer]:
+                      - generic [ref=e322] [cursor=pointer]: Confirmed
+                      - button [ref=e323]:
+                        - img
+                  - generic [ref=e324] [cursor=pointer]:
+                    - generic [ref=e325] [cursor=pointer]:
+                      - generic [ref=e326] [cursor=pointer]: 13:15
+                      - generic [ref=e327] [cursor=pointer]:
+                        - generic [ref=e328] [cursor=pointer]: Ani Hidayat
+                        - generic [ref=e329] [cursor=pointer]: Acne Treatment Facial
+                        - generic [ref=e330] [cursor=pointer]: with Lina Setiawan
+                    - generic [ref=e331] [cursor=pointer]:
+                      - generic [ref=e332] [cursor=pointer]: Confirmed
+                      - button [ref=e333]:
+                        - img
+                  - generic [ref=e334] [cursor=pointer]:
+                    - generic [ref=e335] [cursor=pointer]:
+                      - generic [ref=e336] [cursor=pointer]: 14:15
+                      - generic [ref=e337] [cursor=pointer]:
+                        - generic [ref=e338] [cursor=pointer]: Lina Suryanto
+                        - generic [ref=e339] [cursor=pointer]: Luxury Spa Package
+                        - generic [ref=e340] [cursor=pointer]: with Farhan Suryanto
+                    - generic [ref=e341] [cursor=pointer]:
+                      - generic [ref=e342] [cursor=pointer]: Completed
+                      - button [ref=e343]:
+                        - img
+                  - generic [ref=e344] [cursor=pointer]:
+                    - generic [ref=e345] [cursor=pointer]:
+                      - generic [ref=e346] [cursor=pointer]: 14:15
+                      - generic [ref=e347] [cursor=pointer]:
+                        - generic [ref=e348] [cursor=pointer]: Lina Suryanto
+                        - generic [ref=e349] [cursor=pointer]: Brightening Facial
+                        - generic [ref=e350] [cursor=pointer]: with Dian Permana
+                    - generic [ref=e351] [cursor=pointer]:
+                      - generic [ref=e352] [cursor=pointer]: Confirmed
+                      - button [ref=e353]:
+                        - img
+                  - generic [ref=e354] [cursor=pointer]:
+                    - generic [ref=e355] [cursor=pointer]:
+                      - generic [ref=e356] [cursor=pointer]: 14:15
+                      - generic [ref=e357] [cursor=pointer]:
+                        - generic [ref=e358] [cursor=pointer]: Ahmad Handoko
+                        - generic [ref=e359] [cursor=pointer]: Aromatherapy Massage
+                        - generic [ref=e360] [cursor=pointer]: with Farhan Suryanto
+                    - generic [ref=e361] [cursor=pointer]:
+                      - generic [ref=e362] [cursor=pointer]: Pending
+                      - button [ref=e363]:
+                        - img
+                  - generic [ref=e364] [cursor=pointer]:
+                    - generic [ref=e365] [cursor=pointer]:
+                      - generic [ref=e366] [cursor=pointer]: 14:30
+                      - generic [ref=e367] [cursor=pointer]:
+                        - generic [ref=e368] [cursor=pointer]: Agus Kurniawan
+                        - generic [ref=e369] [cursor=pointer]: Keratin Treatment
+                        - generic [ref=e370] [cursor=pointer]: with Farhan Gunawan
+                    - generic [ref=e371] [cursor=pointer]:
+                      - generic [ref=e372] [cursor=pointer]: Confirmed
+                      - button [ref=e373]:
+                        - img
+                  - generic [ref=e374] [cursor=pointer]:
+                    - generic [ref=e375] [cursor=pointer]:
+                      - generic [ref=e376] [cursor=pointer]: 14:45
+                      - generic [ref=e377] [cursor=pointer]:
+                        - generic [ref=e378] [cursor=pointer]: Agus Gunawan
+                        - generic [ref=e379] [cursor=pointer]: Acrylic Nails
+                        - generic [ref=e380] [cursor=pointer]: with Dian Permana
+                    - generic [ref=e381] [cursor=pointer]:
+                      - generic [ref=e382] [cursor=pointer]: Completed
+                      - button [ref=e383]:
+                        - img
+                  - generic [ref=e384] [cursor=pointer]:
+                    - generic [ref=e385] [cursor=pointer]:
+                      - generic [ref=e386] [cursor=pointer]: 14:45
+                      - generic [ref=e387] [cursor=pointer]:
+                        - generic [ref=e388] [cursor=pointer]: Hadi Handoko
+                        - generic [ref=e389] [cursor=pointer]: Luxury Spa Package
+                        - generic [ref=e390] [cursor=pointer]: with Nia Handoko
+                    - generic [ref=e391] [cursor=pointer]:
+                      - generic [ref=e392] [cursor=pointer]: Pending
+                      - button [ref=e393]:
+                        - img
+                  - generic [ref=e394] [cursor=pointer]:
+                    - generic [ref=e395] [cursor=pointer]:
+                      - generic [ref=e396] [cursor=pointer]: 15:30
+                      - generic [ref=e397] [cursor=pointer]:
+                        - generic [ref=e398] [cursor=pointer]: Lina Suryanto
+                        - generic [ref=e399] [cursor=pointer]: Manicure
+                        - generic [ref=e400] [cursor=pointer]: with Dian Permana
+                    - generic [ref=e401] [cursor=pointer]:
+                      - generic [ref=e402] [cursor=pointer]: Confirmed
+                      - button [ref=e403]:
+                        - img
+                  - generic [ref=e404] [cursor=pointer]:
+                    - generic [ref=e405] [cursor=pointer]:
+                      - generic [ref=e406] [cursor=pointer]: 15:45
+                      - generic [ref=e407] [cursor=pointer]:
+                        - generic [ref=e408] [cursor=pointer]: Lina Gunawan
+                        - generic [ref=e409] [cursor=pointer]: Hair Smoothing
+                        - generic [ref=e410] [cursor=pointer]: with Eko Handoko
+                    - generic [ref=e411] [cursor=pointer]:
+                      - generic [ref=e412] [cursor=pointer]: Pending
+                      - button [ref=e413]:
+                        - img
+                  - generic [ref=e414] [cursor=pointer]:
+                    - generic [ref=e415] [cursor=pointer]:
+                      - generic [ref=e416] [cursor=pointer]: 16:00
+                      - generic [ref=e417] [cursor=pointer]:
+                        - generic [ref=e418] [cursor=pointer]: Tuti Wijaya
+                        - generic [ref=e419] [cursor=pointer]: Keratin Treatment
+                        - generic [ref=e420] [cursor=pointer]: with Irfan Pratama
+                    - generic [ref=e421] [cursor=pointer]:
+                      - generic [ref=e422] [cursor=pointer]: Pending
+                      - button [ref=e423]:
+                        - img
+                  - generic [ref=e424] [cursor=pointer]:
+                    - generic [ref=e425] [cursor=pointer]:
+                      - generic [ref=e426] [cursor=pointer]: 17:45
+                      - generic [ref=e427] [cursor=pointer]:
+                        - generic [ref=e428] [cursor=pointer]: Tuti Wijaya
+                        - generic [ref=e429] [cursor=pointer]: Hydrating Facial
+                        - generic [ref=e430] [cursor=pointer]: with Bambang Lestari
+                    - generic [ref=e431] [cursor=pointer]:
+                      - generic [ref=e432] [cursor=pointer]: Completed
+                      - button [ref=e433]:
+                        - img
+                  - generic [ref=e434] [cursor=pointer]:
+                    - generic [ref=e435] [cursor=pointer]:
+                      - generic [ref=e436] [cursor=pointer]: 17:45
+                      - generic [ref=e437] [cursor=pointer]:
+                        - generic [ref=e438] [cursor=pointer]: Agus Wibowo
+                        - generic [ref=e439] [cursor=pointer]: Brightening Facial
+                        - generic [ref=e440] [cursor=pointer]: with Ratna Wijaya
+                    - generic [ref=e441] [cursor=pointer]:
+                      - generic [ref=e442] [cursor=pointer]: Confirmed
+                      - button [ref=e443]:
+                        - img
+                  - generic [ref=e444] [cursor=pointer]:
+                    - generic [ref=e445] [cursor=pointer]:
+                      - generic [ref=e446] [cursor=pointer]: 18:15
+                      - generic [ref=e447] [cursor=pointer]:
+                        - generic [ref=e448] [cursor=pointer]: Rina Wibowo
+                        - generic [ref=e449] [cursor=pointer]: Swedish Massage
+                        - generic [ref=e450] [cursor=pointer]: with Bambang Lestari
+                    - generic [ref=e451] [cursor=pointer]:
+                      - generic [ref=e452] [cursor=pointer]: Confirmed
+                      - button [ref=e453]:
+                        - img
+                  - generic [ref=e454] [cursor=pointer]:
+                    - generic [ref=e455] [cursor=pointer]:
+                      - generic [ref=e456] [cursor=pointer]: 19:00
+                      - generic [ref=e457] [cursor=pointer]:
+                        - generic [ref=e458] [cursor=pointer]: Yudi Hakim
+                        - generic [ref=e459] [cursor=pointer]: Acne Treatment Facial
+                        - generic [ref=e460] [cursor=pointer]: with Lina Setiawan
+                    - generic [ref=e461] [cursor=pointer]:
+                      - generic [ref=e462] [cursor=pointer]: Pending
+                      - button [ref=e463]:
+                        - img
+          - generic [ref=e464]:
+            - generic [ref=e465]:
+              - generic [ref=e467]:
+                - generic [ref=e468]:
+                  - img [ref=e469]
+                  - text: Recent Activity
+                - generic [ref=e472]:
+                  - button [disabled]:
+                    - img
+                  - generic [ref=e473]: 1 of 0
+                  - button [disabled]:
+                    - img
+              - generic [ref=e476]: No recent activity
+            - generic [ref=e477]:
+              - generic [ref=e479]:
+                - img [ref=e480]
+                - text: Top Treatments This Week
+              - generic [ref=e484]:
+                - generic [ref=e485]:
+                  - generic [ref=e486]: "#1"
+                  - generic [ref=e488]: Manicure
+                  - generic [ref=e491]: "16"
+                - generic [ref=e492]:
+                  - generic [ref=e493]: "#2"
+                  - generic [ref=e495]: Hair Smoothing
+                  - generic [ref=e498]: "14"
+                - generic [ref=e499]:
+                  - generic [ref=e500]: "#3"
+                  - generic [ref=e502]: Luxury Spa Package
+                  - generic [ref=e505]: "10"
+                - generic [ref=e506]:
+                  - generic [ref=e507]: "#4"
+                  - generic [ref=e509]: Brightening Facial
+                  - generic [ref=e512]: "10"
+                - generic [ref=e513]:
+                  - generic [ref=e514]: "#5"
+                  - generic [ref=e516]: Scalp Treatment
+                  - generic [ref=e519]: "9"
+            - generic [ref=e520]:
+              - generic [ref=e522]:
+                - img [ref=e523]
+                - text: Staff Performance Today
+              - generic [ref=e529]:
+                - generic [ref=e530] [cursor=pointer]:
+                  - generic [ref=e533] [cursor=pointer]:
+                    - generic [ref=e534] [cursor=pointer]: Bambang Lestari
+                    - generic [ref=e535] [cursor=pointer]:
+                      - img [ref=e536] [cursor=pointer]
+                      - text: "5"
+                  - generic [ref=e538] [cursor=pointer]:
+                    - generic [ref=e539] [cursor=pointer]: "4"
+                    - generic [ref=e540] [cursor=pointer]: appointments
+                - generic [ref=e541] [cursor=pointer]:
+                  - generic [ref=e544] [cursor=pointer]:
+                    - generic [ref=e545] [cursor=pointer]: Nia Suryanto
+                    - generic [ref=e546] [cursor=pointer]:
+                      - img [ref=e547] [cursor=pointer]
+                      - text: "5"
+                  - generic [ref=e549] [cursor=pointer]:
+                    - generic [ref=e550] [cursor=pointer]: "0"
+                    - generic [ref=e551] [cursor=pointer]: appointments
+                - generic [ref=e552] [cursor=pointer]:
+                  - generic [ref=e555] [cursor=pointer]:
+                    - generic [ref=e556] [cursor=pointer]: Dedi Slamet
+                    - generic [ref=e557] [cursor=pointer]:
+                      - img [ref=e558] [cursor=pointer]
+                      - text: "5"
+                  - generic [ref=e560] [cursor=pointer]:
+                    - generic [ref=e561] [cursor=pointer]: "0"
+                    - generic [ref=e562] [cursor=pointer]: appointments
+                - generic [ref=e563] [cursor=pointer]:
+                  - generic [ref=e566] [cursor=pointer]:
+                    - generic [ref=e567] [cursor=pointer]: Eko Handoko
+                    - generic [ref=e568] [cursor=pointer]:
+                      - img [ref=e569] [cursor=pointer]
+                      - text: "4.7"
+                  - generic [ref=e571] [cursor=pointer]:
+                    - generic [ref=e572] [cursor=pointer]: "2"
+                    - generic [ref=e573] [cursor=pointer]: appointments
+                - generic [ref=e574] [cursor=pointer]:
+                  - generic [ref=e577] [cursor=pointer]:
+                    - generic [ref=e578] [cursor=pointer]: Farhan Gunawan
+                    - generic [ref=e579] [cursor=pointer]:
+                      - img [ref=e580] [cursor=pointer]
+                      - text: "4.7"
+                  - generic [ref=e582] [cursor=pointer]:
+                    - generic [ref=e583] [cursor=pointer]: "2"
+                    - generic [ref=e584] [cursor=pointer]: appointments
+                - generic [ref=e585] [cursor=pointer]:
+                  - generic [ref=e588] [cursor=pointer]:
+                    - generic [ref=e589] [cursor=pointer]: Dewi Handoko
+                    - generic [ref=e590] [cursor=pointer]:
+                      - img [ref=e591] [cursor=pointer]
+                      - text: "4.7"
+                  - generic [ref=e593] [cursor=pointer]:
+                    - generic [ref=e594] [cursor=pointer]: "0"
+                    - generic [ref=e595] [cursor=pointer]: appointments
+                - generic [ref=e596] [cursor=pointer]:
+                  - generic [ref=e599] [cursor=pointer]:
+                    - generic [ref=e600] [cursor=pointer]: Yudi Wijaya
+                    - generic [ref=e601] [cursor=pointer]:
+                      - img [ref=e602] [cursor=pointer]
+                      - text: "4.6"
+                  - generic [ref=e604] [cursor=pointer]:
+                    - generic [ref=e605] [cursor=pointer]: "0"
+                    - generic [ref=e606] [cursor=pointer]: appointments
+                - generic [ref=e607] [cursor=pointer]:
+                  - generic [ref=e610] [cursor=pointer]:
+                    - generic [ref=e611] [cursor=pointer]: Irfan Wibowo
+                    - generic [ref=e612] [cursor=pointer]:
+                      - img [ref=e613] [cursor=pointer]
+                      - text: "4.6"
+                  - generic [ref=e615] [cursor=pointer]:
+                    - generic [ref=e616] [cursor=pointer]: "1"
+                    - generic [ref=e617] [cursor=pointer]: appointments
+                - generic [ref=e618] [cursor=pointer]:
+                  - generic [ref=e621] [cursor=pointer]:
+                    - generic [ref=e622] [cursor=pointer]: Maya Slamet
+                    - generic [ref=e623] [cursor=pointer]:
+                      - img [ref=e624] [cursor=pointer]
+                      - text: "4.6"
+                  - generic [ref=e626] [cursor=pointer]:
+                    - generic [ref=e627] [cursor=pointer]: "0"
+                    - generic [ref=e628] [cursor=pointer]: appointments
+                - generic [ref=e629] [cursor=pointer]:
+                  - generic [ref=e632] [cursor=pointer]:
+                    - generic [ref=e633] [cursor=pointer]: Putri Pratama
+                    - generic [ref=e634] [cursor=pointer]:
+                      - img [ref=e635] [cursor=pointer]
+                      - text: "4.5"
+                  - generic [ref=e637] [cursor=pointer]:
+                    - generic [ref=e638] [cursor=pointer]: "0"
+                    - generic [ref=e639] [cursor=pointer]: appointments
+                - generic [ref=e640] [cursor=pointer]:
+                  - generic [ref=e643] [cursor=pointer]:
+                    - generic [ref=e644] [cursor=pointer]: Hadi Setiawan
+                    - generic [ref=e645] [cursor=pointer]:
+                      - img [ref=e646] [cursor=pointer]
+                      - text: "4.5"
+                  - generic [ref=e648] [cursor=pointer]:
+                    - generic [ref=e649] [cursor=pointer]: "0"
+                    - generic [ref=e650] [cursor=pointer]: appointments
+                - generic [ref=e651] [cursor=pointer]:
+                  - generic [ref=e654] [cursor=pointer]:
+                    - generic [ref=e655] [cursor=pointer]: Dian Permana
+                    - generic [ref=e656] [cursor=pointer]:
+                      - img [ref=e657] [cursor=pointer]
+                      - text: "4.4"
+                  - generic [ref=e659] [cursor=pointer]:
+                    - generic [ref=e660] [cursor=pointer]: "5"
+                    - generic [ref=e661] [cursor=pointer]: appointments
+                - generic [ref=e662] [cursor=pointer]:
+                  - generic [ref=e665] [cursor=pointer]:
+                    - generic [ref=e666] [cursor=pointer]: Farhan Suryanto
+                    - generic [ref=e667] [cursor=pointer]:
+                      - img [ref=e668] [cursor=pointer]
+                      - text: "4.4"
+                  - generic [ref=e670] [cursor=pointer]:
+                    - generic [ref=e671] [cursor=pointer]: "2"
+                    - generic [ref=e672] [cursor=pointer]: appointments
+                - generic [ref=e673] [cursor=pointer]:
+                  - generic [ref=e676] [cursor=pointer]:
+                    - generic [ref=e677] [cursor=pointer]: Farhan Hakim
+                    - generic [ref=e678] [cursor=pointer]:
+                      - img [ref=e679] [cursor=pointer]
+                      - text: "4.3"
+                  - generic [ref=e681] [cursor=pointer]:
+                    - generic [ref=e682] [cursor=pointer]: "1"
+                    - generic [ref=e683] [cursor=pointer]: appointments
+                - generic [ref=e684] [cursor=pointer]:
+                  - generic [ref=e687] [cursor=pointer]:
+                    - generic [ref=e688] [cursor=pointer]: Andi Hidayat
+                    - generic [ref=e689] [cursor=pointer]:
+                      - img [ref=e690] [cursor=pointer]
+                      - text: "4.2"
+                  - generic [ref=e692] [cursor=pointer]:
+                    - generic [ref=e693] [cursor=pointer]: "1"
+                    - generic [ref=e694] [cursor=pointer]: appointments
+                - generic [ref=e695] [cursor=pointer]:
+                  - generic [ref=e698] [cursor=pointer]:
+                    - generic [ref=e699] [cursor=pointer]: Nia Handoko
+                    - generic [ref=e700] [cursor=pointer]:
+                      - img [ref=e701] [cursor=pointer]
+                      - text: "4.2"
+                  - generic [ref=e703] [cursor=pointer]:
+                    - generic [ref=e704] [cursor=pointer]: "1"
+                    - generic [ref=e705] [cursor=pointer]: appointments
+                - generic [ref=e706] [cursor=pointer]:
+                  - generic [ref=e709] [cursor=pointer]:
+                    - generic [ref=e710] [cursor=pointer]: Lina Kusuma
+                    - generic [ref=e711] [cursor=pointer]:
+                      - img [ref=e712] [cursor=pointer]
+                      - text: "4.1"
+                  - generic [ref=e714] [cursor=pointer]:
+                    - generic [ref=e715] [cursor=pointer]: "0"
+                    - generic [ref=e716] [cursor=pointer]: appointments
+                - generic [ref=e717] [cursor=pointer]:
+                  - generic [ref=e720] [cursor=pointer]:
+                    - generic [ref=e721] [cursor=pointer]: Irfan Pratama
+                    - generic [ref=e722] [cursor=pointer]:
+                      - img [ref=e723] [cursor=pointer]
+                      - text: "4.1"
+                  - generic [ref=e725] [cursor=pointer]:
+                    - generic [ref=e726] [cursor=pointer]: "2"
+                    - generic [ref=e727] [cursor=pointer]: appointments
+                - generic [ref=e728] [cursor=pointer]:
+                  - generic [ref=e731] [cursor=pointer]:
+                    - generic [ref=e732] [cursor=pointer]: Lina Setiawan
+                    - generic [ref=e733] [cursor=pointer]:
+                      - img [ref=e734] [cursor=pointer]
+                      - text: "4"
+                  - generic [ref=e736] [cursor=pointer]:
+                    - generic [ref=e737] [cursor=pointer]: "2"
+                    - generic [ref=e738] [cursor=pointer]: appointments
+                - generic [ref=e739] [cursor=pointer]:
+                  - generic [ref=e742] [cursor=pointer]:
+                    - generic [ref=e743] [cursor=pointer]: Ratna Wijaya
+                    - generic [ref=e744] [cursor=pointer]:
+                      - img [ref=e745] [cursor=pointer]
+                      - text: "4"
+                  - generic [ref=e747] [cursor=pointer]:
+                    - generic [ref=e748] [cursor=pointer]: "1"
+                    - generic [ref=e749] [cursor=pointer]: appointments
+                - generic [ref=e750] [cursor=pointer]:
+                  - generic [ref=e753] [cursor=pointer]:
+                    - generic [ref=e754] [cursor=pointer]: Ratna Gunawan
+                    - generic [ref=e755] [cursor=pointer]:
+                      - img [ref=e756] [cursor=pointer]
+                      - text: "4"
+                  - generic [ref=e758] [cursor=pointer]:
+                    - generic [ref=e759] [cursor=pointer]: "0"
+                    - generic [ref=e760] [cursor=pointer]: appointments
+  - region "Notifications (F8)":
+    - list
+  - alert [ref=e761]
+```

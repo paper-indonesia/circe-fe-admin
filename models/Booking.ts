@@ -2,7 +2,7 @@ import mongoose, { Schema, model, models } from 'mongoose'
 
 export interface IBooking {
   _id?: string
-  tenantId: string
+  ownerId: string
   patientId: string
   patientName?: string
   staffId: string
@@ -22,9 +22,9 @@ export interface IBooking {
 
 const BookingSchema = new Schema<IBooking>(
   {
-    tenantId: {
+    ownerId: {
       type: String,
-      required: [true, 'Tenant ID is required'],
+      required: [true, 'Owner ID is required'],
       index: true,
     },
     patientId: {
@@ -89,43 +89,45 @@ const BookingSchema = new Schema<IBooking>(
 )
 
 // Indexes for performance and constraints
-BookingSchema.index({ tenantId: 1, startAt: 1 })
-BookingSchema.index({ tenantId: 1, staffId: 1, startAt: 1 })
-BookingSchema.index({ tenantId: 1, patientId: 1 })
-BookingSchema.index({ tenantId: 1, status: 1 })
-BookingSchema.index({ tenantId: 1, source: 1, createdAt: -1 })
+BookingSchema.index({ ownerId: 1, startAt: 1 })
+BookingSchema.index({ ownerId: 1, staffId: 1, startAt: 1 })
+BookingSchema.index({ ownerId: 1, patientId: 1 })
+BookingSchema.index({ ownerId: 1, status: 1 })
+BookingSchema.index({ ownerId: 1, source: 1, createdAt: -1 })
+// Composite index for calendar queries with status filter
+BookingSchema.index({ ownerId: 1, startAt: 1, status: 1 })
 
 // Prevent double booking for same staff
 BookingSchema.index(
-  { tenantId: 1, staffId: 1, startAt: 1, endAt: 1, status: 1 },
-  { 
+  { ownerId: 1, staffId: 1, startAt: 1, endAt: 1, status: 1 },
+  {
     unique: true,
-    partialFilterExpression: { 
-      status: { $in: ['confirmed', 'pending'] } 
+    partialFilterExpression: {
+      status: { $in: ['confirmed', 'pending'] }
     }
   }
 )
 
 // Static methods
-BookingSchema.statics.findByTenant = function(tenantId: string) {
-  return this.find({ tenantId }).sort({ startAt: -1 })
+BookingSchema.statics.findByOwner = function(ownerId: string) {
+  return this.find({ ownerId }).sort({ startAt: -1 })
 }
 
-BookingSchema.statics.findByTenantAndDate = function(tenantId: string, date: Date) {
+BookingSchema.statics.findByOwnerAndDate = function(ownerId: string, date: Date) {
   const startOfDay = new Date(date)
   startOfDay.setHours(0, 0, 0, 0)
-  
+
   const endOfDay = new Date(date)
   endOfDay.setHours(23, 59, 59, 999)
-  
+
   return this.find({
-    tenantId,
+    ownerId,
     startAt: { $gte: startOfDay, $lte: endOfDay }
   }).sort({ startAt: 1 })
 }
 
-BookingSchema.statics.findWalkInsByTenant = function(tenantId: string) {
-  return this.find({ tenantId, source: 'walk-in' }).sort({ createdAt: -1 })
+BookingSchema.statics.findWalkInsByOwner = function(ownerId: string) {
+  return this.find({ ownerId, source: 'walk-in' }).sort({ createdAt: -1 })
 }
 
 // Instance methods

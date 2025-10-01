@@ -10,8 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, useActivities, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { format, isToday } from "date-fns"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { formatCurrency } from "@/lib/utils"
+import LiquidLoading from "@/components/ui/liquid-loader"
+import { useTerminology } from "@/hooks/use-terminology"
+import { TourTestButton } from "@/components/tour-test-button" // 🧪 DELETE THIS LINE AFTER TESTING
+import { EmptyState } from "@/components/ui/empty-state"
 import {
   Calendar,
   DollarSign,
@@ -36,17 +40,21 @@ import {
   ChevronRight,
   Heart,
   Sparkles,
+  Wallet,
 } from "lucide-react"
 
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const terminology = useTerminology()
 
   const { bookings = [], loading: bookingsLoading, updateBooking } = useBookings()
-  const { activities = [] } = useActivities()
-  const { patients = [] } = usePatients()
-  const { staff = [] } = useStaff()
-  const { treatments = [] } = useTreatments()
+  const { activities = [], loading: activitiesLoading } = useActivities()
+  const { patients = [], loading: patientsLoading } = usePatients()
+  const { staff = [], loading: staffLoading } = useStaff()
+  const { treatments = [], loading: treatmentsLoading } = useTreatments()
+
+  const isLoading = bookingsLoading || activitiesLoading || patientsLoading || staffLoading || treatmentsLoading
 
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null)
   const [selectedActivity, setSelectedActivity] = useState<any>(null)
@@ -54,6 +62,18 @@ export default function DashboardPage() {
   const [selectedStaff, setSelectedStaff] = useState<any>(null)
   const [activityPage, setActivityPage] = useState(0)
   const activitiesPerPage = 5
+  const [schedulePage, setSchedulePage] = useState(0)
+  const schedulePerPage = 5
+
+  // Calculate real user balance from completed bookings
+  const completedBookingsAll = bookings?.filter((b) => b.status === "completed") || []
+  const userTotalEarnings = completedBookingsAll.reduce((total, booking) => {
+    const treatment = treatments?.find((t) => t.id === booking.treatmentId)
+    return total + (treatment?.price || 0)
+  }, 0)
+
+  // Assuming 20% withdrawal rate (you can adjust this based on your business logic)
+  const userBalance = userTotalEarnings * 0.2
 
   const todaysBookings = bookings?.filter((booking) => isToday(new Date(booking.startAt))) || []
 
@@ -68,16 +88,39 @@ export default function DashboardPage() {
     return total + (treatment?.price || 0)
   }, 0)
 
-  const avgCustomerSatisfaction = 4.8
+  // Calculate real customer satisfaction from staff ratings
+  const avgCustomerSatisfaction = staff.length > 0
+    ? (staff.reduce((sum, s) => sum + (s.rating || 0), 0) / staff.length).toFixed(1)
+    : "0.0"
   const newCustomersToday = patients?.filter((p) => isToday(new Date(p.createdAt || new Date()))).length || 0
 
-  const amSchedule = todaysBookings
-    .filter((booking) => new Date(booking.startAt).getHours() < 12)
-    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+  // Function to enrich activity with full details
+  const enrichActivity = (activity: any) => {
+    if (!activity.relatedId) return activity
+    
+    const booking = bookings?.find(b => b.id === activity.relatedId)
+    if (!booking) return activity
+    
+    const patient = patients?.find(p => p.id === booking.patientId)
+    const staffMember = staff?.find(s => s.id === booking.staffId)
+    const treatment = treatments?.find(t => t.id === booking.treatmentId)
+    
+    return {
+      ...activity,
+      booking,
+      patient: patient || { name: 'Unknown Patient', phone: '-', email: '-' },
+      staff: staffMember || { name: 'Unknown Staff', role: '-' },
+      treatment: treatment || { name: 'Unknown Treatment', price: 0, duration: 0, durationMin: 0 }
+    }
+  }
 
-  const pmSchedule = todaysBookings
-    .filter((booking) => new Date(booking.startAt).getHours() >= 12)
-    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+  // Pagination for schedule - sorted by time
+  const allSchedule = todaysBookings.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+  const paginatedSchedule = allSchedule.slice(
+    schedulePage * schedulePerPage,
+    (schedulePage + 1) * schedulePerPage
+  )
+  const totalSchedulePages = Math.ceil(allSchedule.length / schedulePerPage)
 
   const treatmentCounts =
     bookings?.reduce(
@@ -105,7 +148,9 @@ export default function DashboardPage() {
         appointments: todaysAppointments.length,
         status: todaysAppointments.length > 0 ? "available" : "available",
       }
-    }) || []
+    })
+    .sort((a, b) => b.appointments - a.appointments) // Sort by appointments descending
+    .slice(0, 5) || [] // Take top 5
 
   const pendingPayments = bookings?.filter((b) => b.paymentStatus === "unpaid").length || 0
   const pendingConfirmations = bookings?.filter((b) => b.status === "pending").length || 0
@@ -121,7 +166,7 @@ export default function DashboardPage() {
             priority: "medium" as const,
             details: `${pendingPayments} customers have outstanding payments totaling ${formatCurrency(pendingPayments * 150000)}`,
             action: "View Payment Reports",
-            actionUrl: "/reports?tab=payments",
+            actionUrl: `/reports?tab=payments`,
           },
         ]
       : []),
@@ -134,7 +179,7 @@ export default function DashboardPage() {
             priority: "low" as const,
             details: `${unavailableStaff} staff members are not scheduled for today. Consider adjusting schedules to meet demand.`,
             action: "Manage Staff Schedule",
-            actionUrl: "/staff",
+            actionUrl: `/staff`,
           },
         ]
       : []),
@@ -147,7 +192,7 @@ export default function DashboardPage() {
             priority: "high" as const,
             details: `${pendingConfirmations} appointments are still pending confirmation. Contact customers to confirm their bookings.`,
             action: "View Pending Appointments",
-            actionUrl: "/calendar?filter=pending",
+            actionUrl: `/calendar?filter=pending`,
           },
         ]
       : []),
@@ -156,7 +201,19 @@ export default function DashboardPage() {
   const groupedActivities =
     activities?.reduce(
       (acc, activity) => {
-        const activityDate = new Date(activity.createdAt)
+        // Validate and parse the date
+        const activityDate = activity.createdAt ? new Date(activity.createdAt) : new Date()
+        
+        // Check if date is valid
+        if (isNaN(activityDate.getTime())) {
+          // If invalid date, use current date as fallback
+          const fallbackDate = new Date()
+          let day = "Today"
+          if (!acc[day]) acc[day] = []
+          acc[day].push({ ...activity, createdAt: fallbackDate.toISOString() })
+          return acc
+        }
+        
         let day = "Older"
 
         if (isToday(activityDate)) {
@@ -219,16 +276,16 @@ export default function DashboardPage() {
   const handleKpiClick = (type: string) => {
     switch (type) {
       case "bookings":
-        router.push("/calendar")
+        router.push(`/calendar`)
         break
       case "revenue":
-        router.push("/reports")
+        router.push(`/reports`)
         break
       case "attendance":
-        router.push("/calendar?filter=completed")
+        router.push(`/calendar?filter=completed`)
         break
       case "satisfaction":
-        router.push("/reports?tab=satisfaction")
+        router.push(`/reports?tab=satisfaction`)
         break
     }
   }
@@ -236,13 +293,13 @@ export default function DashboardPage() {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case "new-booking":
-        router.push("/walk-in")
+        router.push(`/walk-in`)
         break
       case "export-report":
         toast({ title: "Export Started", description: "Your report is being generated" })
         break
       case "view-calendar":
-        router.push("/calendar")
+        router.push(`/calendar`)
         break
     }
   }
@@ -342,14 +399,77 @@ export default function DashboardPage() {
     }
   }
 
+  // Check if completely empty (no data at all)
+  const hasNoData = !isLoading && (
+    (!bookings || bookings.length === 0) &&
+    (!patients || patients.length === 0) &&
+    (!staff || staff.length === 0) &&
+    (!treatments || treatments.length === 0)
+  )
+
   return (
-    <MainLayout>
+      <MainLayout>
+      {isLoading ? (
+        <div className="flex min-h-[600px] w-full items-center justify-center">
+          <LiquidLoading />
+        </div>
+      ) : hasNoData ? (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <img
+                src="/reserva_logo.webp"
+                alt="Reserva"
+                className="h-12 w-12 object-contain"
+              />
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+                <p className="text-muted-foreground">Welcome! Let's get you started.</p>
+              </div>
+            </div>
+          </div>
+
+          <EmptyState
+            icon={Sparkles}
+            title="Welcome to Reserva!"
+            description={`Get started by setting up your business. Add your first ${terminology.staff.toLowerCase()}, ${terminology.treatment.toLowerCase()}, and ${terminology.patient.toLowerCase()} to begin managing your ${terminology.booking.toLowerCase()}.`}
+            actionLabel={`Add ${terminology.staff}`}
+            onAction={() => router.push('/staff')}
+            secondaryActionLabel={`Add ${terminology.treatment}`}
+            onSecondaryAction={() => router.push('/treatments')}
+            tips={[
+              {
+                icon: Users,
+                title: `Setup ${terminology.staff}`,
+                description: `Add your ${terminology.staff.toLowerCase()} members first`
+              },
+              {
+                icon: Star,
+                title: `Create ${terminology.treatment}`,
+                description: `Define your services or ${terminology.treatment.toLowerCase()}`
+              },
+              {
+                icon: Calendar,
+                title: `Start Booking`,
+                description: `Create your first ${terminology.booking.toLowerCase()}`
+              }
+            ]}
+          />
+        </div>
+      ) : (
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
+          <div className="flex items-center gap-4">
+            <img
+              src="/reserva_logo.webp"
+              alt="Reserva"
+              className="h-12 w-12 object-contain"
+            />
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+              <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
+            </div>
           </div>
 
           <div className="flex gap-2">
@@ -382,7 +502,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <div onClick={() => handleKpiClick("bookings")} className="cursor-pointer">
             <KpiCard
               title="Today's Bookings"
@@ -419,6 +539,15 @@ export default function DashboardPage() {
               icon={Heart}
             />
           </div>
+          <div onClick={() => router.push(`/withdrawal`)} className="cursor-pointer">
+            <KpiCard
+              title="Available Balance"
+              value={formatCurrency(userBalance)}
+              change={`Total: ${formatCurrency(userTotalEarnings)}`}
+              changeType="positive"
+              icon={Wallet}
+            />
+          </div>
         </div>
 
         {alerts.length > 0 && (
@@ -446,154 +575,79 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-4">
-          <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-pink-600 font-medium">Peak Hours</p>
-                  <p className="text-2xl font-bold text-pink-700">2-4 PM</p>
-                  <p className="text-xs text-pink-500">Busiest time today</p>
-                </div>
-                <Clock className="h-8 w-8 text-pink-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-purple-600 font-medium">Avg Treatment Time</p>
-                  <p className="text-2xl font-bold text-purple-700">45 min</p>
-                  <p className="text-xs text-purple-500">5 min faster than usual</p>
-                </div>
-                <TrendingUp className="h-8 w-8 text-purple-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-blue-600 font-medium">Repeat Customers</p>
-                  <p className="text-2xl font-bold text-blue-700">78%</p>
-                  <p className="text-xs text-blue-500">+5% from last week</p>
-                </div>
-                <Users className="h-8 w-8 text-blue-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-600 font-medium">Revenue Goal</p>
-                  <p className="text-2xl font-bold text-green-700">85%</p>
-                  <p className="text-xs text-green-500">Rp 2.1M of Rp 2.5M</p>
-                </div>
-                <DollarSign className="h-8 w-8 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         <div className="grid gap-6 lg:grid-cols-3">
           {/* ... existing schedule code ... */}
           <Card className="lg:col-span-2 border-pink-100">
             <CardHeader className="bg-gradient-to-r from-pink-50 to-purple-50">
-              <CardTitle className="flex items-center gap-2 text-pink-700">
-                <Clock className="h-5 w-5" />
-                Today's Schedule
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-pink-700">
+                  <Clock className="h-5 w-5" />
+                  Today's Schedule
+                </div>
+                {allSchedule.length > schedulePerPage && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSchedulePage(Math.max(0, schedulePage - 1))}
+                      disabled={schedulePage === 0}
+                      className="h-6 w-6 p-0"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    <span className="text-xs text-muted-foreground px-2">
+                      {schedulePage + 1} of {totalSchedulePages}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSchedulePage(Math.min(totalSchedulePages - 1, schedulePage + 1))}
+                      disabled={schedulePage >= totalSchedulePages - 1}
+                      className="h-6 w-6 p-0"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                  Morning (AM)
-                </h3>
-                <div className="space-y-3">
-                  {amSchedule.length === 0 ? (
-                    <div className="text-center py-4 text-muted-foreground">No morning appointments scheduled</div>
-                  ) : (
-                    amSchedule.map((booking) => {
-                      const bookingWithDetails = getBookingWithDetails(booking)
-                      return (
-                        <div
-                          key={booking.id}
-                          onClick={() => setSelectedAppointment(bookingWithDetails)}
-                          className="group flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-pink-50/50 to-purple-50/50 hover:from-pink-100/50 hover:to-purple-100/50 transition-all duration-200 cursor-pointer border border-pink-100"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="text-sm font-medium text-pink-600 min-w-[50px]">
-                              {bookingWithDetails.time}
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium">{bookingWithDetails.client}</div>
-                              <div className="text-sm text-muted-foreground">{bookingWithDetails.treatmentName}</div>
-                              <div className="text-xs text-muted-foreground">with {bookingWithDetails.staffName}</div>
-                            </div>
+            <CardContent>
+              <div className="space-y-3">
+                {paginatedSchedule.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">No appointments scheduled today</div>
+                ) : (
+                  paginatedSchedule.map((booking) => {
+                    const bookingWithDetails = getBookingWithDetails(booking)
+                    return (
+                      <div
+                        key={booking.id}
+                        onClick={() => setSelectedAppointment(bookingWithDetails)}
+                        className="group flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-pink-50/50 to-purple-50/50 hover:from-pink-100/50 hover:to-purple-100/50 transition-all duration-200 cursor-pointer border border-pink-100"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="text-sm font-medium text-pink-600 min-w-[50px]">
+                            {bookingWithDetails.time}
                           </div>
-                          <div className="flex items-center gap-2">
-                            {getStatusBadge(booking.status)}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="h-3 w-3" />
-                            </Button>
+                          <div className="flex-1">
+                            <div className="font-medium">{bookingWithDetails.client}</div>
+                            <div className="text-sm text-muted-foreground">{bookingWithDetails.treatmentName}</div>
+                            <div className="text-xs text-muted-foreground">with {bookingWithDetails.staffName}</div>
                           </div>
                         </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3 uppercase tracking-wide">
-                  Afternoon (PM)
-                </h3>
-                <div className="space-y-3">
-                  {pmSchedule.length === 0 ? (
-                    <div className="text-center py-4 text-muted-foreground">No afternoon appointments scheduled</div>
-                  ) : (
-                    pmSchedule.map((booking) => {
-                      const bookingWithDetails = getBookingWithDetails(booking)
-                      return (
-                        <div
-                          key={booking.id}
-                          onClick={() => setSelectedAppointment(bookingWithDetails)}
-                          className="group flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-pink-50/50 to-purple-50/50 hover:from-pink-100/50 hover:to-purple-100/50 transition-all duration-200 cursor-pointer border border-pink-100"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="text-sm font-medium text-pink-600 min-w-[50px]">
-                              {bookingWithDetails.time}
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium">{bookingWithDetails.client}</div>
-                              <div className="text-sm text-muted-foreground">{bookingWithDetails.treatmentName}</div>
-                              <div className="text-xs text-muted-foreground">with {bookingWithDetails.staffName}</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getStatusBadge(booking.status)}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="h-3 w-3" />
-                            </Button>
-                          </div>
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(booking.status)}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
                         </div>
-                      )
-                    })
-                  )}
-                </div>
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
@@ -640,9 +694,9 @@ export default function DashboardPage() {
                     paginatedActivities.map((activity) => (
                       <div
                         key={activity.id}
-                        onClick={() => setSelectedActivity(activity)}
+                        onClick={() => setSelectedActivity(enrichActivity(activity))}
                         className="flex items-start gap-3 cursor-pointer hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-pink-50/50 p-2 rounded-lg transition-all duration-200"
-                        title={format(new Date(activity.createdAt), "PPpp")}
+                        title={activity.createdAt && !isNaN(new Date(activity.createdAt).getTime()) ? format(new Date(activity.createdAt), "PPpp") : "No date available"}
                       >
                         {getActivityIcon(activity.type)}
                         <div className="flex-1 min-w-0">
@@ -650,7 +704,7 @@ export default function DashboardPage() {
                             <span className="font-medium">{activity.description}</span>
                           </div>
                           <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span>{format(new Date(activity.createdAt), "HH:mm")}</span>
+                            <span>{activity.createdAt && !isNaN(new Date(activity.createdAt).getTime()) ? format(new Date(activity.createdAt), "HH:mm") : "--:--"}</span>
                             <span className="text-purple-400">•</span>
                             <span>{activity.day}</span>
                           </div>
@@ -667,7 +721,7 @@ export default function DashboardPage() {
               <CardHeader className="bg-gradient-to-r from-pink-50 to-purple-50">
                 <CardTitle className="flex items-center gap-2 text-pink-700">
                   <TrendingUp className="h-5 w-5" />
-                  Top Treatments This Week
+                  Top {terminology.treatment} This Week
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -699,12 +753,15 @@ export default function DashboardPage() {
               <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
                 <CardTitle className="flex items-center gap-2 text-purple-700">
                   <Users className="h-5 w-5" />
-                  Staff Performance Today
+                  Top 5 Staff Today
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {staffPerformance.map((staffMember) => (
+                  {staffPerformance.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground">No staff activity today</div>
+                  ) : (
+                    staffPerformance.map((staffMember) => (
                     <div
                       key={staffMember.id}
                       onClick={() => setSelectedStaff(staffMember)}
@@ -727,7 +784,7 @@ export default function DashboardPage() {
                         <div className="text-xs text-muted-foreground">appointments</div>
                       </div>
                     </div>
-                  ))}
+                  )))}
                 </div>
               </CardContent>
             </Card>
@@ -838,24 +895,130 @@ export default function DashboardPage() {
             </DialogHeader>
             {selectedActivity && (
               <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold">{selectedActivity.description}</h3>
-                  <p className="text-xs text-muted-foreground">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-purple-900">{selectedActivity.description}</h3>
+                  <p className="text-xs text-purple-600 mt-1">
                     {format(new Date(selectedActivity.createdAt), "PPpp")}
                   </p>
                 </div>
 
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    if (selectedActivity.relatedId) {
-                      router.push(`/calendar?booking=${selectedActivity.relatedId}`)
-                    }
-                  }}
-                >
-                  View Details
-                </Button>
+                {/* Patient Information */}
+                {selectedActivity.patient && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">Patient Information</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Name:</span>
+                        <span className="text-sm font-medium">{selectedActivity.patient.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Phone:</span>
+                        <span className="text-sm">{selectedActivity.patient.phone || '-'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Email:</span>
+                        <span className="text-sm">{selectedActivity.patient.email || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Treatment Information */}
+                {selectedActivity.treatment && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">Treatment Details</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Treatment:</span>
+                        <span className="text-sm font-medium">{selectedActivity.treatment.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Duration:</span>
+                        <span className="text-sm">{selectedActivity.treatment.duration || selectedActivity.treatment.durationMin || 0} min</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Price:</span>
+                        <span className="text-sm font-medium">{formatCurrency(selectedActivity.treatment.price || 0)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Staff Information */}
+                {selectedActivity.staff && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">Staff Assigned</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Name:</span>
+                        <span className="text-sm font-medium">{selectedActivity.staff.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Role:</span>
+                        <span className="text-sm">{selectedActivity.staff.role || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Booking Status */}
+                {selectedActivity.booking && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">Booking Status</h4>
+                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Status:</span>
+                        <Badge variant={
+                          selectedActivity.booking.status === 'completed' ? 'default' :
+                          selectedActivity.booking.status === 'confirmed' ? 'secondary' :
+                          selectedActivity.booking.status === 'cancelled' ? 'destructive' :
+                          'outline'
+                        }>
+                          {selectedActivity.booking.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Payment:</span>
+                        <Badge variant={
+                          selectedActivity.booking.paymentStatus === 'paid' ? 'default' :
+                          selectedActivity.booking.paymentStatus === 'deposit' ? 'secondary' :
+                          'outline'
+                        }>
+                          {selectedActivity.booking.paymentStatus}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Time:</span>
+                        <span className="text-sm">
+                          {selectedActivity.booking.startAt ? format(new Date(selectedActivity.booking.startAt), "HH:mm") : '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      if (selectedActivity.relatedId) {
+                        router.push(`/calendar?booking=${selectedActivity.relatedId}`)
+                      }
+                    }}
+                  >
+                    <Calendar className="h-4 w-4 mr-2" />
+                    View in Calendar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setSelectedActivity(null)}
+                  >
+                    Close
+                  </Button>
+                </div>
               </div>
             )}
           </DialogContent>
@@ -966,6 +1129,12 @@ export default function DashboardPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </MainLayout>
+      )}
+
+      {/* 🧪 TESTING COMPONENT - DELETE AFTER TESTING */}
+      <TourTestButton />
+      {/* 🧪 END TESTING COMPONENT */}
+
+      </MainLayout>
   )
 }
