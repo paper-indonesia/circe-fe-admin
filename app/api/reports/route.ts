@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
-import { connectMongoDB } from '@/lib/mongodb'
+import { requireAuth } from '@/lib/auth'
+import connectMongoDB from '@/lib/mongodb'
 import Booking from '@/models/Booking'
 import Treatment from '@/models/Treatment'
 import Staff from '@/models/Staff'
@@ -10,42 +10,50 @@ import { format, subDays, startOfDay, endOfDay } from 'date-fns'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await verifyAuth(request)
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const user = requireAuth(request)
 
     const { searchParams } = new URL(request.url)
     const dateRange = searchParams.get('dateRange') || '30days'
+    const monthParam = searchParams.get('month')
+    const yearParam = searchParams.get('year')
 
     await connectMongoDB()
 
     // Calculate date range
     const now = new Date()
     let startDate = subDays(now, 30)
+    let endDate = now
 
-    switch (dateRange) {
-      case '7days':
-        startDate = subDays(now, 7)
-        break
-      case '30days':
-        startDate = subDays(now, 30)
-        break
-      case '90days':
-        startDate = subDays(now, 90)
-        break
-      case 'thisMonth':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-        break
-      case 'thisYear':
-        startDate = new Date(now.getFullYear(), 0, 1)
-        break
+    // Handle custom month/year filtering
+    if (dateRange === 'custom' && monthParam && yearParam) {
+      const month = parseInt(monthParam)
+      const year = parseInt(yearParam)
+      startDate = new Date(year, month - 1, 1)
+      endDate = new Date(year, month, 0, 23, 59, 59, 999) // Last day of the month
+    } else {
+      switch (dateRange) {
+        case '7days':
+          startDate = subDays(now, 7)
+          break
+        case '30days':
+          startDate = subDays(now, 30)
+          break
+        case '90days':
+          startDate = subDays(now, 90)
+          break
+        case 'thisMonth':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+          break
+        case 'thisYear':
+          startDate = new Date(now.getFullYear(), 0, 1)
+          break
+      }
     }
 
     // Fetch bookings
     const bookings = await Booking.find({
       ownerId: user.userId,
-      startAt: { $gte: startDate, $lte: now }
+      startAt: { $gte: startDate, $lte: endDate }
     }).populate('treatmentId').populate('staffId').populate('patientId')
 
     // Fetch all treatments for user
@@ -60,15 +68,15 @@ export async function GET(request: NextRequest) {
     // Fetch withdrawals
     const withdrawals = await Withdrawal.find({
       ownerId: user.userId,
-      createdAt: { $gte: startDate, $lte: now }
+      createdAt: { $gte: startDate, $lte: endDate }
     })
 
     // Generate daily revenue data
-    const days = Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+    const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
     const dailyRevenue = []
 
     for (let i = 0; i < Math.min(days, 90); i++) {
-      const date = subDays(now, days - i - 1)
+      const date = subDays(endDate, days - i - 1)
       const dayStart = startOfDay(date)
       const dayEnd = endOfDay(date)
 
@@ -145,12 +153,18 @@ export async function GET(request: NextRequest) {
       const repeatClients = Array.from(clientBookings.values()).filter(count => count > 1).length
       const retention = uniqueClients > 0 ? Math.round((repeatClients / uniqueClients) * 100) : 0
 
+      // Calculate efficiency: completed bookings vs total bookings for this staff
+      const totalStaffBookings = bookings.filter(b => b.staffId?._id?.toString() === staffMember._id.toString())
+      const efficiency = totalStaffBookings.length > 0
+        ? Math.round((staffBookings.length / totalStaffBookings.length) * 100)
+        : 0
+
       return {
         name: staffMember.name,
         bookings: staffBookings.length,
         revenue,
-        rating: 4.5 + Math.random() * 0.5, // TODO: Implement real rating system
-        efficiency: 85 + Math.floor(Math.random() * 15),
+        rating: staffMember.rating || 0, // Use actual rating from staff model
+        efficiency,
         clients: uniqueClients,
         retention
       }
@@ -252,6 +266,11 @@ export async function GET(request: NextRequest) {
     const peakDay = Array.from(dayBookingCounts.entries())
       .sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'
 
+    // Calculate average satisfaction from staff ratings (if available)
+    const avgStaffRating = staffPerformance.length > 0
+      ? staffPerformance.reduce((sum, s) => sum + s.rating, 0) / staffPerformance.length
+      : 0
+
     const summary = {
       totalRevenue,
       totalBookings,
@@ -260,7 +279,7 @@ export async function GET(request: NextRequest) {
       completionRate: bookings.length > 0
         ? Math.round((completedBookings.length / bookings.length) * 100)
         : 0,
-      customerSatisfaction: 4.8, // TODO: Implement real satisfaction tracking
+      customerSatisfaction: avgStaffRating > 0 ? Number(avgStaffRating.toFixed(1)) : 0,
       returnRate,
       peakDay
     }

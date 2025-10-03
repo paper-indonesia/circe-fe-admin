@@ -25,12 +25,12 @@ interface Terminology {
 
 const defaultTerminology: Terminology = {
   staff: 'Staff',
-  treatment: 'Services',
-  patient: 'Clients',
+  treatment: 'Products',
+  patient: 'Customers',
   booking: 'Bookings',
   staffSingular: 'Staff Member',
-  treatmentSingular: 'Service',
-  patientSingular: 'Client',
+  treatmentSingular: 'Product',
+  patientSingular: 'Customer',
   bookingSingular: 'Booking',
   businessType: 'custom',
   businessName: 'My Business',

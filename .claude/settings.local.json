@@ -25,7 +25,8 @@
       "Bash(for page in clients staff walk-in)",
       "Bash(do echo \"=== $page ===\")",
       "Bash(for file in calendar clients staff treatments walk-in)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

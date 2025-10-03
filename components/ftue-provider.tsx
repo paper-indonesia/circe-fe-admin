@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
-import { useTerminology } from "@/hooks/use-terminology"
 import { GuidedTour } from "./guided-tour"
 import { usePathname } from "next/navigation"
 
 export function FTUEProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  const terminology = useTerminology()
   const pathname = usePathname()
   const [showTour, setShowTour] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -61,54 +59,54 @@ export function FTUEProvider({ children }: { children: React.ReactNode }) {
     setShowTour(false)
   }
 
-  // Define tour steps with dynamic terminology
+  // Define tour steps
   const tourSteps = [
     {
       target: '[data-tour="sidebar-dashboard"]',
       title: "Welcome to Your Dashboard! 🎉",
-      description: `This is your command center. Here you'll see an overview of your ${terminology.booking.toLowerCase()}, revenue, and key metrics at a glance.`,
+      description: "This is your command center. Here you'll see an overview of your bookings, revenue, and key metrics at a glance.",
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-calendar"]',
       title: "Calendar & Scheduling 📅",
-      description: `Manage all your ${terminology.booking.toLowerCase()} here. View appointments in calendar or list mode, create new bookings, and track your schedule.`,
+      description: "Manage all your bookings here. View appointments in calendar or list mode, create new bookings, and track your schedule.",
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-clients"]',
-      title: `Your ${terminology.patient} 👥`,
-      description: `Manage your ${terminology.patient.toLowerCase()} database. Add new ${terminology.patient.toLowerCase()}, view their history, and track their preferences.`,
+      title: "Your Customers 👥",
+      description: "Manage your customer database. Add new customers, view their history, and track their preferences.",
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-staff"]',
-      title: `Manage Your ${terminology.staff} 👨‍💼`,
-      description: `Add and manage your ${terminology.staff.toLowerCase()}. Set their schedules, assign services, and track their performance.`,
+      title: "Manage Your Staff 👨‍💼",
+      description: "Add and manage your staff members. Set their schedules, assign services, and track their performance.",
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-treatments"]',
-      title: `Your ${terminology.treatment} ⭐`,
-      description: `Create and manage your ${terminology.treatment.toLowerCase()}. Set prices, durations, and assign them to your ${terminology.staff.toLowerCase()}.`,
+      title: "Your Products ⭐",
+      description: "Create and manage your products and services. Set prices, durations, and assign them to your staff.",
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-walkin"]',
       title: "Walk-in Bookings 🚶",
-      description: `Quick booking feature for walk-in ${terminology.patient.toLowerCase()}. Perfect for handling last-minute appointments without going through the full booking flow.`,
+      description: "Quick booking feature for walk-in customers. Perfect for handling last-minute appointments without going through the full booking flow.",
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-reports"]',
       title: "Reports & Analytics 📊",
-      description: `View detailed reports about your business performance. Track revenue, popular ${terminology.treatment.toLowerCase()}, and ${terminology.staff.toLowerCase()} performance.`,
+      description: "View detailed reports about your business performance. Track revenue, popular products, and staff performance.",
       position: "right" as const,
       highlight: true
     },
@@ -121,8 +119,8 @@ export function FTUEProvider({ children }: { children: React.ReactNode }) {
     },
     {
       target: '[data-tour="sidebar-settings"]',
-      title: "Settings & Customization ⚙️",
-      description: "Customize your workspace. Update business information, change terminology, manage categories, and configure your preferences.",
+      title: "Settings & Preferences ⚙️",
+      description: "Customize your workspace. Update business information, manage notifications, security settings, and configure your preferences.",
       position: "right" as const,
       highlight: true
     },

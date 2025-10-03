@@ -19,7 +19,6 @@ import { format, isToday, parseISO } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { EmptyState } from "@/components/ui/empty-state"
-import { useTerminology } from "@/hooks/use-terminology"
 import { useRouter } from "next/navigation"
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -29,7 +28,6 @@ export default function StaffPage() {
   const { bookings } = useBookings()
   const { treatments } = useTreatments()
   const { toast } = useToast()
-  const terminology = useTerminology()
   const router = useRouter()
 
   const [searchQuery, setSearchQuery] = useState("")
@@ -430,20 +428,20 @@ export default function StaffPage() {
       {hasNoData ? (
         <EmptyState
           icon={Users}
-          title={`No ${terminology.staff} Members`}
-          description={`Add your ${terminology.staff.toLowerCase()} members to assign ${terminology.booking.toLowerCase()} and manage schedules.`}
-          actionLabel={`Add ${terminology.staff}`}
+          title={`No Staff Members`}
+          description={`Add your staff members to assign bookings and manage schedules.`}
+          actionLabel={`Add Staff`}
           onAction={() => setShowAddStaffDialog(true)}
           tips={[
             {
               icon: UserPlus,
-              title: `Add ${terminology.staff}`,
+              title: `Add Staff`,
               description: "Create staff profiles"
             },
             {
               icon: Calendar,
               title: "Assign Bookings",
-              description: `Assign ${terminology.booking.toLowerCase()} to ${terminology.staff.toLowerCase()}`
+              description: `Assign bookings to staff`
             },
             {
               icon: Star,
@@ -821,7 +819,7 @@ export default function StaffPage() {
                       </div>
 
                       <div>
-                        <Label className="text-sm text-muted-foreground">Treatments</Label>
+                        <Label className="text-sm text-muted-foreground">Products</Label>
                         <div className="space-y-2 mt-1">
                           {(() => {
                             const staffTreatments = treatments.filter((treatment) =>
@@ -829,7 +827,7 @@ export default function StaffPage() {
                             )
 
                             if (staffTreatments.length === 0) {
-                              return <div className="text-sm text-muted-foreground italic">No treatments assigned</div>
+                              return <div className="text-sm text-muted-foreground italic">No products assigned</div>
                             }
 
                             return (
@@ -986,7 +984,7 @@ export default function StaffPage() {
                     </div>
 
                     <div>
-                      <Label className="text-sm font-medium">Assigned Treatments</Label>
+                      <Label className="text-sm font-medium">Assigned Products</Label>
                       <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border border-[#E7C6FF] rounded-lg p-3">
                         {treatments.map((treatment) => (
                           <div key={treatment.id} className="flex items-center space-x-2">
@@ -1206,7 +1204,7 @@ export default function StaffPage() {
                           </div>
                           <div className="flex-1">
                             <div className="font-medium">{booking.patientName}</div>
-                            <div className="text-sm text-muted-foreground">Treatment Name</div>
+                            <div className="text-sm text-muted-foreground">Product Name</div>
                           </div>
                           <Badge
                             className={`text-xs ${
@@ -1475,7 +1473,7 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Assign Treatments</Label>
+                <Label className="text-sm font-medium">Assign Products</Label>
                 <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border border-[#E7C6FF] rounded-lg p-3">
                   {treatments.map((treatment) => (
                     <div key={treatment.id} className="flex items-center space-x-2">

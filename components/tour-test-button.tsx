@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { GuidedTour } from "./guided-tour"
-import { useTerminology } from "@/hooks/use-terminology"
 import { Play, X } from "lucide-react"
 
 /**
@@ -18,55 +17,54 @@ import { Play, X } from "lucide-react"
 
 export function TourTestButton() {
   const [showTour, setShowTour] = useState(false)
-  const terminology = useTerminology()
 
   const tourSteps = [
     {
       target: '[data-tour="sidebar-dashboard"]',
       title: "Welcome to Your Dashboard! 🎉",
-      description: `This is your command center. Here you'll see an overview of your ${terminology.booking.toLowerCase()}, revenue, and key metrics at a glance.`,
+      description: `This is your command center. Here you'll see an overview of your bookings, revenue, and key metrics at a glance.`,
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-calendar"]',
       title: "Calendar & Scheduling 📅",
-      description: `Manage all your ${terminology.booking.toLowerCase()} here. View appointments in calendar or list mode, create new bookings, and track your schedule.`,
+      description: `Manage all your bookings here. View appointments in calendar or list mode, create new bookings, and track your schedule.`,
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-clients"]',
-      title: `Your ${terminology.patient} 👥`,
-      description: `Manage your ${terminology.patient.toLowerCase()} database. Add new ${terminology.patient.toLowerCase()}, view their history, and track their preferences.`,
+      title: `Your Customers 👥`,
+      description: `Manage your customers database. Add new customers, view their history, and track their preferences.`,
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-staff"]',
-      title: `Manage Your ${terminology.staff} 👨‍💼`,
-      description: `Add and manage your ${terminology.staff.toLowerCase()}. Set their schedules, assign services, and track their performance.`,
+      title: `Manage Your Staff 👨‍💼`,
+      description: `Add and manage your staff. Set their schedules, assign services, and track their performance.`,
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-treatments"]',
-      title: `Your ${terminology.treatment} ⭐`,
-      description: `Create and manage your ${terminology.treatment.toLowerCase()}. Set prices, durations, and assign them to your ${terminology.staff.toLowerCase()}.`,
+      title: `Your Products ⭐`,
+      description: `Create and manage your products. Set prices, durations, and assign them to your staff.`,
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-walkin"]',
       title: "Walk-in Bookings 🚶",
-      description: `Quick booking feature for walk-in ${terminology.patient.toLowerCase()}. Perfect for handling last-minute appointments without going through the full booking flow.`,
+      description: `Quick booking feature for walk-in customers. Perfect for handling last-minute appointments without going through the full booking flow.`,
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-reports"]',
       title: "Reports & Analytics 📊",
-      description: `View detailed reports about your business performance. Track revenue, popular ${terminology.treatment.toLowerCase()}, and ${terminology.staff.toLowerCase()} performance.`,
+      description: `View detailed reports about your business performance. Track revenue, popular products, and staff performance.`,
       position: "right" as const,
       highlight: true
     },

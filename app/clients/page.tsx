@@ -18,7 +18,6 @@ import { format, parseISO, isValid } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { useRouter } from "next/navigation"
 import { EmptyState } from "@/components/ui/empty-state"
-import { useTerminology } from "@/hooks/use-terminology"
 import { Star } from "lucide-react"
 import {
   Users,
@@ -42,7 +41,6 @@ import {
 export default function ClientsPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const terminology = useTerminology()
 
   const {
     patients = [],
@@ -349,20 +347,20 @@ export default function ClientsPage() {
       {hasNoData ? (
         <EmptyState
           icon={Users}
-          title={`No ${terminology.patient} Yet`}
-          description={`Start building your ${terminology.patient.toLowerCase()} database. Add your first ${terminology.patient.toLowerCase()} to track their appointments and history.`}
-          actionLabel={`Add ${terminology.patient}`}
+          title={`No Customers Yet`}
+          description={`Start building your customers database. Add your first customers to track their appointments and history.`}
+          actionLabel={`Add Customers`}
           onAction={openAddDialog}
           tips={[
             {
               icon: UserPlus,
-              title: `Add ${terminology.patient}`,
+              title: `Add Customers`,
               description: "Manually add client info"
             },
             {
               icon: CalendarIcon,
               title: "First Booking",
-              description: `Create ${terminology.booking.toLowerCase()} to auto-add ${terminology.patient.toLowerCase()}`
+              description: `Create bookings to auto-add customers`
             },
             {
               icon: Star,
@@ -887,7 +885,7 @@ export default function ClientsPage() {
                                 className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
                               >
                                 <div>
-                                  <div className="font-medium text-sm">{treatment?.name || "Unknown Treatment"}</div>
+                                  <div className="font-medium text-sm">{treatment?.name || "Unknown Product"}</div>
                                   <div className="text-xs text-muted-foreground">
                                     {format(parseISO(booking.startAt), "MMM d, yyyy HH:mm")} •{" "}
                                     {staffMember?.name || "Unknown Staff"}

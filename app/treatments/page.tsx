@@ -16,11 +16,9 @@ import { useAppContext } from "@/lib/context"
 import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, DollarSign, AlertCircle } from "lucide-react"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { EmptyState } from "@/components/ui/empty-state"
-import { useTerminology } from "@/hooks/use-terminology"
 
 export default function TreatmentsPage() {
   const { toast } = useToast()
-  const terminology = useTerminology()
 
   const {
     treatments = [],
@@ -258,20 +256,20 @@ export default function TreatmentsPage() {
       {hasNoData ? (
         <EmptyState
           icon={Star}
-          title={`No ${terminology.treatment} Defined`}
-          description={`Create your ${terminology.treatment.toLowerCase()} to offer services to your ${terminology.patient.toLowerCase()}.`}
-          actionLabel={`Add ${terminology.treatment}`}
+          title={`No Products Defined`}
+          description={`Create your products to offer services to your customers.`}
+          actionLabel={`Add Products`}
           onAction={openAddDialog}
           tips={[
             {
               icon: Star,
-              title: `Define ${terminology.treatment}`,
+              title: `Define Products`,
               description: "Set prices and duration"
             },
             {
               icon: Users,
-              title: `Assign ${terminology.staff}`,
-              description: `Link ${terminology.treatment.toLowerCase()} to ${terminology.staff.toLowerCase()}`
+              title: `Assign Staff`,
+              description: `Link products to staff`
             },
             {
               icon: DollarSign,

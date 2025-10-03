@@ -49,10 +49,10 @@ export function OnboardingWizard({ open, onComplete }: OnboardingWizardProps) {
   const handleTemplateSelect = (template: IndustryTemplate) => {
     setSelectedTemplate(template)
     setCustomTerminology({
-      staff: template.terminology.staff,
-      treatment: template.terminology.treatment,
-      patient: template.terminology.patient,
-      booking: template.terminology.booking,
+      staff: "Staff",
+      treatment: "Products",
+      patient: "Customers",
+      booking: "Bookings",
     })
     setCustomCategories([...template.categories])
   }

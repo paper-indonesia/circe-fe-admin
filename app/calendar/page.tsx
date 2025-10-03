@@ -1,443 +1,325 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
-import { formatCurrency } from "@/lib/utils"
-import { format, addDays, startOfWeek, endOfWeek, isSameDay, parseISO, addHours } from "date-fns"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useTerminology } from "@/hooks/use-terminology"
+import { formatCurrency, cn } from "@/lib/utils"
 import {
-  Calendar,
-  Plus,
+  format,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+  addMonths,
+  subMonths,
+  isSameMonth,
+  isSameDay,
+  isToday,
+  parseISO,
+  startOfDay,
+  endOfDay,
+} from "date-fns"
+import {
+  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  Phone,
-  Mail,
+  Grid3x3,
+  List,
+  Search,
+  Filter,
+  Plus,
+  X,
+  Clock,
+  User,
+  DollarSign,
+  Edit,
   Trash2,
   CheckCircle,
-  X,
-  UserPlus,
-  Table,
-  CalendarDays,
-  FilterX,
-  Search,
-  SlidersHorizontal,
-  AlertTriangle,
-  Users,
+  XCircle,
+  AlertCircle,
+  MoreHorizontal,
   Star,
+  Banknote,
+  CreditCard,
+  Building2,
+  Smartphone,
 } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import LiquidLoading from "@/components/ui/liquid-loader"
-import { EmptyState } from "@/components/ui/empty-state"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from "@/components/ui/sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
-const timeSlots = [
-  "09:00",
-  "09:30",
-  "10:00",
-  "10:30",
-  "11:00",
-  "11:30",
-  "12:00",
-  "12:30",
-  "13:00",
-  "13:30",
-  "14:00",
-  "14:30",
-  "15:00",
-  "15:30",
-  "16:00",
-  "16:30",
-  "17:00",
-  "17:30",
-]
-
-const ITEMS_PER_PAGE = 10
+type ViewMode = "calendar" | "table"
+type DateRange = "week" | "month" | "2weeks"
 
 export default function CalendarPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
   const { toast } = useToast()
-  const terminology = useTerminology()
 
-  const { bookings = [], loading, addBooking, updateBooking, deleteBooking } = useBookings() || {}
-  const { patients = [], addPatient } = usePatients() || {}
-  const { staff = [] } = useStaff() || {}
-  const { treatments = [] } = useTreatments() || {}
+  const { bookings = [], loading, updateBooking, deleteBooking } = useBookings()
+  const { patients = [] } = usePatients()
+  const { staff = [] } = useStaff()
+  const { treatments = [] } = useTreatments()
 
-  const [currentWeek, setCurrentWeek] = useState(new Date())
-  const [viewMode, setViewMode] = useState<"calendar" | "table">("calendar")
-  const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>("calendar")
+  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [dateRange, setDateRange] = useState<DateRange>("month")
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedBookings, setSelectedBookings] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [slideOpen, setSlideOpen] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState<any>(null)
-  const [selectedMultipleBookings, setSelectedMultipleBookings] = useState<any[]>([])
-  const [showBookingDialog, setShowBookingDialog] = useState(false)
-  const [showMultipleBookingsDialog, setShowMultipleBookingsDialog] = useState(false)
-  const [showFilterDialog, setShowFilterDialog] = useState(false)
-  const [showNewPatientDialog, setShowNewPatientDialog] = useState(false)
-  const [multipleBookingsSearch, setMultipleBookingsSearch] = useState("")
-
-  const [filters, setFilters] = useState({
-    status: "all",
-    staff: "all",
-    treatment: "all",
-    paymentStatus: "all",
-    dateRange: "week", // week, month, custom
-    customStartDate: "",
-    customEndDate: "",
-    searchQuery: "",
-  })
-
-  const [currentPage, setCurrentPage] = useState(1)
-
-  const [bookingForm, setBookingForm] = useState({
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [tablePage, setTablePage] = useState(0)
+  const itemsPerPage = 10
+  const [expandedTimeSlots, setExpandedTimeSlots] = useState<Set<string>>(new Set())
+  const [tempStatus, setTempStatus] = useState<string>("")
+  const [newBookingOpen, setNewBookingOpen] = useState(false)
+  const [newBookingStep, setNewBookingStep] = useState(1)
+  const [newBookingData, setNewBookingData] = useState<any>({
+    treatmentId: "",
     patientId: "",
     staffId: "",
-    treatmentId: "",
-    notes: "",
-    paymentStatus: "unpaid" as const,
+    date: "",
+    time: "",
+    paymentMethod: "cash",
+    isNewClient: false,
+    newClientName: "",
+    newClientPhone: "",
+    notes: ""
   })
-
-  const [newPatientForm, setNewPatientForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    notes: "",
-  })
-
-  const [showStartCalendar, setShowStartCalendar] = useState(false)
-  const [showEndCalendar, setShowEndCalendar] = useState(false)
-
-  const [statusSearch, setStatusSearch] = useState("")
-  const [staffSearch, setStaffSearch] = useState("")
   const [treatmentSearch, setTreatmentSearch] = useState("")
-  const [paymentSearch, setPaymentSearch] = useState("")
+  const [treatmentPage, setTreatmentPage] = useState(0)
+  const treatmentsPerPage = 6
+  const [clientSearch, setClientSearch] = useState("")
 
-  useEffect(() => {}, [])
-
-  useEffect(() => {
-    const filter = searchParams.get("filter")
-    const staffParam = searchParams.get("staff")
-    const bookingParam = searchParams.get("booking")
-
-    if (filter) setFilters((prev) => ({ ...prev, status: filter }))
-    if (staffParam) setFilters((prev) => ({ ...prev, staff: staffParam }))
-    if (bookingParam && bookings && bookings.length > 0 && patients.length > 0 && staff.length > 0 && treatments.length > 0) {
-      const booking = bookings.find((b) => b?.id === bookingParam)
-      if (booking) {
-        const bookingDetails = getBookingDetails(booking)
-        if (bookingDetails) {
-          setSelectedBooking(bookingDetails)
-        }
+  // Calculate date range based on selection
+  const { startDate, endDate } = useMemo(() => {
+    if (dateRange === "week") {
+      return {
+        startDate: startOfWeek(currentMonth),
+        endDate: endOfWeek(currentMonth)
       }
-    }
-  }, [searchParams, bookings, patients, staff, treatments])
-
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 })
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-
-  const filteredBookings = (bookings || []).filter((booking) => {
-    if (!booking?.startAt) return false
-
-    const bookingDate = parseISO(booking.startAt)
-
-    // Date range filtering
-    let dateMatch = false
-    if (filters.dateRange === "week") {
-      dateMatch = bookingDate >= weekStart && bookingDate <= endOfWeek(currentWeek, { weekStartsOn: 1 })
-    } else if (filters.dateRange === "month") {
-      const monthStart = new Date(currentWeek.getFullYear(), currentWeek.getMonth(), 1)
-      const monthEnd = new Date(currentWeek.getFullYear(), currentWeek.getMonth() + 1, 0)
-      dateMatch = bookingDate >= monthStart && bookingDate <= monthEnd
-    } else if (filters.dateRange === "custom" && filters.customStartDate && filters.customEndDate) {
-      const customStart = new Date(filters.customStartDate)
-      const customEnd = new Date(filters.customEndDate)
-      dateMatch = bookingDate >= customStart && bookingDate <= customEnd
-    } else {
-      dateMatch = true
-    }
-
-    // Other filters
-    const statusMatch = filters.status === "all" || booking.status === filters.status
-    const staffMatch = filters.staff === "all" || booking.staffId === filters.staff
-    const treatmentMatch = filters.treatment === "all" || booking.treatmentId === filters.treatment
-    const paymentMatch = filters.paymentStatus === "all" || booking.paymentStatus === filters.paymentStatus
-
-    // Search query match
-    let searchMatch = true
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase()
-      const patient = patients.find((p) => p?.id === booking.patientId)
-      const treatment = treatments.find((t) => t?.id === booking.treatmentId)
-      const staffMember = staff.find((s) => s?.id === booking.staffId)
-
-      searchMatch =
-        patient?.name?.toLowerCase().includes(query) ||
-        patient?.phone?.includes(query) ||
-        treatment?.name?.toLowerCase().includes(query) ||
-        staffMember?.name?.toLowerCase().includes(query) ||
-        booking.notes?.toLowerCase().includes(query) ||
-        false
-    }
-
-    return dateMatch && statusMatch && staffMatch && treatmentMatch && paymentMatch && searchMatch
-  })
-
-  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE)
-  const paginatedBookings = filteredBookings
-    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
-    .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
-
-  // Reset pagination when filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [
-    filters.status,
-    filters.staff,
-    filters.treatment,
-    filters.paymentStatus,
-    filters.dateRange,
-    filters.customStartDate,
-    filters.customEndDate,
-    filters.searchQuery,
-  ])
-
-  const weekBookings = filteredBookings.filter((booking) => {
-    const bookingDate = parseISO(booking.startAt)
-    return bookingDate >= weekStart && bookingDate <= endOfWeek(currentWeek, { weekStartsOn: 1 })
-  })
-
-  const getBookingsForSlot = (date: Date, time: string) => {
-    return weekBookings.filter((booking) => {
-      if (!booking?.startAt) return false
-
-      const bookingDate = parseISO(booking.startAt)
-      const bookingTime = format(bookingDate, "HH:mm")
-      return isSameDay(bookingDate, date) && bookingTime === time
-    })
-  }
-
-  const getBookingForSlot = (date: Date, time: string) => {
-    const bookings = getBookingsForSlot(date, time)
-    return bookings.length > 0 ? bookings[0] : null
-  }
-
-  const getBookingDetails = (booking: any) => {
-    if (!booking) return null
-
-    const patient = patients.find((p) => p?.id === booking.patientId)
-    const treatment = treatments.find((t) => t?.id === booking.treatmentId)
-    const staffMember = staff.find((s) => s?.id === booking.staffId)
-
-    return {
-      ...booking,
-      patient,
-      treatment,
-      staff: staffMember,
-    }
-  }
-
-  const handleSlotClick = (date: Date, time: string) => {
-    const existingBookings = getBookingsForSlot(date, time)
-
-    if (existingBookings.length > 0) {
-      if (existingBookings.length === 1) {
-        // Single booking - show details
-        const bookingDetails = getBookingDetails(existingBookings[0])
-        if (bookingDetails) {
-          setSelectedBooking(bookingDetails)
-        }
-      } else {
-        // Multiple bookings - show list dialog
-        const allBookingDetails = existingBookings
-          .map(b => getBookingDetails(b))
-          .filter(b => b !== null)
-        setSelectedMultipleBookings(allBookingDetails)
-        setShowMultipleBookingsDialog(true)
+    } else if (dateRange === "2weeks") {
+      const start = startOfWeek(currentMonth)
+      return {
+        startDate: start,
+        endDate: addDays(start, 13)
       }
     } else {
-      setSelectedSlot({ date, time })
-      setBookingForm({
-        patientId: "",
-        staffId: "",
-        treatmentId: "",
-        notes: "",
-        paymentStatus: "unpaid",
-      })
-      setShowBookingDialog(true)
-    }
-  }
-
-  const handleCreateBooking = async () => {
-    if (!selectedSlot || !bookingForm.patientId || !bookingForm.staffId || !bookingForm.treatmentId) {
-      toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" })
-      return
-    }
-
-    if (!addBooking) {
-      toast({ title: "Error", description: "Booking system not available", variant: "destructive" })
-      return
-    }
-
-    try {
-      const [hours, minutes] = selectedSlot.time.split(":").map(Number)
-      const startAt = new Date(selectedSlot.date)
-      startAt.setHours(hours, minutes, 0, 0)
-
-      const treatment = treatments.find((t) => t?.id === bookingForm.treatmentId)
-      const patient = patients.find((p) => p?.id === bookingForm.patientId)
-      const endAt = addHours(startAt, (treatment?.durationMin || 60) / 60)
-
-      addBooking({
-        patientId: bookingForm.patientId,
-        patientName: patient?.name || "Unknown",
-        staffId: bookingForm.staffId,
-        treatmentId: bookingForm.treatmentId,
-        startAt: startAt.toISOString(),
-        endAt: endAt.toISOString(),
-        status: "confirmed",
-        source: "online",
-        paymentStatus: bookingForm.paymentStatus,
-        notes: bookingForm.notes,
-      })
-
-      toast({ title: "Success", description: "Booking created successfully" })
-      setShowBookingDialog(false)
-      setSelectedSlot(null)
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to create booking", variant: "destructive" })
-    }
-  }
-
-  const handleBookingAction = async (bookingId: string, action: string) => {
-    if (!bookingId || !updateBooking || !deleteBooking) {
-      toast({ title: "Error", description: "Booking system not available", variant: "destructive" })
-      return
-    }
-
-    try {
-      const booking = bookings.find((b) => b?.id === bookingId)
-      if (!booking) return
-
-      switch (action) {
-        case "checkin":
-          await updateBooking(bookingId, { status: "confirmed" })
-          toast({ title: "Success", description: "Patient checked in" })
-          break
-        case "complete":
-          await updateBooking(bookingId, { status: "completed" })
-          toast({ title: "Success", description: "Appointment completed" })
-          break
-        case "cancel":
-          await updateBooking(bookingId, { status: "cancelled" })
-          toast({ title: "Success", description: "Appointment cancelled" })
-          break
-        case "delete":
-          await deleteBooking(bookingId)
-          toast({ title: "Success", description: "Appointment deleted" })
-          break
+      return {
+        startDate: startOfMonth(currentMonth),
+        endDate: endOfMonth(currentMonth)
       }
-      setSelectedBooking(null)
-    } catch (error) {
-      console.error("Failed to update booking:", error)
-      toast({ title: "Error", description: "Failed to update appointment", variant: "destructive" })
     }
-  }
+  }, [currentMonth, dateRange])
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      confirmed: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      completed: "bg-blue-100 text-blue-800",
-      cancelled: "bg-red-100 text-red-800",
-      "no-show": "bg-gray-100 text-gray-800",
+  // Generate calendar days
+  const calendarDays = useMemo(() => {
+    const start = startOfWeek(startDate)
+    const end = endOfWeek(endDate)
+    const days = []
+    let day = start
+
+    while (day <= end) {
+      days.push(day)
+      day = addDays(day, 1)
     }
 
-    return (
-      <Badge className={`text-xs ${variants[status as keyof typeof variants] || "bg-gray-100 text-gray-800"}`}>
-        {status}
-      </Badge>
+    return days
+  }, [startDate, endDate])
+
+  // Get bookings for a specific date
+  const getBookingsForDate = (date: Date) => {
+    return bookings.filter(booking =>
+      isSameDay(new Date(booking.startAt), date)
     )
   }
 
-  const handleCreateNewPatient = async () => {
-    if (!newPatientForm.name || !newPatientForm.phone) {
-      toast({ title: "Error", description: "Name and phone are required", variant: "destructive" })
-      return
+  // Get bookings for selected date grouped by time
+  const selectedDateBookings = useMemo(() => {
+    if (!selectedDate) return []
+
+    const dayBookings = getBookingsForDate(selectedDate)
+    const grouped: { [key: string]: any[] } = {}
+
+    dayBookings.forEach(booking => {
+      const time = format(new Date(booking.startAt), "HH:mm")
+      if (!grouped[time]) {
+        grouped[time] = []
+      }
+      grouped[time].push(booking)
+    })
+
+    return Object.entries(grouped)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([time, bookings]) => ({ time, bookings }))
+  }, [selectedDate, bookings])
+
+  // Filtered bookings for table view
+  const filteredBookings = useMemo(() => {
+    let filtered = bookings
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(b => b.status === statusFilter)
     }
 
-    if (!addPatient) {
-      toast({ title: "Error", description: "Patient system not available", variant: "destructive" })
-      return
+    if (searchQuery) {
+      filtered = filtered.filter(b => {
+        const patient = patients.find(p => p.id === b.patientId)
+        const treatment = treatments.find(t => t.id === b.treatmentId)
+        const search = searchQuery.toLowerCase()
+
+        return (
+          patient?.name?.toLowerCase().includes(search) ||
+          treatment?.name?.toLowerCase().includes(search) ||
+          b.id?.toLowerCase().includes(search)
+        )
+      })
     }
+
+    return filtered.sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+  }, [bookings, statusFilter, searchQuery, patients, treatments])
+
+  // Paginated bookings for table view
+  const paginatedBookings = useMemo(() => {
+    const start = tablePage * itemsPerPage
+    return filteredBookings.slice(start, start + itemsPerPage)
+  }, [filteredBookings, tablePage])
+
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage)
+
+  // Calendar statistics
+  const calendarStats = useMemo(() => {
+    const rangeBookings = bookings.filter(b => {
+      const bookingDate = new Date(b.startAt)
+      return bookingDate >= startDate && bookingDate <= endDate
+    })
+
+    const totalRevenue = rangeBookings.reduce((sum, b) => {
+      const treatment = treatments.find(t => t.id === b.treatmentId)
+      return sum + (treatment?.price || 0)
+    }, 0)
+
+    const confirmedCount = rangeBookings.filter(b => b.status === 'confirmed').length
+    const completedCount = rangeBookings.filter(b => b.status === 'completed').length
+    const cancelledCount = rangeBookings.filter(b => b.status === 'cancelled').length
+
+    return {
+      total: rangeBookings.length,
+      confirmed: confirmedCount,
+      completed: completedCount,
+      cancelled: cancelledCount,
+      revenue: totalRevenue,
+    }
+  }, [bookings, treatments, startDate, endDate])
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "confirmed": return "bg-green-100 text-green-800"
+      case "completed": return "bg-blue-100 text-blue-800"
+      case "cancelled": return "bg-red-100 text-red-800"
+      case "no-show": return "bg-gray-100 text-gray-800"
+      default: return "bg-yellow-100 text-yellow-800"
+    }
+  }
+
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date)
+    setSlideOpen(true)
+  }
+
+  const handleNewBookingFromCalendar = (date: Date) => {
+    setNewBookingData({
+      ...newBookingData,
+      date: format(date, "yyyy-MM-dd")
+    })
+    setNewBookingOpen(true)
+    setNewBookingStep(1)
+  }
+
+  const handleNewBookingFromButton = () => {
+    setNewBookingData({
+      treatmentId: "",
+      patientId: "",
+      staffId: "",
+      date: "",
+      time: "",
+      paymentMethod: "cash",
+      notes: ""
+    })
+    setNewBookingOpen(true)
+    setNewBookingStep(1)
+  }
+
+  const handleDeleteBooking = async (id: string) => {
+    try {
+      await deleteBooking(id)
+      toast({ title: "Booking deleted successfully" })
+      setDetailDialogOpen(false)
+      setSelectedBooking(null)
+    } catch (error) {
+      toast({ title: "Failed to delete booking", variant: "destructive" })
+    }
+  }
+
+  const handleOpenDetails = (booking: any) => {
+    setSelectedBooking(booking)
+    setTempStatus(booking.status)
+    setDetailDialogOpen(true)
+  }
+
+  const handleFinishBooking = async () => {
+    if (!selectedBooking) return
 
     try {
-      const newPatient = await addPatient({
-        name: newPatientForm.name,
-        phone: newPatientForm.phone,
-        email: newPatientForm.email || undefined,
-        notes: newPatientForm.notes || undefined,
-      })
-
-      if (newPatient?.id) {
-        setBookingForm((prev) => ({ ...prev, patientId: newPatient.id }))
-        toast({ title: "Success", description: "New patient created and selected" })
-        setShowNewPatientDialog(false)
-        setNewPatientForm({ name: "", phone: "", email: "", notes: "" })
+      if (tempStatus !== selectedBooking.status) {
+        await updateBooking(selectedBooking.id, { status: tempStatus })
+        toast({ title: "Booking updated successfully" })
       }
+      setDetailDialogOpen(false)
+      setSelectedBooking(null)
+      setTempStatus("")
     } catch (error) {
-      toast({ title: "Error", description: "Failed to create patient", variant: "destructive" })
+      toast({ title: "Failed to update booking", variant: "destructive" })
     }
   }
 
-  const openNewPatientDialog = () => {
-    setNewPatientForm({ name: "", phone: "", email: "", notes: "" })
-    setShowNewPatientDialog(true)
+  const handleBulkStatusUpdate = async (status: string) => {
+    try {
+      await Promise.all(
+        selectedBookings.map(id => updateBooking(id, { status }))
+      )
+      setSelectedBookings([])
+      toast({ title: `${selectedBookings.length} bookings updated` })
+    } catch (error) {
+      toast({ title: "Failed to update bookings", variant: "destructive" })
+    }
   }
-
-  const resetFilters = () => {
-    setFilters({
-      status: "all",
-      staff: "all",
-      treatment: "all",
-      paymentStatus: "all",
-      dateRange: "week",
-      customStartDate: "",
-      customEndDate: "",
-      searchQuery: "",
-    })
-    setCurrentPage(1)
-  }
-
-  const hasActiveFilters =
-    filters.status !== "all" ||
-    filters.staff !== "all" ||
-    filters.treatment !== "all" ||
-    filters.paymentStatus !== "all" ||
-    filters.dateRange !== "week" ||
-    filters.searchQuery !== ""
-
-  // Check if data is completely empty (no bookings, patients, staff, or treatments)
-  const hasNoData = !loading && (
-    (!bookings || bookings.length === 0) &&
-    (!patients || patients.length === 0) &&
-    (!staff || staff.length === 0) &&
-    (!treatments || treatments.length === 0)
-  )
 
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex min-h-[600px] w-full items-center justify-center">
+        <div className="flex items-center justify-center h-[60vh]">
           <LiquidLoading />
         </div>
       </MainLayout>
@@ -446,436 +328,414 @@ export default function CalendarPage() {
 
   return (
     <MainLayout>
-      {hasNoData ? (
-        <EmptyState
-          icon={Calendar}
-          title={`No ${terminology.booking} Scheduled`}
-          description={`You don't have any ${terminology.booking.toLowerCase()} yet. Start by adding ${terminology.staff.toLowerCase()}, ${terminology.treatment.toLowerCase()}, and ${terminology.patient.toLowerCase()}, then create your first ${terminology.booking.toLowerCase()} to manage your schedule.`}
-          actionLabel={`Add ${terminology.staff}`}
-          onAction={() => router.push('/staff')}
-          secondaryActionLabel={`Add ${terminology.treatment}`}
-          onSecondaryAction={() => router.push('/treatments')}
-          tips={[
-            {
-              icon: Users,
-              title: `Setup ${terminology.staff}`,
-              description: "Add staff members first"
-            },
-            {
-              icon: Star,
-              title: `Create ${terminology.treatment}`,
-              description: "Define services to offer"
-            },
-            {
-              icon: UserPlus,
-              title: `Add ${terminology.patient}`,
-              description: "Build client database"
-            }
-          ]}
-        />
-      ) : (
-      <div className="space-y-6">
+      <div className="space-y-6 pb-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Calendar</h1>
-            <p className="text-muted-foreground">Manage appointments and schedules</p>
+            <h1 className="text-3xl font-bold text-gray-900">Calendar</h1>
+            <p className="text-gray-500 mt-1">Manage your bookings and schedule</p>
           </div>
-          <div className="flex gap-2">
-            <div className="flex bg-muted rounded-lg p-1">
-              <Button
-                variant={viewMode === "calendar" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("calendar")}
-                className="h-8 px-3"
-              >
-                <CalendarDays className="h-4 w-4 mr-2" />
-                Calendar
-              </Button>
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("table")}
-                className="h-8 px-3"
-              >
-                <Table className="h-4 w-4 mr-2" />
-                Table
-              </Button>
-            </div>
-            <Button
-              variant={hasActiveFilters ? "default" : "outline"}
-              size="sm"
-              onClick={() => setShowFilterDialog(true)}
-              className={hasActiveFilters ? "bg-primary text-primary-foreground" : ""}
-            >
-              <SlidersHorizontal className="h-4 w-4 mr-2" />
-              Filters
-              {hasActiveFilters && (
-                <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 text-xs">
-                  {Object.values(filters).filter((v) => v !== "all" && v !== "week" && v !== "").length}
-                </Badge>
-              )}
-            </Button>
-            <Button size="sm" onClick={() => router.push("/walk-in")}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Walk-in
-            </Button>
-          </div>
+          <Button
+            onClick={handleNewBookingFromButton}
+            className="bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Booking
+          </Button>
         </div>
 
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search appointments, patients, treatments, or staff..."
-              value={filters.searchQuery}
-              onChange={(e) => setFilters((prev) => ({ ...prev, searchQuery: e.target.value }))}
-              className="pl-10"
-            />
-          </div>
-          {hasActiveFilters && (
-            <Button variant="outline" size="sm" onClick={resetFilters}>
-              <FilterX className="h-4 w-4 mr-2" />
-              Clear All
-            </Button>
-          )}
-        </div>
-
-        {/* Calendar Navigation */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" onClick={() => setCurrentWeek(addDays(currentWeek, -7))}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h2 className="text-lg font-semibold">
-              {format(weekStart, "MMM d")} - {format(addDays(weekStart, 6), "MMM d, yyyy")}
-            </h2>
-            <Button variant="outline" size="sm" onClick={() => setCurrentWeek(addDays(currentWeek, 7))}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setCurrentWeek(new Date())}>
-              Today
-            </Button>
-            {viewMode === "table" && (
-              <div className="text-sm text-muted-foreground flex items-center">
-                Showing {filteredBookings.length} appointments
+        {/* Controls */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              {/* View Toggle */}
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <Button
+                  variant={viewMode === "calendar" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("calendar")}
+                  className={cn(
+                    viewMode === "calendar" && "bg-white shadow-sm"
+                  )}
+                >
+                  <Grid3x3 className="h-4 w-4 mr-2" />
+                  Calendar
+                </Button>
+                <Button
+                  variant={viewMode === "table" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setViewMode("table")}
+                  className={cn(
+                    viewMode === "table" && "bg-white shadow-sm"
+                  )}
+                >
+                  <List className="h-4 w-4 mr-2" />
+                  Table
+                </Button>
               </div>
-            )}
-          </div>
-        </div>
 
-        {hasActiveFilters && (
-          <Card className="bg-muted/30">
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-muted-foreground">Active filters:</span>
-                {filters.status !== "all" && (
-                  <Badge variant="secondary" className="gap-1">
-                    Status: {filters.status}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-destructive"
-                      onClick={() => setFilters((prev) => ({ ...prev, status: "all" }))}
-                    />
-                  </Badge>
-                )}
-                {filters.staff !== "all" && (
-                  <Badge variant="secondary" className="gap-1">
-                    Staff: {staff.find((s) => s?.id === filters.staff)?.name}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-destructive"
-                      onClick={() => setFilters((prev) => ({ ...prev, staff: "all" }))}
-                    />
-                  </Badge>
-                )}
-                {filters.treatment !== "all" && (
-                  <Badge variant="secondary" className="gap-1">
-                    Treatment: {treatments.find((t) => t?.id === filters.treatment)?.name}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-destructive"
-                      onClick={() => setFilters((prev) => ({ ...prev, treatment: "all" }))}
-                    />
-                  </Badge>
-                )}
-                {filters.paymentStatus !== "all" && (
-                  <Badge variant="secondary" className="gap-1">
-                    Payment: {filters.paymentStatus}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-destructive"
-                      onClick={() => setFilters((prev) => ({ ...prev, paymentStatus: "all" }))}
-                    />
-                  </Badge>
-                )}
-                {filters.dateRange !== "week" && (
-                  <Badge variant="secondary" className="gap-1">
-                    Date: {filters.dateRange}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-destructive"
-                      onClick={() =>
-                        setFilters((prev) => ({ ...prev, dateRange: "week", customStartDate: "", customEndDate: "" }))
-                      }
-                    />
-                  </Badge>
-                )}
-                {filters.searchQuery && (
-                  <Badge variant="secondary" className="gap-1">
-                    Search: "{filters.searchQuery}"
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-destructive"
-                      onClick={() => setFilters((prev) => ({ ...prev, searchQuery: "" }))}
-                    />
-                  </Badge>
-                )}
+              {/* Date Range Selector */}
+              {viewMode === "calendar" && (
+                <div className="flex items-center gap-2">
+                  <Select value={dateRange} onValueChange={(v: DateRange) => setDateRange(v)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="week">Week</SelectItem>
+                      <SelectItem value="2weeks">2 Weeks</SelectItem>
+                      <SelectItem value="month">Month</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <div className="flex items-center gap-2 px-3 py-2 border rounded-lg">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCurrentMonth(
+                        dateRange === "week" ? addDays(currentMonth, -7) : subMonths(currentMonth, 1)
+                      )}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium min-w-[120px] text-center">
+                      {format(currentMonth, "MMMM yyyy")}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCurrentMonth(
+                        dateRange === "week" ? addDays(currentMonth, 7) : addMonths(currentMonth, 1)
+                      )}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Search & Filters */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search bookings..."
+                    className="pl-9 w-[200px]"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Calendar View */}
+        {viewMode === "calendar" && (
+          <Card>
+            <CardContent className="p-6">
+              {/* Current Date Display */}
+              <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+                <div>
+                  <p className="text-sm text-gray-500 font-medium">Today</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mt-1">
+                    {format(new Date(), "EEEE, MMMM dd, yyyy")}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-6 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded bg-green-100 border border-green-200"></div>
+                    <span className="text-gray-600">{calendarStats.confirmed} Confirmed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded bg-blue-100 border border-blue-200"></div>
+                    <span className="text-gray-600">{calendarStats.completed} Completed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-900 font-semibold">{formatCurrency(calendarStats.revenue)}</span>
+                  </div>
+                </div>
+              </div>
+                {/* Weekday Headers */}
+                <div className="grid grid-cols-7 gap-2 mb-2">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                    <div key={day} className="text-center text-sm font-semibold text-gray-600 py-2">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, idx) => {
+                  const dayBookings = getBookingsForDate(day)
+                  const isCurrentMonth = isSameMonth(day, currentMonth)
+                  const isCurrentDay = isToday(day)
+
+                  // Calculate day revenue
+                  const dayRevenue = dayBookings.reduce((sum, b) => {
+                    const treatment = treatments.find(t => t.id === b.treatmentId)
+                    return sum + (treatment?.price || 0)
+                  }, 0)
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handleDateClick(day)}
+                      className={cn(
+                        "min-h-[120px] p-3 rounded-lg border transition-all hover:shadow-lg hover:scale-[1.02] relative overflow-hidden group",
+                        isCurrentMonth ? "bg-white" : "bg-gray-50",
+                        isCurrentDay && "ring-2 ring-[#C8B6FF]",
+                        selectedDate && isSameDay(day, selectedDate) && "bg-gradient-to-br from-[#FFD6FF]/30 to-[#E7C6FF]/30 shadow-md"
+                      )}
+                    >
+                      {/* Gradient overlay on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#FFD6FF]/0 to-[#E7C6FF]/0 group-hover:from-[#FFD6FF]/10 group-hover:to-[#E7C6FF]/10 transition-all" />
+
+                      <div className="relative">
+                        {/* Date header */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={cn(
+                            "text-sm font-semibold",
+                            isCurrentDay ? "bg-[#C8B6FF] text-white px-2.5 py-1 rounded-full" : "text-gray-700",
+                            !isCurrentMonth && "text-gray-400"
+                          )}>
+                            {format(day, "d")}
+                          </span>
+                          {dayBookings.length > 0 && (
+                            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 bg-white/80">
+                              {dayBookings.length}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Booking Indicators */}
+                        {dayBookings.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {dayBookings.slice(0, 2).map((booking, i) => {
+                              const treatment = treatments.find(t => t.id === booking.treatmentId)
+                              const patient = patients.find(p => p.id === booking.patientId)
+                              return (
+                                <div
+                                  key={i}
+                                  className={cn(
+                                    "text-xs px-2 py-1.5 rounded-md truncate shadow-sm",
+                                    getStatusColor(booking.status)
+                                  )}
+                                >
+                                  <div className="font-semibold truncate">
+                                    {format(new Date(booking.startAt), "HH:mm")}
+                                  </div>
+                                  <div className="text-[10px] truncate opacity-90">
+                                    {patient?.name || "Unknown"}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                            {dayBookings.length > 2 && (
+                              <div className="text-xs text-center text-gray-500 font-medium bg-gray-100 rounded py-1">
+                                +{dayBookings.length - 2} more
+                              </div>
+                            )}
+
+                            {/* Day Revenue */}
+                            {dayRevenue > 0 && (
+                              <div className="pt-1 mt-1 border-t border-gray-200">
+                                <div className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+                                  <DollarSign className="h-3 w-3" />
+                                  {formatCurrency(dayRevenue)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4">
+                            <div className="text-xs text-gray-300">No bookings</div>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
         )}
 
-        {viewMode === "calendar" ? (
-          /* Calendar View */
+        {/* Table View */}
+        {viewMode === "table" && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Week View
-                <Badge variant="outline" className="ml-auto">
-                  {weekBookings.length} appointments
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <div className="min-w-[800px]">
-                  {/* Header */}
-                  <div className="grid grid-cols-8 gap-2 mb-4">
-                    <div className="p-2"></div>
-                    {weekDays.map((day) => (
-                      <div key={day.toISOString()} className="p-2 text-center font-medium text-sm">
-                        <div>{format(day, "EEE")}</div>
-                        <div className="text-lg font-bold">{format(day, "d")}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Time slots */}
-                  <div className="space-y-1">
-                    {timeSlots.map((time) => (
-                      <div key={time} className="grid grid-cols-8 gap-2">
-                        <div className="p-2 text-sm text-muted-foreground font-medium">{time}</div>
-                        {weekDays.map((day) => {
-                          const bookings = getBookingsForSlot(day, time)
-                          const hasMultiple = bookings.length > 1
-
-                          return (
-                            <div
-                              key={`${time}-${day.toISOString()}`}
-                              className="p-2 min-h-[60px] border border-border rounded-md hover:bg-muted/30 cursor-pointer transition-colors relative"
-                              onClick={() => handleSlotClick(day, time)}
-                            >
-                              {bookings.length > 0 && (
-                                <div className={`bg-primary/20 border border-primary/30 rounded p-2 text-xs h-full ${
-                                  hasMultiple ? 'bg-orange-100 border-orange-300' : ''
-                                }`}>
-                                  {hasMultiple ? (
-                                    <>
-                                      <div className="font-medium text-orange-700">
-                                        {bookings.length} appointments
-                                      </div>
-                                      <div className="text-xs text-orange-600 mt-1">
-                                        {bookings.map((b, i) => {
-                                          const details = getBookingDetails(b)
-                                          return details?.patient?.name || 'Unknown'
-                                        }).join(', ')}
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <div className="font-medium truncate">
-                                        {getBookingDetails(bookings[0])?.patient?.name || "Unknown"}
-                                      </div>
-                                      <div className="text-muted-foreground truncate">
-                                        {getBookingDetails(bookings[0])?.treatment?.name || "Unknown"}
-                                      </div>
-                                      <div className="mt-1">{getStatusBadge(bookings[0].status)}</div>
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                              {hasMultiple && (
-                                <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                                  {bookings.length}
-                                </div>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ))}
-                  </div>
+            <CardContent className="p-6">
+              {/* Bulk Actions */}
+              {selectedBookings.length > 0 && (
+                <div className="flex items-center gap-2 mb-4 p-3 bg-[#BBD0FF]/20 rounded-lg">
+                  <span className="text-sm font-medium">{selectedBookings.length} selected</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkStatusUpdate("confirmed")}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Confirm
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkStatusUpdate("completed")}
+                  >
+                    Complete
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedBookings([])}
+                  >
+                    Clear
+                  </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          /* Table View */
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Table className="h-5 w-5" />
-                Table View
-                <Badge variant="outline" className="ml-auto">
-                  {filteredBookings.length} total appointments
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              )}
+
+              {/* Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-3 font-medium">Date & Time</th>
-                      <th className="text-left p-3 font-medium">Patient</th>
-                      <th className="text-left p-3 font-medium">Treatment</th>
-                      <th className="text-left p-3 font-medium">Staff</th>
-                      <th className="text-left p-3 font-medium">Duration</th>
-                      <th className="text-left p-3 font-medium">Price</th>
-                      <th className="text-left p-3 font-medium">Status</th>
-                      <th className="text-left p-3 font-medium">Actions</th>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedBookings.length === filteredBookings.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedBookings(filteredBookings.map(b => b.id))
+                            } else {
+                              setSelectedBookings([])
+                            }
+                          }}
+                          className="rounded"
+                        />
+                      </th>
+                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Booking ID</th>
+                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Customer</th>
+                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Product</th>
+                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Date & Time</th>
+                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Staff</th>
+                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Status</th>
+                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Amount</th>
+                      <th className="text-right text-sm font-semibold text-gray-600 py-3 px-4">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedBookings.length > 0 ? (
-                      paginatedBookings.map((booking) => {
-                        const bookingDetails = getBookingDetails(booking)
-                        return (
-                          <tr key={booking.id} className="border-b hover:bg-muted/30 transition-colors">
-                            <td className="p-3">
-                              <div className="font-medium">{format(parseISO(booking.startAt), "EEE, MMM d")}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {format(parseISO(booking.startAt), "HH:mm")}
+                    {paginatedBookings.map((booking) => {
+                      const patient = patients.find(p => p.id === booking.patientId)
+                      const treatment = treatments.find(t => t.id === booking.treatmentId)
+                      const staffMember = staff.find(s => s.id === booking.staffId)
+
+                      return (
+                        <tr key={booking.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedBookings.includes(booking.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedBookings([...selectedBookings, booking.id])
+                                } else {
+                                  setSelectedBookings(selectedBookings.filter(id => id !== booking.id))
+                                }
+                              }}
+                              className="rounded"
+                            />
+                          </td>
+                          <td className="py-3 px-4 text-sm font-mono text-gray-600">
+                            #{booking.id.slice(0, 8)}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center text-sm font-semibold">
+                                {patient?.name?.charAt(0) || "?"}
                               </div>
-                            </td>
-                            <td className="p-3">
-                              <div className="font-medium">{bookingDetails?.patient?.name || "Unknown"}</div>
-                              <div className="text-sm text-muted-foreground flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {bookingDetails?.patient?.phone || "No phone"}
-                              </div>
-                            </td>
-                            <td className="p-3">
-                              <div className="font-medium">{bookingDetails?.treatment?.name || "Unknown"}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {bookingDetails?.treatment?.category || "General"}
-                              </div>
-                            </td>
-                            <td className="p-3">
-                              <div className="font-medium">{bookingDetails?.staff?.name || "Unknown"}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {bookingDetails?.staff?.role || "Staff"}
-                              </div>
-                            </td>
-                            <td className="p-3 text-sm">{bookingDetails?.treatment?.durationMin || 60} min</td>
-                            <td className="p-3 font-medium">
-                              {formatCurrency(bookingDetails?.treatment?.price || 0)}
-                            </td>
-                            <td className="p-3">{getStatusBadge(booking.status)}</td>
-                            <td className="p-3">
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    const details = getBookingDetails(booking)
-                                    if (details) setSelectedBooking(details)
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Calendar className="h-4 w-4" />
-                                </Button>
-                                {booking.status === "pending" && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleBookingAction(booking.id, "checkin")}
-                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                {booking.status === "confirmed" && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleBookingAction(booking.id, "complete")}
-                                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleBookingAction(booking.id, "delete")}
-                                  className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan={8} className="p-8 text-center text-muted-foreground">
-                          {hasActiveFilters ? "No appointments match your filters" : "No appointments found"}
-                        </td>
-                      </tr>
-                    )}
+                              <span className="text-sm font-medium">{patient?.name || "Unknown"}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{treatment?.name || "Unknown"}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            {format(new Date(booking.startAt), "MMM dd, yyyy HH:mm")}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{staffMember?.name || "Unassigned"}</td>
+                          <td className="py-3 px-4">
+                            <Badge className={cn("text-xs", getStatusColor(booking.status))}>
+                              {booking.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 text-sm font-medium">{formatCurrency(treatment?.price || 0)}</td>
+                          <td className="py-3 px-4 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenDetails(booking)}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
 
+              {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
-                    {Math.min(currentPage * ITEMS_PER_PAGE, filteredBookings.length)} of {filteredBookings.length}{" "}
-                    appointments
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                  <div className="text-sm text-gray-500">
+                    Showing {tablePage * itemsPerPage + 1} to {Math.min((tablePage + 1) * itemsPerPage, filteredBookings.length)} of {filteredBookings.length} bookings
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
+                      onClick={() => setTablePage(prev => Math.max(0, prev - 1))}
+                      disabled={tablePage === 0}
                     >
                       <ChevronLeft className="h-4 w-4" />
                       Previous
                     </Button>
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-1">
                       {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum
-                        if (totalPages <= 5) {
-                          pageNum = i + 1
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i
-                        } else {
-                          pageNum = currentPage - 2 + i
+                        let pageNum = i
+                        if (totalPages > 5) {
+                          if (tablePage > 2) {
+                            pageNum = tablePage - 2 + i
+                          }
+                          if (pageNum >= totalPages) {
+                            pageNum = totalPages - 5 + i
+                          }
                         }
-
                         return (
                           <Button
                             key={pageNum}
-                            variant={currentPage === pageNum ? "default" : "outline"}
+                            variant={tablePage === pageNum ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setCurrentPage(pageNum)}
-                            className="w-8 h-8 p-0"
+                            className={cn(
+                              "w-8 h-8 p-0",
+                              tablePage === pageNum && "bg-[#C8B6FF] hover:bg-[#B8A6EF]"
+                            )}
+                            onClick={() => setTablePage(pageNum)}
                           >
-                            {pageNum}
+                            {pageNum + 1}
                           </Button>
                         )
                       })}
@@ -883,8 +743,8 @@ export default function CalendarPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
+                      onClick={() => setTablePage(prev => Math.min(totalPages - 1, prev + 1))}
+                      disabled={tablePage === totalPages - 1}
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />
@@ -892,867 +752,1209 @@ export default function CalendarPage() {
                   </div>
                 </div>
               )}
-
-              <div className="mt-4 pt-4 border-t">
-                <Button
-                  onClick={() => {
-                    setSelectedSlot({ date: new Date(), time: "09:00" })
-                    setBookingForm({
-                      patientId: "",
-                      staffId: "",
-                      treatmentId: "",
-                      notes: "",
-                      paymentStatus: "unpaid",
-                    })
-                    setShowBookingDialog(true)
-                  }}
-                  className="w-full"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New Appointment
-                </Button>
-              </div>
             </CardContent>
           </Card>
         )}
-      </div>
-      )}
 
-      {/* Create Booking Dialog */}
-      <Dialog open={showBookingDialog} onOpenChange={setShowBookingDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Booking</DialogTitle>
+        {/* Sliding Panel for Date Details */}
+        <Sheet open={slideOpen} onOpenChange={setSlideOpen}>
+          <SheetContent className="w-[1000px] sm:w-[1100px] max-w-[95vw] overflow-y-auto bg-gray-50">
+            <SheetHeader className="border-b border-gray-200 pb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm text-gray-500 font-medium">Schedule</p>
+                  <SheetTitle className="text-2xl font-bold text-gray-900 mt-1">
+                    {selectedDate && format(selectedDate, "EEE, MMMM dd")}
+                  </SheetTitle>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">Total Bookings</p>
+                  <p className="text-2xl font-bold text-[#C8B6FF]">
+                    {selectedDate && getBookingsForDate(selectedDate).length}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => selectedDate && handleNewBookingFromCalendar(selectedDate)}
+                className="w-full bg-[#C8B6FF] hover:bg-[#B8A6EF] text-white h-11 font-medium"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Booking
+              </Button>
+            </SheetHeader>
+
+            <div className="mt-6 space-y-1">
+              {selectedDateBookings.length === 0 ? (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <AlertCircle className="h-10 w-10 text-gray-300" />
+                  </div>
+                  <p className="text-gray-500 font-medium">No bookings for this date</p>
+                  <p className="text-sm text-gray-400 mt-1">Schedule a new booking to get started</p>
+                </div>
+              ) : (
+                selectedDateBookings.map(({ time, bookings: timeBookings }) => {
+                  const isExpanded = expandedTimeSlots.has(time)
+
+                  return (
+                    <div
+                      key={time}
+                      className="mb-4 group"
+                      onMouseEnter={() => setExpandedTimeSlots(prev => new Set([...prev, time]))}
+                      onMouseLeave={() => setExpandedTimeSlots(prev => {
+                        const next = new Set(prev)
+                        next.delete(time)
+                        return next
+                      })}
+                    >
+                      {/* Time Header - Collapsible */}
+                      <div
+                        className={cn(
+                          "flex items-center gap-4 px-5 py-4 rounded-2xl bg-white border cursor-pointer transition-all",
+                          isExpanded ? "border-[#C8B6FF] shadow-lg mb-2" : "border-gray-100 hover:border-gray-200 hover:shadow-md"
+                        )}
+                      >
+                        {/* Time Badge */}
+                        <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-[#FFD6FF]/40 to-[#E7C6FF]/40 flex-shrink-0">
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-gray-900">{time.split(':')[0]}</div>
+                            <div className="text-[10px] text-gray-500 font-medium">{time.split(':')[1]}</div>
+                          </div>
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Time Slot</p>
+                          <p className="text-base font-semibold text-gray-900 mt-0.5">
+                            {timeBookings.length} {timeBookings.length === 1 ? 'booking' : 'bookings'}
+                          </p>
+                        </div>
+
+                        {/* Preview Avatars */}
+                        <div className="flex -space-x-3">
+                          {timeBookings.slice(0, 3).map((booking, idx) => {
+                            const patient = patients.find(p => p.id === booking.patientId)
+                            return (
+                              <div
+                                key={idx}
+                                className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center border-2 border-white text-xs font-bold text-gray-700 shadow-sm"
+                              >
+                                {patient?.name?.charAt(0)?.toUpperCase() || "?"}
+                              </div>
+                            )
+                          })}
+                          {timeBookings.length > 3 && (
+                            <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center border-2 border-white text-[10px] font-bold text-gray-500 shadow-sm">
+                              +{timeBookings.length - 3}
+                            </div>
+                          )}
+                        </div>
+
+                        <ChevronRight className={cn(
+                          "h-5 w-5 text-gray-400 transition-all duration-200 flex-shrink-0",
+                          isExpanded && "rotate-90 text-[#C8B6FF]"
+                        )} />
+                      </div>
+
+                      {/* Expanded Bookings */}
+                      <div
+                        className={cn(
+                          "overflow-hidden transition-all duration-300 ease-in-out",
+                          isExpanded ? "max-h-[3000px] opacity-100 mt-3" : "max-h-0 opacity-0"
+                        )}
+                      >
+                        <div className="space-y-3 pl-3">
+                          {timeBookings.map((booking, idx) => {
+                            const patient = patients.find(p => p.id === booking.patientId)
+                            const treatment = treatments.find(t => t.id === booking.treatmentId)
+                            const staffMember = staff.find(s => s.id === booking.staffId)
+                            const endTime = format(new Date(booking.endAt), "HH:mm")
+
+                            return (
+                              <div
+                                key={booking.id}
+                                className="relative"
+                              >
+                                {/* Vertical Line Connector */}
+                                <div
+                                  className="absolute left-[27px] top-0 w-0.5 h-full"
+                                  style={{
+                                    backgroundColor: booking.status === 'confirmed' ? '#10b981' :
+                                                     booking.status === 'completed' ? '#3b82f6' :
+                                                     booking.status === 'cancelled' ? '#ef4444' : '#f59e0b'
+                                  }}
+                                />
+
+                                <div className="flex gap-3">
+                                  {/* Color Dot */}
+                                  <div
+                                    className="w-[14px] h-[14px] rounded-full border-[3px] border-white shadow-md flex-shrink-0 mt-4 z-10"
+                                    style={{
+                                      backgroundColor: booking.status === 'confirmed' ? '#10b981' :
+                                                       booking.status === 'completed' ? '#3b82f6' :
+                                                       booking.status === 'cancelled' ? '#ef4444' : '#f59e0b'
+                                    }}
+                                  />
+
+                                  {/* Card */}
+                                  <Card
+                                    className="flex-1 bg-white border border-gray-100 hover:border-[#E7C6FF] cursor-pointer hover:shadow-lg transition-all"
+                                    onClick={() => handleOpenDetails(booking)}
+                                  >
+                                    <CardContent className="p-4">
+                                      {/* Header */}
+                                      <div className="flex items-start gap-3 mb-3">
+                                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center flex-shrink-0 text-sm font-bold text-gray-700 shadow">
+                                          {patient?.name?.charAt(0)?.toUpperCase() || "?"}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="font-semibold text-gray-900 truncate">
+                                            {patient?.name || "Unknown"}
+                                          </h4>
+                                          <p className="text-xs text-gray-400 truncate">{patient?.email || "No email"}</p>
+                                        </div>
+                                        <Badge className={cn("text-[10px] px-2 py-0.5 font-medium", getStatusColor(booking.status))}>
+                                          {booking.status}
+                                        </Badge>
+                                      </div>
+
+                                      {/* Details Grid */}
+                                      <div className="grid grid-cols-2 gap-3 text-xs">
+                                        <div className="flex items-center gap-2">
+                                          <Star className="h-3.5 w-3.5 text-[#C8B6FF] flex-shrink-0" />
+                                          <div className="min-w-0">
+                                            <p className="text-gray-400 text-[10px]">Treatment</p>
+                                            <p className="font-medium text-gray-900 truncate">{treatment?.name || "Unknown"}</p>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          <User className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                                          <div className="min-w-0">
+                                            <p className="text-gray-400 text-[10px]">Staff</p>
+                                            <p className="font-medium text-gray-900 truncate">{staffMember?.name || "Unassigned"}</p>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          <Clock className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                                          <div className="min-w-0">
+                                            <p className="text-gray-400 text-[10px]">Duration</p>
+                                            <p className="font-medium text-gray-900">{time} - {endTime}</p>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          <DollarSign className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                                          <div className="min-w-0">
+                                            <p className="text-gray-400 text-[10px]">Price</p>
+                                            <p className="font-semibold text-gray-900">{formatCurrency(treatment?.price || 0)}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Notes */}
+                                      {booking.notes && (
+                                        <div className="mt-3 pt-3 border-t border-gray-100">
+                                          <p className="text-[10px] text-gray-400 font-medium mb-1">Notes</p>
+                                          <p className="text-xs text-gray-600 line-clamp-2">{booking.notes}</p>
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* Booking Detail Dialog */}
+        <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+          <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+            {selectedBooking && (() => {
+              const patient = patients.find(p => p.id === selectedBooking.patientId)
+              const treatment = treatments.find(t => t.id === selectedBooking.treatmentId)
+              const staffMember = staff.find(s => s.id === selectedBooking.staffId)
+
+              return (
+                <div className="space-y-0">
+                  {/* Header */}
+                  <div className="sticky top-0 bg-white z-10 pb-3 border-b border-gray-100">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="h-4 w-4 text-gray-400" />
+                        <span className="text-xs text-gray-500 font-medium">Booking ID #{selectedBooking.id.slice(0, 8).toUpperCase()}</span>
+                      </div>
+                      <button
+                        onClick={() => setDetailDialogOpen(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-3">{patient?.name || "Unknown Customer"}</h2>
+                    <Select
+                      value={tempStatus}
+                      onValueChange={setTempStatus}
+                    >
+                      <SelectTrigger className="w-full h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                            Pending
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="confirmed">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                            Confirmed
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="completed">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            Completed
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="cancelled">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                            Cancelled
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="no-show">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                            No Show
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="py-4 space-y-5">
+                    {/* Patient Info Card */}
+                    <div className="bg-gradient-to-br from-[#FFD6FF]/10 to-[#E7C6FF]/10 rounded-xl p-4 border border-[#FFD6FF]/30">
+                      <div className="flex items-start gap-3">
+                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center text-xl font-bold text-gray-700 shadow flex-shrink-0">
+                          {patient?.name?.charAt(0)?.toUpperCase() || "?"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] text-gray-500 font-semibold mb-1">PATIENT NAME</p>
+                          <h3 className="text-base font-bold text-gray-900 mb-2">{patient?.name || "Unknown"}</h3>
+                          <div className="grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <p className="text-gray-400 text-[10px] font-semibold mb-0.5">PHONE NUMBER</p>
+                              <p className="text-gray-900 font-medium">{patient?.phone || "Not provided"}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-[10px] font-semibold mb-0.5">EMAIL</p>
+                              <p className="text-gray-900 font-medium truncate">{patient?.email || "Not provided"}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Appointment Details - Horizontal Layout */}
+                    <div className="space-y-3">
+                      {/* Treatment */}
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                          <Star className="h-4 w-4 text-[#C8B6FF]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Treatment</p>
+                          <p className="font-bold text-gray-900 text-sm">{treatment?.name || "Unknown"}</p>
+                          <p className="text-xs text-gray-500">{treatment?.category || "N/A"}</p>
+                        </div>
+                      </div>
+
+                      {/* Date & Time */}
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                          <Clock className="h-4 w-4 text-blue-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Date & Time</p>
+                          <p className="font-bold text-gray-900 text-sm">
+                            {format(new Date(selectedBooking.startAt), "EEE, MMM dd")}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(selectedBooking.startAt), "HH:mm")} - {format(new Date(selectedBooking.endAt), "HH:mm")}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Staff */}
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                          <User className="h-4 w-4 text-green-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Staff</p>
+                          <p className="font-bold text-gray-900 text-sm">{staffMember?.name || "Unassigned"}</p>
+                          {staffMember?.email && (
+                            <p className="text-xs text-gray-500">{staffMember.email}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* General Info Section */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-1 h-3 bg-[#C8B6FF] rounded-full"></div>
+                        <h3 className="text-xs font-bold text-gray-900">General Info</h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-[10px] text-gray-400 font-semibold mb-1">FULL NAME</p>
+                          <p className="text-gray-900 font-medium text-xs">{patient?.name || "Unknown"}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-[10px] text-gray-400 font-semibold mb-1">PHONE NUMBER</p>
+                          <p className="text-gray-900 font-medium text-xs">{patient?.phone || "Not provided"}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-[10px] text-gray-400 font-semibold mb-1">EMAIL</p>
+                          <p className="text-gray-900 font-medium text-xs truncate">{patient?.email || "Not provided"}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-[10px] text-gray-400 font-semibold mb-1">PRICE</p>
+                          <p className="text-gray-900 font-bold text-base">{formatCurrency(treatment?.price || 0)}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    {selectedBooking.notes && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-1 h-3 bg-[#C8B6FF] rounded-full"></div>
+                          <h3 className="text-xs font-bold text-gray-900">Notes</h3>
+                        </div>
+                        <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-3">
+                          <p className="text-xs text-gray-700">{selectedBooking.notes}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="sticky bottom-0 bg-white pt-3 border-t border-gray-100 flex items-center gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-10 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-sm"
+                      onClick={() => handleDeleteBooking(selectedBooking.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      Delete Booking
+                    </Button>
+                    <Button
+                      className="flex-1 h-10 bg-[#C8B6FF] hover:bg-[#B8A6EF] text-white text-sm font-medium"
+                      onClick={handleFinishBooking}
+                    >
+                      Finish
+                    </Button>
+                  </div>
+                </div>
+              )
+            })()}
+          </DialogContent>
+        </Dialog>
+
+        {/* New Booking Dialog */}
+        <Dialog open={newBookingOpen} onOpenChange={setNewBookingOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-gray-50 to-white">
+            <DialogHeader className="border-b-2 border-gray-200 pb-5">
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  Book Appointment
+                </DialogTitle>
+                <button onClick={() => setNewBookingOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="flex items-center gap-1 mt-4">
+                {[
+                  { num: 1, label: 'Treatment', icon: Star },
+                  { num: 2, label: 'Staff', icon: User },
+                  { num: 3, label: 'Schedule', icon: Clock },
+                  { num: 4, label: 'Payment', icon: DollarSign },
+                  { num: 5, label: 'Review', icon: CheckCircle }
+                ].map((step, idx) => (
+                  <>
+                    <div key={step.num} className={cn(
+                      "flex items-center gap-2 flex-1",
+                      newBookingStep >= step.num ? "text-[#C8B6FF]" : "text-gray-400"
+                    )}>
+                      <div className={cn(
+                        "w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shadow-sm transition-all",
+                        newBookingStep > step.num ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white" :
+                        newBookingStep === step.num ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white ring-4 ring-[#FFD6FF]/50" :
+                        "bg-gray-100 text-gray-400"
+                      )}>
+                        {newBookingStep > step.num ? <CheckCircle className="h-4 w-4" /> : step.num}
+                      </div>
+                      <span className="text-[10px] font-bold uppercase hidden md:block">{step.label}</span>
+                    </div>
+                    {idx < 4 && <div className={cn("h-0.5 w-8", newBookingStep > step.num ? "bg-[#C8B6FF]" : "bg-gray-200")} />}
+                  </>
+                ))}
+              </div>
             </DialogHeader>
-            <div className="space-y-4">
-              {selectedSlot && (
-                <div className="text-sm text-muted-foreground">
-                  {format(selectedSlot.date, "EEEE, MMMM d, yyyy")} at {selectedSlot.time}
+
+            <div className="py-6">
+              {/* Step 1: Treatment Selection with Search & Pagination */}
+              {newBookingStep === 1 && (() => {
+                const filteredTreatments = treatments.filter(t =>
+                  t.name.toLowerCase().includes(treatmentSearch.toLowerCase()) ||
+                  t.category.toLowerCase().includes(treatmentSearch.toLowerCase())
+                )
+                const paginatedTreatments = filteredTreatments.slice(
+                  treatmentPage * treatmentsPerPage,
+                  (treatmentPage + 1) * treatmentsPerPage
+                )
+                const totalTreatmentPages = Math.ceil(filteredTreatments.length / treatmentsPerPage)
+
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Select Treatment</h3>
+
+                      {/* Search */}
+                      <div className="relative mb-4">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search treatment..."
+                          value={treatmentSearch}
+                          onChange={(e) => {
+                            setTreatmentSearch(e.target.value)
+                            setTreatmentPage(0)
+                          }}
+                          className="pl-9 h-11"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {paginatedTreatments.map((treatment) => (
+                        <button
+                          key={treatment.id}
+                          onClick={() => setNewBookingData({ ...newBookingData, treatmentId: treatment.id })}
+                          className={cn(
+                            "p-4 rounded-xl border-2 text-left transition-all hover:shadow-md",
+                            newBookingData.treatmentId === treatment.id
+                              ? "border-[#C8B6FF] bg-[#FFD6FF]/10"
+                              : "border-gray-200 hover:border-gray-300"
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                              <Star className="h-5 w-5 text-[#C8B6FF]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 text-sm mb-1">{treatment.name}</p>
+                              <p className="text-xs text-gray-500">{treatment.category}</p>
+                              <div className="flex items-center gap-3 mt-2 text-xs">
+                                <span className="text-gray-600">{treatment.durationMin} min</span>
+                                <span className="font-semibold text-gray-900">{formatCurrency(treatment.price)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                        ))}
+                      </div>
+
+                      {/* Pagination */}
+                      {totalTreatmentPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setTreatmentPage(prev => Math.max(0, prev - 1))}
+                            disabled={treatmentPage === 0}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm text-gray-600">
+                            Page {treatmentPage + 1} of {totalTreatmentPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setTreatmentPage(prev => Math.min(totalTreatmentPages - 1, prev + 1))}
+                            disabled={treatmentPage === totalTreatmentPages - 1}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Step 2: Staff Selection (filtered by selected treatment) */}
+              {newBookingStep === 2 && (() => {
+                const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
+                const availableStaff = selectedTreatment?.assignedStaff
+                  ? staff.filter(s => selectedTreatment.assignedStaff.includes(s.id))
+                  : staff
+
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Select Available Staff</h3>
+                      <p className="text-xs text-gray-500 mb-4">
+                        {availableStaff.length} staff member(s) available for {selectedTreatment?.name}
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {availableStaff.map((staffMember) => (
+                          <button
+                            key={staffMember.id}
+                            onClick={() => setNewBookingData({ ...newBookingData, staffId: staffMember.id })}
+                            className={cn(
+                              "p-4 rounded-xl border-2 text-left transition-all hover:shadow-md",
+                              newBookingData.staffId === staffMember.id
+                                ? "border-[#C8B6FF] bg-[#FFD6FF]/10"
+                                : "border-gray-200 hover:border-gray-300"
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center text-lg font-bold text-gray-700">
+                                {staffMember.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-gray-900 text-sm">{staffMember.name}</p>
+                                <p className="text-xs text-gray-500">{staffMember.email}</p>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Step 3: Schedule (Date & Time) */}
+              {newBookingStep === 3 && (() => {
+                const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
+                const workingHours = {
+                  start: selectedStaff?.workingHours?.start || '09:00',
+                  end: selectedStaff?.workingHours?.end || '18:00'
+                }
+
+                // Generate time slots based on staff availability
+                const generateTimeSlots = () => {
+                  const slots = []
+                  const [startHour, startMin] = workingHours.start.split(':').map(Number)
+                  const [endHour, endMin] = workingHours.end.split(':').map(Number)
+
+                  const categories = [
+                    { name: 'Morning', start: startHour, end: 12, color: 'from-amber-50 to-orange-50 border-amber-200', badge: 'bg-amber-500 text-white', textColor: 'text-amber-900' },
+                    { name: 'Afternoon', start: 12, end: 17, color: 'from-sky-50 to-blue-50 border-sky-200', badge: 'bg-sky-500 text-white', textColor: 'text-sky-900' },
+                    { name: 'Evening', start: 17, end: endHour + 1, color: 'from-violet-50 to-purple-50 border-violet-200', badge: 'bg-violet-500 text-white', textColor: 'text-violet-900' }
+                  ]
+
+                  return categories.map(category => {
+                    const categorySlots = []
+                    for (let hour = Math.max(category.start, startHour); hour < Math.min(category.end, endHour + 1); hour++) {
+                      for (let min = 0; min < 60; min += 30) {
+                        if (hour === startHour && min < startMin) continue
+                        if (hour === endHour && min >= endMin) continue
+                        categorySlots.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`)
+                      }
+                    }
+                    return { ...category, slots: categorySlots }
+                  }).filter(cat => cat.slots.length > 0)
+                }
+
+                const timeCategories = generateTimeSlots()
+
+                // Generate calendar dates for current month
+                const generateCalendarDates = () => {
+                  const start = startOfWeek(startOfMonth(currentMonth))
+                  const end = endOfWeek(endOfMonth(currentMonth))
+                  const dates = []
+                  let day = start
+
+                  while (day <= end) {
+                    dates.push(day)
+                    day = addDays(day, 1)
+                  }
+                  return dates
+                }
+
+                const calendarDates = generateCalendarDates()
+
+                return (
+                  <div className="space-y-6">
+                    {/* Date Input - Quick Select */}
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
+                          <CalendarIcon className="h-4 w-4 text-[#C8B6FF]" />
+                        </div>
+                        Select Date
+                      </h3>
+                      <Input
+                        type="date"
+                        value={newBookingData.date}
+                        onChange={(e) => setNewBookingData({ ...newBookingData, date: e.target.value })}
+                        min={format(new Date(), 'yyyy-MM-dd')}
+                        className="h-14 border-2 text-base font-semibold"
+                        style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                      />
+                    </div>
+
+                    {/* Selected Date Display */}
+                    {newBookingData.date && (
+                      <div className="bg-gradient-to-r from-[#C8B6FF] to-[#B8A6EF] rounded-2xl p-5 text-white shadow-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                            <CalendarIcon className="h-7 w-7 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Selected Date</p>
+                            <p className="text-lg font-bold">{format(new Date(newBookingData.date), 'EEEE, MMMM d, yyyy')}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Date Selection with Custom Calendar - Optional Visual */}
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
+                          <CalendarIcon className="h-4 w-4 text-[#C8B6FF]" />
+                        </div>
+                        Select Date
+                      </h3>
+
+                      {/* Month Navigation */}
+                      <div className="flex items-center justify-between mb-4 px-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                          className="hover:bg-[#FFD6FF]/30 hover:text-[#C8B6FF] font-semibold"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </Button>
+                        <h4 className="font-bold text-lg text-gray-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                          {format(currentMonth, 'MMMM yyyy')}
+                        </h4>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                          className="hover:bg-[#FFD6FF]/30 hover:text-[#C8B6FF] font-semibold"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </Button>
+                      </div>
+
+                      {/* Calendar Grid */}
+                      <div className="bg-white rounded-2xl p-5 shadow-md border-2 border-gray-100">
+                        {/* Day Headers */}
+                        <div className="grid grid-cols-7 gap-2 mb-3">
+                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                            <div key={day} className="text-center text-xs font-bold text-gray-600 py-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                              {day}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Date Grid */}
+                        <div className="grid grid-cols-7 gap-2">
+                          {calendarDates.map((date, idx) => {
+                            const dateStr = format(date, 'yyyy-MM-dd')
+                            const isSelected = newBookingData.date === dateStr
+                            const isCurrentMonth = isSameMonth(date, currentMonth)
+                            const isTodayDate = isToday(date)
+                            const isPast = date < startOfDay(new Date())
+
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  if (!isPast && isCurrentMonth) {
+                                    setNewBookingData({ ...newBookingData, date: dateStr })
+                                  }
+                                }}
+                                disabled={isPast || !isCurrentMonth}
+                                className={cn(
+                                  "aspect-square rounded-xl text-sm font-bold transition-all relative",
+                                  "hover:shadow-md hover:scale-105",
+                                  isSelected && "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white shadow-lg scale-105",
+                                  !isSelected && isTodayDate && isCurrentMonth && "bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] text-gray-900 ring-2 ring-[#C8B6FF]",
+                                  !isSelected && !isTodayDate && isCurrentMonth && !isPast && "bg-gray-50 hover:bg-gray-100 text-gray-900",
+                                  !isCurrentMonth && "text-gray-300 cursor-not-allowed",
+                                  isPast && isCurrentMonth && "text-gray-300 cursor-not-allowed opacity-40"
+                                )}
+                                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                              >
+                                {format(date, 'd')}
+                                {isTodayDate && isCurrentMonth && !isSelected && (
+                                  <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#C8B6FF]"></div>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Time Selection by Category */}
+                    {newBookingData.date && (
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
+                            <Clock className="h-4 w-4 text-[#C8B6FF]" />
+                          </div>
+                          Select Time
+                          <span className="text-xs font-normal text-gray-500 ml-1">({selectedStaff?.name})</span>
+                        </h3>
+                        <div className="space-y-3">
+                          {timeCategories.map((category) => (
+                            <div key={category.name} className={cn("rounded-2xl bg-gradient-to-br p-5 border-2 shadow-sm", category.color)}>
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                  <Badge className={cn("text-xs font-bold px-3 py-1", category.badge)}>
+                                    {category.name}
+                                  </Badge>
+                                  <span className={cn("text-xs font-semibold", category.textColor)}>{category.slots.length} slots available</span>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-4 gap-2">
+                                {category.slots.map((time) => {
+                                  const isSelected = newBookingData.time === time
+                                  return (
+                                    <button
+                                      key={time}
+                                      onClick={() => setNewBookingData({ ...newBookingData, time })}
+                                      className={cn(
+                                        "px-3 py-3 rounded-xl text-sm font-bold transition-all",
+                                        isSelected
+                                          ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white shadow-lg scale-105"
+                                          : "bg-white hover:bg-gray-50 text-gray-900 hover:shadow-md hover:scale-105 border-2 border-transparent hover:border-gray-200"
+                                      )}
+                                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                                    >
+                                      {time}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Customer Selection */}
+                    {newBookingData.date && newBookingData.time && (
+                      <div>
+                        <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
+                            <User className="h-4 w-4 text-[#C8B6FF]" />
+                          </div>
+                          Select Customer
+                        </h3>
+
+                        {/* Toggle: Existing or New Customer */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <button
+                            onClick={() => setNewBookingData({ ...newBookingData, isNewClient: false, newClientName: "", newClientPhone: "" })}
+                            className={cn(
+                              "px-5 py-4 rounded-xl font-bold text-sm transition-all border-2",
+                              !newBookingData.isNewClient
+                                ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white shadow-lg border-transparent"
+                                : "bg-white text-gray-700 hover:bg-gray-50 border-gray-200"
+                            )}
+                            style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                          >
+                            Existing Customer
+                          </button>
+                          <button
+                            onClick={() => setNewBookingData({ ...newBookingData, isNewClient: true, patientId: "" })}
+                            className={cn(
+                              "px-5 py-4 rounded-xl font-bold text-sm transition-all border-2",
+                              newBookingData.isNewClient
+                                ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white shadow-lg border-transparent"
+                                : "bg-white text-gray-700 hover:bg-gray-50 border-gray-200"
+                            )}
+                            style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                          >
+                            New Customer
+                          </button>
+                        </div>
+
+                        {/* Existing Customer - Searchable List */}
+                        {!newBookingData.isNewClient && (
+                          <div className="space-y-3">
+                            {/* Search Input */}
+                            <div className="relative">
+                              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                              <Input
+                                value={clientSearch}
+                                onChange={(e) => setClientSearch(e.target.value)}
+                                placeholder="Search customer by name or phone..."
+                                className="h-14 pl-12 border-2 text-base font-medium"
+                                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                              />
+                            </div>
+
+                            {/* Client List */}
+                            <div className="max-h-64 overflow-y-auto space-y-2 bg-gray-50 rounded-xl p-3 border-2 border-gray-200">
+                              {patients
+                                .filter(p =>
+                                  p.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                                  p.phone?.toLowerCase().includes(clientSearch.toLowerCase())
+                                )
+                                .map((patient) => (
+                                  <button
+                                    key={patient.id}
+                                    onClick={() => setNewBookingData({ ...newBookingData, patientId: patient.id })}
+                                    className={cn(
+                                      "w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all hover:shadow-md text-left",
+                                      newBookingData.patientId === patient.id
+                                        ? "border-[#C8B6FF] bg-gradient-to-br from-[#FFD6FF]/30 to-[#E7C6FF]/30 shadow-md"
+                                        : "border-transparent bg-white hover:border-gray-200"
+                                    )}
+                                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                                  >
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center text-base font-bold text-gray-900 shadow-sm flex-shrink-0">
+                                      {patient.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-bold text-gray-900 text-base">{patient.name}</p>
+                                      <p className="text-sm text-gray-600 font-medium">{patient.phone}</p>
+                                    </div>
+                                    {newBookingData.patientId === patient.id && (
+                                      <CheckCircle className="h-6 w-6 text-[#C8B6FF] flex-shrink-0" />
+                                    )}
+                                  </button>
+                                ))}
+                              {patients.filter(p =>
+                                p.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                                p.phone?.toLowerCase().includes(clientSearch.toLowerCase())
+                              ).length === 0 && (
+                                <div className="text-center py-8 text-gray-500">
+                                  <p className="font-semibold">No customers found</p>
+                                  <p className="text-sm">Try a different search term</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* New Customer Form */}
+                        {newBookingData.isNewClient && (
+                          <div className="space-y-4 bg-white rounded-xl p-5 border-2 border-gray-200">
+                            <div>
+                              <label className="text-xs text-gray-600 font-bold mb-2 block uppercase tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Customer Name</label>
+                              <Input
+                                value={newBookingData.newClientName}
+                                onChange={(e) => setNewBookingData({ ...newBookingData, newClientName: e.target.value })}
+                                placeholder="Enter full name"
+                                className="h-14 border-2 text-base font-semibold"
+                                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-600 font-bold mb-2 block uppercase tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Phone Number</label>
+                              <Input
+                                value={newBookingData.newClientPhone}
+                                onChange={(e) => setNewBookingData({ ...newBookingData, newClientPhone: e.target.value })}
+                                placeholder="Enter phone number"
+                                className="h-14 border-2 text-base font-semibold"
+                                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {/* Step 4: Payment Method */}
+              {newBookingStep === 4 && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
+                        <DollarSign className="h-4 w-4 text-[#C8B6FF]" />
+                      </div>
+                      Select Payment Method
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { value: 'cash', label: 'Cash', icon: Banknote, iconBg: 'bg-gradient-to-br from-green-400 to-emerald-500', iconColor: 'text-white' },
+                        { value: 'card', label: 'Debit/Credit Card', icon: CreditCard, iconBg: 'bg-gradient-to-br from-blue-400 to-cyan-500', iconColor: 'text-white' },
+                        { value: 'transfer', label: 'Bank Transfer', icon: Building2, iconBg: 'bg-gradient-to-br from-purple-400 to-violet-500', iconColor: 'text-white' },
+                        { value: 'ewallet', label: 'E-Wallet', icon: Smartphone, iconBg: 'bg-gradient-to-br from-orange-400 to-amber-500', iconColor: 'text-white' }
+                      ].map((method) => (
+                        <button
+                          key={method.value}
+                          onClick={() => setNewBookingData({ ...newBookingData, paymentMethod: method.value })}
+                          className={cn(
+                            "p-5 rounded-2xl border-2 text-left transition-all hover:shadow-lg hover:scale-105",
+                            newBookingData.paymentMethod === method.value
+                              ? "border-[#C8B6FF] bg-gradient-to-br from-[#FFD6FF]/30 to-[#E7C6FF]/30 shadow-lg scale-105"
+                              : "border-gray-200 bg-white hover:border-gray-300"
+                          )}
+                          style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                        >
+                          <div className="flex flex-col items-center gap-3 text-center">
+                            <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center shadow-md", method.iconBg)}>
+                              <method.icon className={cn("h-8 w-8", method.iconColor)} />
+                            </div>
+                            <p className="font-bold text-gray-900 text-sm">{method.label}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-600 font-bold mb-2 block uppercase tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Notes (Optional)</label>
+                    <textarea
+                      value={newBookingData.notes}
+                      onChange={(e) => setNewBookingData({ ...newBookingData, notes: e.target.value })}
+                      placeholder="Add any special requests or notes..."
+                      className="w-full h-28 p-4 border-2 border-gray-200 rounded-xl text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#C8B6FF] font-medium text-gray-900"
+                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+                    />
+                  </div>
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="patient">Patient *</Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={bookingForm.patientId}
-                    onValueChange={(value) => setBookingForm((prev) => ({ ...prev, patientId: value }))}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select patient" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {patients && patients.length > 0 ? (
-                        patients.map((patient) => (
-                          <SelectItem key={patient.id} value={patient.id}>
-                            {patient.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-patients" disabled>
-                          No patients available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={openNewPatientDialog}
-                    className="shrink-0 bg-transparent"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Can't find the patient? Click the + button to create a new one.
-                </p>
-              </div>
+              {/* Step 5: Booking Summary */}
+              {newBookingStep === 5 && (() => {
+                const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
+                const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
+                const selectedPatient = patients.find(p => p.id === newBookingData.patientId)
 
-              <div className="space-y-2">
-                <Label htmlFor="treatment">Treatment *</Label>
-                <Select
-                  value={bookingForm.treatmentId}
-                  onValueChange={(value) => setBookingForm((prev) => ({ ...prev, treatmentId: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select treatment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {treatments && treatments.length > 0 ? (
-                      treatments.map((treatment) => (
-                        <SelectItem key={treatment.id} value={treatment.id}>
-                          {treatment.name} - {treatment.durationMin}min - {formatCurrency(treatment.price)}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-treatments" disabled>
-                        No treatments available
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="staff">Staff *</Label>
-                <Select
-                  value={bookingForm.staffId}
-                  onValueChange={(value) => setBookingForm((prev) => ({ ...prev, staffId: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select staff" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {staff && staff.length > 0 ? (
-                      staff.map((staffMember) => (
-                        <SelectItem key={staffMember.id} value={staffMember.id}>
-                          {staffMember.name} - {staffMember.role}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-staff" disabled>
-                        No staff available
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="payment">Payment Status</Label>
-                <Select
-                  value={bookingForm.paymentStatus}
-                  onValueChange={(value: any) => setBookingForm((prev) => ({ ...prev, paymentStatus: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unpaid">Unpaid</SelectItem>
-                    <SelectItem value="deposit">Deposit</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Additional notes..."
-                  value={bookingForm.notes}
-                  onChange={(e) => setBookingForm((prev) => ({ ...prev, notes: e.target.value }))}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={handleCreateBooking} className="flex-1">
-                  Create Booking
-                </Button>
-                <Button variant="outline" onClick={() => setShowBookingDialog(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Booking Details Dialog */}
-        <Dialog open={!!selectedBooking && !loading} onOpenChange={() => setSelectedBooking(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Appointment Details
-              </DialogTitle>
-            </DialogHeader>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <LiquidLoading />
-                <span className="ml-2 text-sm text-muted-foreground">Loading appointment details...</span>
-              </div>
-            ) : selectedBooking ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold">
-                      {selectedBooking.patient?.name || selectedBooking.patientName || "Unknown Patient"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedBooking.treatment?.name || "Unknown Treatment"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedBooking.startAt ? format(parseISO(selectedBooking.startAt), "EEE, MMM d, yyyy") : "Date not available"}
-                    </p>
-                  </div>
-                  {getStatusBadge(selectedBooking.status)}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Time:</span>
-                    <p className="font-medium">
-                      {selectedBooking.startAt ? format(parseISO(selectedBooking.startAt), "HH:mm") : "--:--"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Duration:</span>
-                    <p className="font-medium">{selectedBooking.treatment?.durationMin || selectedBooking.treatment?.duration || 60} min</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Staff:</span>
-                    <p className="font-medium">{selectedBooking.staff?.name || selectedBooking.staffName || "Unknown"}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Price:</span>
-                    <p className="font-medium">{formatCurrency(selectedBooking.treatment?.price || 0)}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{selectedBooking.patient?.phone || "No phone"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{selectedBooking.patient?.email || "No email"}</span>
-                  </div>
-                </div>
-
-                {selectedBooking.notes && (
-                  <div className="pt-2 border-t">
-                    <p className="text-sm text-muted-foreground mb-2">Notes:</p>
-                    <p className="text-sm">{selectedBooking.notes}</p>
-                  </div>
-                )}
-
-                <div className="flex gap-2 flex-wrap">
-                  {selectedBooking.status === "pending" && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleBookingAction(selectedBooking.id, "checkin")}
-                      className="flex-1"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Check In
-                    </Button>
-                  )}
-                  {selectedBooking.status === "confirmed" && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleBookingAction(selectedBooking.id, "complete")}
-                      className="flex-1"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Complete
-                    </Button>
-                  )}
-                  {["pending", "confirmed"].includes(selectedBooking.status) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleBookingAction(selectedBooking.id, "cancel")}
-                    >
-                      Cancel
-                    </Button>
-                  )}
-                  <Button size="sm" variant="outline" onClick={() => handleBookingAction(selectedBooking.id, "delete")}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-center">
-                  <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Appointment details not found</p>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="mt-2"
-                    onClick={() => setSelectedBooking(null)}
-                  >
-                    Close
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Multiple Bookings Dialog */}
-        <Dialog open={showMultipleBookingsDialog} onOpenChange={(open) => {
-          setShowMultipleBookingsDialog(open)
-          if (!open) setMultipleBookingsSearch("")
-        }}>
-          <DialogContent className="max-w-3xl border-none shadow-2xl">
-            <DialogHeader className="pb-4">
-              <DialogTitle className="flex items-center gap-3 text-2xl">
-                <div className="h-10 w-1 bg-gradient-to-b from-primary to-primary/50 rounded-full"></div>
-                <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  {selectedMultipleBookings.length} Appointments
-                </span>
-              </DialogTitle>
-            </DialogHeader>
-
-            {/* Search Bar */}
-            {selectedMultipleBookings.length > 3 && (
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by patient name, treatment, or staff..."
-                  value={multipleBookingsSearch}
-                  onChange={(e) => setMultipleBookingsSearch(e.target.value)}
-                  className="pl-10 border-border/50 focus:border-primary/50 transition-colors"
-                />
-              </div>
-            )}
-
-            <div className="space-y-3 overflow-y-auto max-h-[68vh] pr-2">
-              {(() => {
-                const filteredBookings = selectedMultipleBookings.filter((booking) => {
-                  if (!multipleBookingsSearch) return true
-                  const search = multipleBookingsSearch.toLowerCase()
-                  const patientName = (booking.patient?.name || booking.patientName || "").toLowerCase()
-                  const treatmentName = (booking.treatment?.name || "").toLowerCase()
-                  const staffName = (booking.staff?.name || "").toLowerCase()
-                  return patientName.includes(search) || treatmentName.includes(search) || staffName.includes(search)
-                })
-
-                if (filteredBookings.length === 0) {
-                  return (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <Search className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                      <p className="text-lg font-medium text-muted-foreground mb-2">No appointments found</p>
-                      <p className="text-sm text-muted-foreground">
-                        Try adjusting your search query
-                      </p>
-                    </div>
-                  )
-                }
-
-                return filteredBookings.map((booking, index) => (
-                  <div
-                    key={booking.id || index}
-                    className="group relative overflow-hidden rounded-xl border border-border/50 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm p-5 hover:border-primary/50 hover:shadow-lg hover:scale-[1.01] transition-all duration-300 cursor-pointer"
-                    onClick={() => {
-                      setShowMultipleBookingsDialog(false)
-                      setSelectedBooking(booking)
-                    }}
-                  >
-                    {/* Gradient overlay on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-                    {/* Number indicator */}
-                    <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                      {index + 1}
-                    </div>
-
-                    <div className="relative flex items-start justify-between gap-6">
-                      <div className="flex-1 space-y-3">
-                        {/* Patient & Status */}
-                        <div className="flex items-center gap-3">
-                          <h4 className="text-lg font-semibold tracking-tight">
-                            {booking.patient?.name || booking.patientName || "Unknown Patient"}
-                          </h4>
-                          {getStatusBadge(booking.status)}
-                        </div>
-
-                        {/* Treatment */}
-                        <p className="text-sm font-medium text-primary">
-                          {booking.treatment?.name || "Unknown Treatment"}
-                        </p>
-
-                        {/* Details Grid */}
-                        <div className="grid grid-cols-4 gap-4 pt-2">
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Staff</p>
-                            <p className="text-sm font-medium truncate">{booking.staff?.name || "Unknown"}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Time</p>
-                            <p className="text-sm font-medium">
-                              {booking.startAt ? format(parseISO(booking.startAt), "HH:mm") : "--:--"}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Duration</p>
-                            <p className="text-sm font-medium">{booking.treatment?.durationMin || 60}m</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Price</p>
-                            <p className="text-sm font-semibold text-foreground">
-                              {formatCurrency(booking.treatment?.price || 0)}
-                            </p>
-                          </div>
-                        </div>
+                return (
+                  <div className="space-y-6">
+                    {/* Confirmation Header */}
+                    <div className="text-center py-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <CheckCircle className="h-10 w-10 text-white" />
                       </div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Review Your Booking</h3>
+                      <p className="text-gray-600 font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Please confirm all details before creating the booking</p>
+                    </div>
 
-                      {/* Action Button */}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="shrink-0 opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-primary/10"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setShowMultipleBookingsDialog(false)
-                          setSelectedBooking(booking)
-                        }}
-                      >
-                        View
-                        <ChevronRight className="ml-1 h-4 w-4" />
-                      </Button>
+                    {/* Booking Summary */}
+                    <div className="bg-gradient-to-br from-[#FFD6FF]/30 to-[#E7C6FF]/30 rounded-2xl p-6 border-2 border-[#E7C6FF] shadow-lg">
+                      <div className="space-y-4">
+                        {/* Treatment */}
+                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center flex-shrink-0 shadow-md">
+                            <Star className="h-7 w-7 text-[#C8B6FF]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Treatment</p>
+                            <p className="font-bold text-gray-900 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedTreatment?.name}</p>
+                            <p className="text-sm text-gray-700 font-semibold mt-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{formatCurrency(selectedTreatment?.price || 0)} • {selectedTreatment?.durationMin} minutes</p>
+                          </div>
+                        </div>
+
+                        {/* Staff */}
+                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-md">
+                            {selectedStaff?.name?.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Staff Member</p>
+                            <p className="font-bold text-gray-900 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedStaff?.name}</p>
+                          </div>
+                        </div>
+
+                        {/* Date & Time */}
+                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                            <Clock className="h-7 w-7 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Appointment</p>
+                            <p className="font-bold text-gray-900 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                              {format(new Date(newBookingData.date), 'EEEE, MMMM d, yyyy')}
+                            </p>
+                            <p className="text-sm text-gray-700 font-semibold mt-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{newBookingData.time}</p>
+                          </div>
+                        </div>
+
+                        {/* Customer */}
+                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center flex-shrink-0 shadow-md">
+                            <User className="h-7 w-7 text-[#C8B6FF]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Customer</p>
+                            {newBookingData.isNewClient ? (
+                              <>
+                                <p className="font-bold text-gray-900 text-lg flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                  {newBookingData.newClientName}
+                                  <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold">New</Badge>
+                                </p>
+                                <p className="text-sm text-gray-700 font-semibold mt-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{newBookingData.newClientPhone}</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="font-bold text-gray-900 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedPatient?.name}</p>
+                                <p className="text-sm text-gray-700 font-semibold mt-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedPatient?.phone}</p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Payment */}
+                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
+                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-md">
+                            <DollarSign className="h-7 w-7 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Payment Method</p>
+                            <p className="font-bold text-gray-900 text-lg capitalize" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                              {newBookingData.paymentMethod === 'ewallet' ? 'E-Wallet' : newBookingData.paymentMethod === 'card' ? 'Debit/Credit Card' : newBookingData.paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Notes */}
+                        {newBookingData.notes && (
+                          <div className="bg-white rounded-xl p-4 shadow-sm">
+                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Additional Notes</p>
+                            <p className="text-sm text-gray-700 font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{newBookingData.notes}</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ))
+                )
               })()}
             </div>
-          </DialogContent>
-        </Dialog>
 
-        <Dialog open={showFilterDialog} onOpenChange={setShowFilterDialog}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <SlidersHorizontal className="h-5 w-5 text-primary" />
-                Advanced Filters
-              </DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Status</Label>
-                  <Select
-                    value={filters.status}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
-                  >
-                    <SelectTrigger className="border-2 hover:border-primary/50 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-3 h-3 rounded-full ${
-                            filters.status === "all"
-                              ? "bg-gray-400"
-                              : filters.status === "pending"
-                                ? "bg-yellow-400"
-                                : filters.status === "confirmed"
-                                  ? "bg-blue-400"
-                                  : filters.status === "completed"
-                                    ? "bg-green-400"
-                                    : filters.status === "cancelled"
-                                      ? "bg-red-400"
-                                      : filters.status === "no-show"
-                                        ? "bg-orange-400"
-                                        : "bg-gray-400"
-                          }`}
-                        ></div>
-                        <SelectValue placeholder="All statuses" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="p-2 border-b">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                          <Input
-                            placeholder="Search status..."
-                            value={statusSearch}
-                            onChange={(e) => setStatusSearch(e.target.value)}
-                            className="pl-7 h-8 text-xs"
-                          />
-                        </div>
-                      </div>
-                      {[
-                        { value: "all", label: "All statuses", color: "bg-gray-400" },
-                        { value: "pending", label: "Pending", color: "bg-yellow-400" },
-                        { value: "confirmed", label: "Confirmed", color: "bg-blue-400" },
-                        { value: "completed", label: "Completed", color: "bg-green-400" },
-                        { value: "cancelled", label: "Cancelled", color: "bg-red-400" },
-                        { value: "no-show", label: "No Show", color: "bg-orange-400" },
-                      ]
-                        .filter((status) => status.label.toLowerCase().includes(statusSearch.toLowerCase()))
-                        .map((status) => (
-                          <SelectItem key={status.value} value={status.value} className="flex items-center gap-2">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${status.color}`}></div>
-                              {status.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Staff</Label>
-                  <Select
-                    value={filters.staffId}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, staffId: value }))}
-                  >
-                    <SelectTrigger className="border-2 hover:border-primary/50 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-purple-400"></div>
-                        <SelectValue placeholder="All staff" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="p-2 border-b">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                          <Input
-                            placeholder="Search staff..."
-                            value={staffSearch}
-                            onChange={(e) => setStaffSearch(e.target.value)}
-                            className="pl-7 h-8 text-xs"
-                          />
-                        </div>
-                      </div>
-                      <SelectItem value="all" className="flex items-center gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                          All staff
-                        </div>
-                      </SelectItem>
-                      {staff &&
-                        staff
-                          .filter(
-                            (staffMember) =>
-                              staffMember.name.toLowerCase().includes(staffSearch.toLowerCase()) ||
-                              staffMember.role.toLowerCase().includes(staffSearch.toLowerCase()),
-                          )
-                          .map((staffMember) => (
-                            <SelectItem key={staffMember.id} value={staffMember.id} className="flex items-center gap-2">
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-3 h-3 rounded-full ${
-                                    staffMember.role === "Senior Therapist"
-                                      ? "bg-purple-500"
-                                      : staffMember.role === "Therapist"
-                                        ? "bg-blue-500"
-                                        : staffMember.role === "Junior Therapist"
-                                          ? "bg-green-500"
-                                          : staffMember.role === "Receptionist"
-                                            ? "bg-pink-500"
-                                            : "bg-gray-500"
-                                  }`}
-                                ></div>
-                                {staffMember.name} - {staffMember.role}
-                              </div>
-                            </SelectItem>
-                          ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Treatment</Label>
-                  <Select
-                    value={filters.treatmentId}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, treatmentId: value }))}
-                  >
-                    <SelectTrigger className="border-2 hover:border-primary/50 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-indigo-400"></div>
-                        <SelectValue placeholder="All treatments" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="p-2 border-b">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                          <Input
-                            placeholder="Search treatments..."
-                            value={treatmentSearch}
-                            onChange={(e) => setTreatmentSearch(e.target.value)}
-                            className="pl-7 h-8 text-xs"
-                          />
-                        </div>
-                      </div>
-                      <SelectItem value="all" className="flex items-center gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                          All treatments
-                        </div>
-                      </SelectItem>
-                      {treatments &&
-                        treatments
-                          .filter(
-                            (treatment) =>
-                              treatment.name.toLowerCase().includes(treatmentSearch.toLowerCase()) ||
-                              treatment.category.toLowerCase().includes(treatmentSearch.toLowerCase()),
-                          )
-                          .map((treatment) => (
-                            <SelectItem key={treatment.id} value={treatment.id} className="flex items-center gap-2">
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-3 h-3 rounded-full ${
-                                    treatment.category === "Facial"
-                                      ? "bg-pink-500"
-                                      : treatment.category === "Body"
-                                        ? "bg-blue-500"
-                                        : treatment.category === "Hair"
-                                          ? "bg-purple-500"
-                                          : treatment.category === "Nail"
-                                            ? "bg-red-500"
-                                            : "bg-indigo-500"
-                                  }`}
-                                ></div>
-                                {treatment.name} - {treatment.durationMin}min
-                              </div>
-                            </SelectItem>
-                          ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Payment Status</Label>
-                  <Select
-                    value={filters.paymentStatus}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, paymentStatus: value }))}
-                  >
-                    <SelectTrigger className="border-2 hover:border-primary/50 transition-colors">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-3 h-3 rounded-full ${
-                            filters.paymentStatus === "all"
-                              ? "bg-gray-400"
-                              : filters.paymentStatus === "paid"
-                                ? "bg-green-400"
-                                : filters.paymentStatus === "deposit"
-                                  ? "bg-yellow-400"
-                                  : filters.paymentStatus === "unpaid"
-                                    ? "bg-red-400"
-                                    : "bg-gray-400"
-                          }`}
-                        ></div>
-                        <SelectValue placeholder="All payment statuses" />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="p-2 border-b">
-                        <div className="relative">
-                          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                          <Input
-                            placeholder="Search payment status..."
-                            value={paymentSearch}
-                            onChange={(e) => setPaymentSearch(e.target.value)}
-                            className="pl-7 h-8 text-xs"
-                          />
-                        </div>
-                      </div>
-                      {[
-                        { value: "all", label: "All payment statuses", color: "bg-gray-400" },
-                        { value: "paid", label: "Paid", color: "bg-green-400" },
-                        { value: "deposit", label: "Deposit", color: "bg-yellow-400" },
-                        { value: "unpaid", label: "Unpaid", color: "bg-red-400" },
-                      ]
-                        .filter((payment) => payment.label.toLowerCase().includes(paymentSearch.toLowerCase()))
-                        .map((payment) => (
-                          <SelectItem key={payment.value} value={payment.value} className="flex items-center gap-2">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${payment.color}`}></div>
-                              {payment.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">Date Range</Label>
-                  <Select
-                    value={filters.dateRange}
-                    onValueChange={(value) => setFilters((prev) => ({ ...prev, dateRange: value }))}
-                  >
-                    <SelectTrigger className="border-2 hover:border-primary/50 transition-colors">
-                      <SelectValue placeholder="Select date range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="week" className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-blue-400"></div>
-                        This Week
-                      </SelectItem>
-                      <SelectItem value="month" className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-purple-400"></div>
-                        This Month
-                      </SelectItem>
-                      <SelectItem value="custom" className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-pink-400"></div>
-                        Custom Range
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {filters.dateRange === "custom" && (
-                  <div className="space-y-3 p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border-2 border-pink-200">
-                    <Label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      Custom Date Range
-                    </Label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label className="text-xs text-gray-600">Start Date</Label>
-                        <Popover open={showStartCalendar} onOpenChange={setShowStartCalendar}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal border-2 hover:border-primary/50 bg-transparent"
-                            >
-                              <Calendar className="mr-2 h-4 w-4 text-primary" />
-                              {filters.customStartDate
-                                ? format(new Date(filters.customStartDate), "PPP")
-                                : "Pick start date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={filters.customStartDate ? new Date(filters.customStartDate) : undefined}
-                              onSelect={(date) => {
-                                if (date) {
-                                  setFilters((prev) => ({ ...prev, customStartDate: format(date, "yyyy-MM-dd") }))
-                                  setShowStartCalendar(false)
-                                }
-                              }}
-                              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs text-gray-600">End Date</Label>
-                        <Popover open={showEndCalendar} onOpenChange={setShowEndCalendar}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="w-full justify-start text-left font-normal border-2 hover:border-primary/50 bg-transparent"
-                            >
-                              <Calendar className="mr-2 h-4 w-4 text-primary" />
-                              {filters.customEndDate ? format(new Date(filters.customEndDate), "PPP") : "Pick end date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <CalendarComponent
-                              mode="single"
-                              selected={filters.customEndDate ? new Date(filters.customEndDate) : undefined}
-                              onSelect={(date) => {
-                                if (date) {
-                                  setFilters((prev) => ({ ...prev, customEndDate: format(date, "yyyy-MM-dd") }))
-                                  setShowEndCalendar(false)
-                                }
-                              }}
-                              disabled={(date) => {
-                                const startDate = filters.customStartDate
-                                  ? new Date(filters.customStartDate)
-                                  : new Date("1900-01-01")
-                                return date < startDate || date > new Date()
-                              }}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4 border-t">
-              <Button
-                onClick={() => setShowFilterDialog(false)}
-                className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200"
-              >
-                Apply Filters
-              </Button>
-              <Button
-                variant="outline"
-                onClick={resetFilters}
-                className="border-2 hover:border-primary/50 bg-transparent"
-              >
-                <FilterX className="h-4 w-4 mr-2" />
-                Reset All
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilterDialog(false)}
-                className="border-2 hover:border-primary/50"
-              >
-                Cancel
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* New Patient Dialog */}
-        <Dialog open={showNewPatientDialog} onOpenChange={setShowNewPatientDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5" />
-                Create New Patient
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="new-patient-name">Name *</Label>
-                <Input
-                  id="new-patient-name"
-                  placeholder="Patient name"
-                  value={newPatientForm.name}
-                  onChange={(e) => setNewPatientForm((prev) => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="new-patient-phone">Phone *</Label>
-                <Input
-                  id="new-patient-phone"
-                  placeholder="+62 812 345 6789"
-                  value={newPatientForm.phone}
-                  onChange={(e) => setNewPatientForm((prev) => ({ ...prev, phone: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="new-patient-email">Email</Label>
-                <Input
-                  id="new-patient-email"
-                  type="email"
-                  placeholder="patient@email.com"
-                  value={newPatientForm.email}
-                  onChange={(e) => setNewPatientForm((prev) => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="new-patient-notes">Notes</Label>
-                <Textarea
-                  id="new-patient-notes"
-                  placeholder="Additional notes about the patient..."
-                  value={newPatientForm.notes}
-                  onChange={(e) => setNewPatientForm((prev) => ({ ...prev, notes: e.target.value }))}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button onClick={handleCreateNewPatient} className="flex-1">
-                  Create Patient
+            {/* Footer Actions */}
+            <div className="border-t border-gray-100 pt-4 flex items-center gap-3">
+              {newBookingStep > 1 && (
+                <Button
+                  variant="outline"
+                  onClick={() => setNewBookingStep(newBookingStep - 1)}
+                  className="flex-1"
+                >
+                  Back
                 </Button>
-                <Button variant="outline" onClick={() => setShowNewPatientDialog(false)}>
-                  Cancel
+              )}
+              {newBookingStep < 5 ? (
+                <Button
+                  onClick={() => setNewBookingStep(newBookingStep + 1)}
+                  disabled={
+                    (newBookingStep === 1 && !newBookingData.treatmentId) ||
+                    (newBookingStep === 2 && !newBookingData.staffId) ||
+                    (newBookingStep === 3 && (!newBookingData.date || !newBookingData.time || (!newBookingData.patientId && !newBookingData.isNewClient) || (newBookingData.isNewClient && (!newBookingData.newClientName || !newBookingData.newClientPhone)))) ||
+                    (newBookingStep === 4 && !newBookingData.paymentMethod)
+                  }
+                  className="flex-1 bg-gradient-to-r from-[#C8B6FF] to-[#B8A6EF] hover:from-[#B8A6EF] hover:to-[#A896DF] text-white font-bold shadow-md"
+                >
+                  Next
                 </Button>
-              </div>
+              ) : (
+                <Button
+                  onClick={async () => {
+                    try {
+                      // Calculate end time based on treatment duration
+                      const treatment = treatments.find(t => t.id === newBookingData.treatmentId)
+                      const startDateTime = new Date(`${newBookingData.date}T${newBookingData.time}`)
+                      const endDateTime = new Date(startDateTime.getTime() + (treatment?.durationMin || 60) * 60000)
+
+                      // If new client, create patient first
+                      let patientId = newBookingData.patientId
+                      if (newBookingData.isNewClient) {
+                        const patientResponse = await fetch('/api/patients', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            name: newBookingData.newClientName,
+                            phone: newBookingData.newClientPhone
+                          })
+                        })
+
+                        if (!patientResponse.ok) throw new Error('Failed to create new customer')
+                        const newPatient = await patientResponse.json()
+                        patientId = newPatient.id
+                      }
+
+                      // Create booking
+                      const response = await fetch('/api/bookings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          treatmentId: newBookingData.treatmentId,
+                          patientId: patientId,
+                          staffId: newBookingData.staffId,
+                          startAt: startDateTime.toISOString(),
+                          endAt: endDateTime.toISOString(),
+                          paymentMethod: newBookingData.paymentMethod,
+                          notes: newBookingData.notes,
+                          status: 'pending'
+                        })
+                      })
+
+                      if (!response.ok) throw new Error('Failed to create booking')
+
+                      toast({ title: "Booking created successfully!" })
+                      setNewBookingOpen(false)
+                      setNewBookingStep(1)
+                      setNewBookingData({
+                        treatmentId: "",
+                        patientId: "",
+                        staffId: "",
+                        date: "",
+                        time: "",
+                        paymentMethod: "cash",
+                        isNewClient: false,
+                        newClientName: "",
+                        newClientPhone: "",
+                        notes: ""
+                      })
+
+                      // Refresh data
+                      fetchBookings()
+                    } catch (error) {
+                      toast({ title: "Failed to create booking", variant: "destructive" })
+                    }
+                  }}
+                  disabled={!newBookingData.paymentMethod}
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                >
+                  Create Booking
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>
+      </div>
     </MainLayout>
   )
 }

@@ -16,16 +16,18 @@ import {
   UserPlus, Clock, CreditCard, Banknote, Smartphone,
   Check, AlertCircle, Users, Calendar,
   ChevronRight, X, Printer, Mail, MessageSquare,
-  TrendingUp, Star, Activity, Search
+  TrendingUp, Star, Activity, Search, Sparkles, Syringe, Zap, Heart,
+  Percent, DollarSign, ChevronDown
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { usePatients, useStaff, useTreatments, useBookings } from "@/lib/context"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency, cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
+import { format, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, isToday, startOfDay, addMonths, subMonths } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
-import { useTerminology } from "@/hooks/use-terminology"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useRouter } from "next/navigation"
+import { BookingDateTime } from "@/components/booking-date-time"
 
 const timeSlots = [
   { time: "09:00", available: true },
@@ -61,7 +63,6 @@ interface Booking {
 
 export default function WalkInPage() {
   const { toast } = useToast()
-  const terminology = useTerminology()
   const router = useRouter()
   const { patients = [], loading: patientsLoading, addPatient } = usePatients()
   const { staff = [], loading: staffLoading } = useStaff()
@@ -78,12 +79,16 @@ export default function WalkInPage() {
   const [isValidating, setIsValidating] = useState(false)
   const [showClientSearch, setShowClientSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
   const [treatmentSearchQuery, setTreatmentSearchQuery] = useState("")
   const [staffSearchQuery, setStaffSearchQuery] = useState("")
   const [treatmentPage, setTreatmentPage] = useState(1)
   const [staffPage, setStaffPage] = useState(1)
   const treatmentsPerPage = 6
   const staffPerPage = 6
+  const [calendarMonth, setCalendarMonth] = useState(new Date())
+  const [showCalendar, setShowCalendar] = useState(true)
+  const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
 
   // Walk-in is enabled by default
   const isWalkInEnabled = true
@@ -95,16 +100,48 @@ export default function WalkInPage() {
     notes: "",
     treatmentId: "",
     staffId: "",
+    bookingDate: format(new Date(), 'yyyy-MM-dd'), // Default to today
     timeSlot: "",
     paymentMethod: "",
     paymentType: "deposit",
+    paymentValueType: "percentage", // "percentage" or "fixed"
+    paymentPercentage: 50,
+    paymentFixedAmount: 0,
     existingClient: false,
-    sendReminder: true,
-    addToMembership: false,
+    // Card details
+    cardNumber: "",
+    cardExpiry: "",
+    cardCvv: "",
   })
 
   const [errors, setErrors] = useState<any>({})
   const [selectedCategory, setSelectedCategory] = useState("All")
+
+  // Get unique categories from treatments
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(treatments.map(t => t.category)))
+    return uniqueCategories.sort()
+  }, [treatments])
+
+  // Category icon mapping
+  const categoryIcons: Record<string, any> = {
+    "All": Star,
+    "Facial": Sparkles,
+    "Medical": Heart,
+    "Laser": Zap,
+    "Injectable": Syringe,
+    "Exfoliation": Sparkles,
+  }
+
+  // Category gradient mapping
+  const categoryGradients: Record<string, { gradient: string, color: string }> = {
+    "All": { gradient: "from-purple-500 to-pink-500", color: "bg-purple-50 border-purple-200 text-purple-700 hover:border-purple-400" },
+    "Facial": { gradient: "from-blue-500 to-cyan-500", color: "bg-blue-50 border-blue-200 text-blue-700 hover:border-blue-400" },
+    "Medical": { gradient: "from-green-500 to-emerald-500", color: "bg-green-50 border-green-200 text-green-700 hover:border-green-400" },
+    "Laser": { gradient: "from-orange-500 to-red-500", color: "bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400" },
+    "Injectable": { gradient: "from-pink-500 to-rose-500", color: "bg-pink-50 border-pink-200 text-pink-700 hover:border-pink-400" },
+    "Exfoliation": { gradient: "from-indigo-500 to-purple-500", color: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:border-indigo-400" },
+  }
 
   // Load today's bookings
   useEffect(() => {
@@ -131,8 +168,69 @@ export default function WalkInPage() {
   const selectedTreatment = treatments.find((t) => t.id === formData.treatmentId || t.id.toString() === formData.treatmentId)
   const selectedStaff = staff.find((s) => s.id === formData.staffId || s.id.toString() === formData.staffId)
 
-  const depositAmount = selectedTreatment ? selectedTreatment.price * 0.5 : 0
   const totalAmount = selectedTreatment ? selectedTreatment.price : 0
+
+  // Calculate deposit amount based on value type
+  const depositAmount = useMemo(() => {
+    if (!selectedTreatment) return 0
+    if (formData.paymentValueType === "percentage") {
+      return selectedTreatment.price * (formData.paymentPercentage / 100)
+    } else {
+      return Math.min(formData.paymentFixedAmount, selectedTreatment.price)
+    }
+  }, [selectedTreatment, formData.paymentValueType, formData.paymentPercentage, formData.paymentFixedAmount])
+
+  // Generate week days for calendar
+  const weekDays = useMemo(() => {
+    const days = []
+    for (let i = 0; i < 7; i++) {
+      days.push(addDays(weekStart, i))
+    }
+    return days
+  }, [weekStart])
+
+  // Filter available time slots based on selected date, staff, and current time
+  const availableTimeSlots = useMemo(() => {
+    if (!formData.bookingDate || !formData.staffId) return []
+
+    const now = new Date()
+    const selectedDate = formData.bookingDate
+    const isToday = selectedDate === format(now, 'yyyy-MM-dd')
+    const currentHour = now.getHours()
+    const currentMinute = now.getMinutes()
+
+    // Filter bookings for selected date and staff
+    const staffBookings = todayBookings.filter(
+      b => b.bookingDate === formData.bookingDate && b.staffId === formData.staffId
+    )
+
+    return timeSlots.map(slot => {
+      const [slotHour, slotMinute] = slot.time.split(':').map(Number)
+      const isBooked = staffBookings.some(b => b.timeSlot === slot.time)
+
+      if (isToday) {
+        // If today, disable past time slots
+        const isPast = slotHour < currentHour || (slotHour === currentHour && slotMinute <= currentMinute)
+        return {
+          ...slot,
+          available: !isBooked && !isPast
+        }
+      }
+
+      return {
+        ...slot,
+        available: !isBooked
+      }
+    })
+  }, [formData.bookingDate, formData.staffId, todayBookings])
+
+  // Check if booking is still possible today
+  const canBookToday = useMemo(() => {
+    const now = new Date()
+    const currentHour = now.getHours()
+    // Assume operational hours are 09:00 - 17:00
+    return currentHour < 17
+  }, [])
   
   // Get available staff for selected treatment
   const availableStaff = useMemo(() => {
@@ -209,9 +307,9 @@ export default function WalkInPage() {
       }
       
       // Calculate time slots
-      const now = new Date()
+      const bookingDate = new Date(formData.bookingDate)
       const [hours, minutes] = formData.timeSlot.split(':').map(Number)
-      const startAt = new Date(now.setHours(hours, minutes, 0, 0))
+      const startAt = new Date(bookingDate.setHours(hours, minutes, 0, 0))
       const endAt = new Date(startAt.getTime() + (selectedTreatment?.duration || 60) * 60000)
       
       // Create booking in MongoDB
@@ -291,15 +389,7 @@ export default function WalkInPage() {
     setIsValidating(false)
     setShowConfirmDialog(false)
     setShowSuccessDialog(true)
-    
-    // Send notifications if enabled
-    if (formData.sendReminder) {
-      toast({
-        title: "Reminder Sent",
-        description: "Booking confirmation has been sent via SMS/WhatsApp.",
-      })
-    }
-    
+
     // Reset form
     resetForm()
   }
@@ -312,12 +402,17 @@ export default function WalkInPage() {
       notes: "",
       treatmentId: "",
       staffId: "",
+      bookingDate: format(new Date(), 'yyyy-MM-dd'),
       timeSlot: "",
       paymentMethod: "",
       paymentType: "deposit",
+      paymentValueType: "percentage",
+      paymentPercentage: 50,
+      paymentFixedAmount: 0,
       existingClient: false,
-      sendReminder: true,
-      addToMembership: false,
+      cardNumber: "",
+      cardExpiry: "",
+      cardCvv: "",
     })
     setErrors({})
   }
@@ -352,6 +447,48 @@ export default function WalkInPage() {
     client.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  // Group clients by alphabet
+  const groupedClients = useMemo(() => {
+    const groups: Record<string, typeof filteredClients> = {}
+
+    filteredClients.forEach(client => {
+      const firstLetter = client.name.charAt(0).toUpperCase()
+      if (!groups[firstLetter]) {
+        groups[firstLetter] = []
+      }
+      groups[firstLetter].push(client)
+    })
+
+    // Sort each group by name
+    Object.keys(groups).forEach(letter => {
+      groups[letter].sort((a, b) => a.name.localeCompare(b.name))
+    })
+
+    return groups
+  }, [filteredClients])
+
+  // Toggle group expansion
+  const toggleGroup = (letter: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(letter)) {
+        newSet.delete(letter)
+      } else {
+        newSet.add(letter)
+      }
+      return newSet
+    })
+  }
+
+  // Auto-expand all groups by default when clients change
+  useEffect(() => {
+    const letters = Object.keys(groupedClients)
+    // Only set if expandedGroups is empty (initial load or after clear)
+    if (expandedGroups.size === 0 && letters.length > 0) {
+      setExpandedGroups(new Set(letters))
+    }
+  }, [filteredClients.length]) // Trigger when filtered clients change
+
   const getQueueStatus = () => {
     const waiting = todayBookings.filter(b => b.status === "waiting").length
     const inProgress = todayBookings.filter(b => b.status === "in-progress").length
@@ -384,10 +521,10 @@ export default function WalkInPage() {
         <EmptyState
           icon={UserPlus}
           title="Walk-in Not Ready"
-          description={`Quick booking feature for walk-in ${terminology.patient.toLowerCase()}. Before you can use walk-in, please add ${terminology.staff.toLowerCase()} and ${terminology.treatment.toLowerCase()} first.`}
-          actionLabel={`Setup ${terminology.staff}`}
+          description={`Quick booking feature for walk-in customers. Before you can use walk-in, please add staff and products first.`}
+          actionLabel={`Setup Staff`}
           onAction={() => router.push('/staff')}
-          secondaryActionLabel={`Add ${terminology.treatment}`}
+          secondaryActionLabel={`Add Products`}
           onSecondaryAction={() => router.push('/treatments')}
           tips={[
             {
@@ -527,68 +664,83 @@ export default function WalkInPage() {
                       placeholder="Any special notes, allergies, or medical conditions..."
                     />
                   </div>
-                  
-                  <div className="flex gap-4 pt-2">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="reminder"
-                        checked={formData.sendReminder}
-                        onChange={(e) => setFormData({ ...formData, sendReminder: e.target.checked })}
-                        className="rounded border-gray-300"
-                      />
-                      <Label htmlFor="reminder" className="text-sm">Send SMS/WhatsApp reminder</Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="membership"
-                        checked={formData.addToMembership}
-                        onChange={(e) => setFormData({ ...formData, addToMembership: e.target.checked })}
-                        className="rounded border-gray-300"
-                      />
-                      <Label htmlFor="membership" className="text-sm">Add to membership program</Label>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
 
-              {/* Treatment Selection */}
+              {/* Product Selection */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Select Treatment</CardTitle>
+                  <CardTitle>Select Product</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Filter by Category</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {["All", "Facial", "Injection", "Laser", "Treatment"].map((category) => (
-                        <button
-                          key={category}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCategory(category)
-                            setTreatmentPage(1)
-                          }}
-                          className="cursor-pointer"
-                        >
-                          <Badge
-                            variant={selectedCategory === category ? "default" : "outline"}
-                            className="transition-all hover:scale-105"
-                          >
-                            {category}
-                          </Badge>
-                        </button>
-                      ))}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Filter by Category</Label>
+                    {/* Horizontal scroll container with fade effect */}
+                    <div className="relative">
+                      {/* Left fade overlay */}
+                      <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+                      {/* Right fade overlay */}
+                      <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+
+                      <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
+                        <div className="flex gap-3 pb-2 min-w-max">
+                          {/* All category first */}
+                          {["All", ...categories].map((categoryName) => {
+                            const Icon = categoryIcons[categoryName] || Star
+                            const style = categoryGradients[categoryName] || categoryGradients["All"]
+                            const isSelected = selectedCategory === categoryName
+                            return (
+                              <button
+                                key={categoryName}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCategory(categoryName)
+                                  setTreatmentPage(1)
+                                }}
+                                className={cn(
+                                  "relative group flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg flex-shrink-0 w-[110px]",
+                                  isSelected
+                                    ? `bg-gradient-to-br ${style.gradient} border-transparent text-white shadow-lg scale-105`
+                                    : `${style.color} bg-white`
+                                )}
+                              >
+                                <div className={cn(
+                                  "p-2 rounded-lg transition-transform group-hover:scale-110",
+                                  isSelected
+                                    ? "bg-white/20"
+                                    : "bg-gradient-to-br " + style.gradient + " bg-clip-padding"
+                                )}>
+                                  <Icon className={cn(
+                                    "h-5 w-5",
+                                    isSelected ? "text-white" : "text-white"
+                                  )} />
+                                </div>
+                                <span className={cn(
+                                  "text-xs font-medium text-center leading-tight",
+                                  isSelected ? "text-white" : ""
+                                )}>
+                                  {categoryName}
+                                </span>
+                                {isSelected && (
+                                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow-md">
+                                    <Check className="h-3 w-3 text-green-600" />
+                                  </div>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                     </div>
+                    <p className="text-xs text-muted-foreground">Scroll to see more categories →</p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Search Treatment</Label>
+                    <Label>Search Product</Label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Search by treatment name..."
+                        placeholder="Search by product name..."
                         value={treatmentSearchQuery}
                         onChange={(e) => {
                           setTreatmentSearchQuery(e.target.value)
@@ -600,7 +752,7 @@ export default function WalkInPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Available Treatments *</Label>
+                    <Label>Available Products *</Label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {(() => {
                         const filteredTreatments = treatments
@@ -827,97 +979,289 @@ export default function WalkInPage() {
                     {errors.staff && <p className="text-sm text-red-500">{errors.staff}</p>}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Available Time Slots *</Label>
-                    <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
-                      {timeSlots.map((slot) => (
-                        <Button
-                          key={slot.time}
-                          type="button"
-                          variant={formData.timeSlot === slot.time ? "default" : "outline"}
-                          size="sm"
-                          disabled={!slot.available}
-                          onClick={() => setFormData({ ...formData, timeSlot: slot.time })}
-                          className={`${!slot.available ? "opacity-50 cursor-not-allowed" : ""}`}
-                        >
-                          {slot.time}
-                        </Button>
-                      ))}
-                    </div>
-                    {errors.timeSlot && <p className="text-sm text-red-500">{errors.timeSlot}</p>}
-                  </div>
+                  {/* Booking Date & Time - New Component */}
+                  <BookingDateTime
+                    provider={{
+                      name: selectedStaff?.name || "Select Staff First",
+                      address: "Beauty Clinic - Jakarta",
+                      avatarUrl: selectedStaff?.photoUrl
+                    }}
+                    selectedStaffId={formData.staffId}
+                    existingBookings={todayBookings.map(b => ({
+                      bookingDate: b.bookingDate,
+                      timeSlot: b.timeSlot,
+                      staffId: b.staffId || b.staff
+                    }))}
+                    onSelectDateTime={(date, time) => {
+                      setFormData({ ...formData, bookingDate: date, timeSlot: time })
+                      setErrors({ ...errors, timeSlot: "" })
+                    }}
+                    isLoading={loading}
+                  />
+                  {errors.timeSlot && <p className="text-sm text-red-500 mt-2">{errors.timeSlot}</p>}
                 </CardContent>
               </Card>
 
-              {/* Payment Information */}
+              {/* Payment Information - Compact Design */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
                     Payment Information
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Payment Method - Compact Pills */}
                   <div className="space-y-2">
-                    <Label>Payment Method *</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button
+                    <Label className="text-sm">Payment Method *</Label>
+                    <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
+                      <button
                         type="button"
-                        variant={formData.paymentMethod === "cash" ? "default" : "outline"}
                         onClick={() => setFormData({ ...formData, paymentMethod: "cash" })}
-                        className="flex flex-col items-center gap-2 h-auto py-3"
+                        className={cn(
+                          "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition-all",
+                          formData.paymentMethod === "cash"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-background"
+                        )}
                       >
-                        <Banknote className="h-5 w-5" />
-                        <span>Cash</span>
-                      </Button>
-                      <Button
+                        <Banknote className="h-4 w-4" />
+                        Cash
+                      </button>
+                      <button
                         type="button"
-                        variant={formData.paymentMethod === "card" ? "default" : "outline"}
                         onClick={() => setFormData({ ...formData, paymentMethod: "card" })}
-                        className="flex flex-col items-center gap-2 h-auto py-3"
+                        className={cn(
+                          "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition-all",
+                          formData.paymentMethod === "card"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-background"
+                        )}
                       >
-                        <CreditCard className="h-5 w-5" />
-                        <span>Card</span>
-                      </Button>
-                      <Button
+                        <CreditCard className="h-4 w-4" />
+                        Card
+                      </button>
+                      <button
                         type="button"
-                        variant={formData.paymentMethod === "qris" ? "default" : "outline"}
                         onClick={() => setFormData({ ...formData, paymentMethod: "qris" })}
-                        className="flex flex-col items-center gap-2 h-auto py-3"
+                        className={cn(
+                          "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-md text-sm font-medium transition-all",
+                          formData.paymentMethod === "qris"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-background"
+                        )}
                       >
-                        <Smartphone className="h-5 w-5" />
-                        <span>QRIS</span>
-                      </Button>
+                        <Smartphone className="h-4 w-4" />
+                        QRIS
+                      </button>
                     </div>
-                    {errors.paymentMethod && <p className="text-sm text-red-500">{errors.paymentMethod}</p>}
+                    {errors.paymentMethod && <p className="text-xs text-red-500">{errors.paymentMethod}</p>}
                   </div>
-                  
+
+                  {/* Payment Type - Compact Pills */}
                   <div className="space-y-2">
-                    <Label>Payment Type</Label>
-                    <div className="flex gap-2">
-                      <Button
+                    <Label className="text-sm">Payment Type</Label>
+                    <div className="flex gap-2 p-1 bg-muted/50 rounded-lg">
+                      <button
                         type="button"
-                        variant={formData.paymentType === "deposit" ? "default" : "outline"}
                         onClick={() => setFormData({ ...formData, paymentType: "deposit" })}
-                        className="flex-1"
+                        className={cn(
+                          "flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all",
+                          formData.paymentType === "deposit"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-background"
+                        )}
                       >
-                        Deposit (50%)
-                      </Button>
-                      <Button
+                        Deposit
+                      </button>
+                      <button
                         type="button"
-                        variant={formData.paymentType === "full" ? "default" : "outline"}
                         onClick={() => setFormData({ ...formData, paymentType: "full" })}
-                        className="flex-1"
+                        className={cn(
+                          "flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all",
+                          formData.paymentType === "full"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground hover:bg-background"
+                        )}
                       >
                         Full Payment
-                      </Button>
+                      </button>
                     </div>
                   </div>
+
+                  {/* Deposit Configuration - Compact */}
+                  {formData.paymentType === "deposit" && (
+                    <div className="space-y-3 p-3 bg-muted/30 rounded-lg border animate-in slide-in-from-top-2 fade-in duration-200">
+                      <div className="flex gap-2 p-1 bg-background rounded-md">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, paymentValueType: "percentage" })}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded text-xs font-medium transition-all",
+                            formData.paymentValueType === "percentage"
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          <Percent className="h-3 w-3" />
+                          Percentage
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, paymentValueType: "fixed" })}
+                          className={cn(
+                            "flex-1 flex items-center justify-center gap-1 py-1.5 px-2 rounded text-xs font-medium transition-all",
+                            formData.paymentValueType === "fixed"
+                              ? "bg-primary text-primary-foreground shadow-sm"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          <DollarSign className="h-3 w-3" />
+                          Fixed
+                        </button>
+                      </div>
+
+                      {formData.paymentValueType === "percentage" ? (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="1"
+                              max="100"
+                              value={formData.paymentPercentage}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                paymentPercentage: Math.min(100, Math.max(1, parseInt(e.target.value) || 1))
+                              })}
+                              className="flex-1 h-9 text-sm"
+                            />
+                            <span className="text-sm text-muted-foreground">%</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {formData.paymentPercentage}% × Rp {totalAmount.toLocaleString("id-ID")} = <span className="font-semibold text-foreground">Rp {depositAmount.toLocaleString("id-ID")}</span>
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <Input
+                            type="number"
+                            min="0"
+                            max={totalAmount}
+                            value={formData.paymentFixedAmount}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              paymentFixedAmount: Math.min(totalAmount, Math.max(0, parseInt(e.target.value) || 0))
+                            })}
+                            placeholder="Enter amount"
+                            className="h-9 text-sm"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Max: Rp {totalAmount.toLocaleString("id-ID")}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Card Details - Show when Card is selected */}
+                  {formData.paymentMethod === "card" && (
+                    <div className="space-y-3 p-3 bg-blue-50 border border-blue-200 rounded-lg animate-in slide-in-from-top-2 fade-in duration-200">
+                      <div className="space-y-2">
+                        <Label htmlFor="cardNumber" className="text-sm">Card Number *</Label>
+                        <Input
+                          id="cardNumber"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="1234 5678 9012 3456"
+                          value={formData.cardNumber}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, "")
+                            const formatted = value.match(/.{1,4}/g)?.join(" ") || value
+                            setFormData({ ...formData, cardNumber: formatted })
+                          }}
+                          maxLength={19}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="cardExpiry" className="text-sm">Expiry (MM/YY) *</Label>
+                          <Input
+                            id="cardExpiry"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="MM/YY"
+                            value={formData.cardExpiry}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "")
+                              let formatted = value
+                              if (value.length >= 2) {
+                                formatted = `${value.substring(0, 2)}/${value.substring(2, 4)}`
+                              }
+                              setFormData({ ...formData, cardExpiry: formatted })
+                            }}
+                            maxLength={5}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cardCvv" className="text-sm">CVV *</Label>
+                          <Input
+                            id="cardCvv"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="123"
+                            value={formData.cardCvv}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "")
+                              setFormData({ ...formData, cardCvv: value })
+                            }}
+                            maxLength={4}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* QRIS Note - Show when QRIS is selected */}
+                  {formData.paymentMethod === "qris" && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg animate-in slide-in-from-top-2 fade-in duration-200">
+                      <div className="flex items-start gap-2">
+                        <Smartphone className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-green-900 mb-1">
+                            QRIS Payment
+                          </p>
+                          <p className="text-xs text-green-700">
+                            QR code akan di-generate setelah booking dikonfirmasi. Scan dengan e-wallet Anda.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cash Note - Show when Cash is selected */}
+                  {formData.paymentMethod === "cash" && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg animate-in slide-in-from-top-2 fade-in duration-200">
+                      <div className="flex items-start gap-2">
+                        <Banknote className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-900 mb-1">
+                            Cash Payment
+                          </p>
+                          <p className="text-xs text-amber-700">
+                            Siapkan uang tunai sebesar {formatCurrency(formData.paymentType === "deposit" ? depositAmount : totalAmount)} untuk pembayaran.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Booking Summary */}
+            {/* Booking Summary - Quick Info */}
             <div className="space-y-6">
               <Card className="sticky top-6">
                 <CardHeader>
@@ -928,7 +1272,7 @@ export default function WalkInPage() {
                     <p className="text-xs text-muted-foreground mb-1">Queue Number</p>
                     <p className="text-3xl font-bold text-primary">{currentQueue.toString().padStart(3, '0')}</p>
                   </div>
-                  
+
                   {formData.name && (
                     <div>
                       <Label className="text-sm text-muted-foreground">Client</Label>
@@ -939,7 +1283,7 @@ export default function WalkInPage() {
 
                   {selectedTreatment && (
                     <div>
-                      <Label className="text-sm text-muted-foreground">Treatment</Label>
+                      <Label className="text-sm text-muted-foreground">Product</Label>
                       <p className="font-medium">{selectedTreatment.name}</p>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4" />
@@ -962,26 +1306,36 @@ export default function WalkInPage() {
                     </div>
                   )}
 
-                  {formData.timeSlot && (
+                  {formData.bookingDate && formData.timeSlot && (
                     <div>
-                      <Label className="text-sm text-muted-foreground">Time</Label>
-                      <p className="font-medium">Today, {formData.timeSlot}</p>
+                      <Label className="text-sm text-muted-foreground">Date & Time</Label>
+                      <p className="font-medium">
+                        {formData.bookingDate === format(new Date(), 'yyyy-MM-dd')
+                          ? 'Today'
+                          : format(new Date(formData.bookingDate), 'MMM d, yyyy')
+                        }, {formData.timeSlot}
+                      </p>
                     </div>
                   )}
 
                   {selectedTreatment && (
-                    <div className="border-t pt-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span>Treatment Price</span>
-                        <span>Rp {totalAmount.toLocaleString("id-ID")}</span>
+                    <div className="border-t pt-4 space-y-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Treatment Price</span>
+                        <span className="font-medium">Rp {totalAmount.toLocaleString("id-ID")}</span>
                       </div>
                       {formData.paymentType === "deposit" && (
-                        <div className="flex justify-between items-center mb-2 text-sm">
-                          <span>Deposit (50%)</span>
-                          <span>Rp {depositAmount.toLocaleString("id-ID")}</span>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">
+                            Deposit
+                            {formData.paymentValueType === "percentage"
+                              ? ` (${formData.paymentPercentage}%)`
+                              : " (Fixed)"}
+                          </span>
+                          <span className="font-medium">Rp {depositAmount.toLocaleString("id-ID")}</span>
                         </div>
                       )}
-                      <div className="flex justify-between items-center font-bold text-lg border-t pt-2">
+                      <div className="flex justify-between items-center font-bold text-base border-t pt-3">
                         <span>Total {formData.paymentType === "deposit" ? "Deposit" : "Amount"}</span>
                         <span className="text-primary">
                           Rp {(formData.paymentType === "deposit" ? depositAmount : totalAmount).toLocaleString("id-ID")}
@@ -1063,7 +1417,7 @@ export default function WalkInPage() {
                 <span className="text-sm font-medium">{formData.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Treatment:</span>
+                <span className="text-sm text-muted-foreground">Product:</span>
                 <span className="text-sm font-medium">{selectedTreatment?.name}</span>
               </div>
               <div className="flex justify-between">
@@ -1071,8 +1425,13 @@ export default function WalkInPage() {
                 <span className="text-sm font-medium">{selectedStaff?.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Time:</span>
-                <span className="text-sm font-medium">Today, {formData.timeSlot}</span>
+                <span className="text-sm text-muted-foreground">Date & Time:</span>
+                <span className="text-sm font-medium">
+                  {formData.bookingDate === format(new Date(), 'yyyy-MM-dd')
+                    ? 'Today'
+                    : format(new Date(formData.bookingDate), 'MMM d, yyyy')
+                  }, {formData.timeSlot}
+                </span>
               </div>
               <div className="flex justify-between font-bold border-t pt-2">
                 <span>Amount to Pay:</span>
@@ -1125,8 +1484,13 @@ export default function WalkInPage() {
                   <span className="text-sm">{lastBooking?.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Time:</span>
-                  <span className="text-sm">Today, {lastBooking?.timeSlot}</span>
+                  <span className="text-sm text-muted-foreground">Date & Time:</span>
+                  <span className="text-sm">
+                    {formData.bookingDate === format(new Date(), 'yyyy-MM-dd')
+                      ? 'Today'
+                      : format(new Date(formData.bookingDate), 'MMM d, yyyy')
+                    }, {lastBooking?.timeSlot}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1162,70 +1526,125 @@ export default function WalkInPage() {
 
         {/* Client Search Dialog */}
         <Dialog open={showClientSearch} onOpenChange={setShowClientSearch}>
-          <DialogContent className="max-w-2xl max-h-[70vh] overflow-hidden">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="flex items-center gap-2 text-lg">
                 <Users className="h-5 w-5" />
                 Search Existing Client
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-sm">
                 Search and select a client from your database
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="relative">
+
+            <div className="flex-1 flex flex-col space-y-4 min-h-0">
+              {/* Search Input */}
+              <div className="relative flex-shrink-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, phone, or email..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pr-10"
+                  className="pl-10 pr-10 h-11"
                 />
                 {searchQuery && (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
                     onClick={() => setSearchQuery("")}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 )}
               </div>
-              
-              <div className="max-h-[400px] overflow-y-auto space-y-2 pr-2">
+
+              {/* Results List - Grouped by Alphabet */}
+              <div className="flex-1 overflow-y-auto pr-2 min-h-0">
                 {filteredClients.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {searchQuery ? "No clients found matching your search" : "Start typing to search clients"}
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Users className="h-12 w-12 mb-3 opacity-30" />
+                    <p className="text-sm font-medium">
+                      {searchQuery ? "No clients found matching your search" : "Start typing to search clients"}
+                    </p>
                   </div>
                 ) : (
-                  filteredClients.map((client) => (
-                    <div
-                      key={client.id}
-                      onClick={() => handleClientSelect(client)}
-                      className="p-4 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{client.name}</h4>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                            <span>{client.phone}</span>
-                            <span>{client.email}</span>
+                  <div className="space-y-4">
+                    {Object.keys(groupedClients)
+                      .sort()
+                      .map((letter) => {
+                        const isExpanded = expandedGroups.has(letter)
+                        const clientCount = groupedClients[letter].length
+
+                        return (
+                          <div key={letter} className="space-y-2">
+                            {/* Alphabet Header - Clickable */}
+                            <button
+                              onClick={() => toggleGroup(letter)}
+                              className="w-full sticky top-0 bg-gradient-to-r from-primary/10 to-transparent backdrop-blur-sm z-10 py-2.5 px-3 rounded-lg border-l-4 border-primary hover:from-primary/20 transition-all duration-200 group"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <h3 className="text-lg font-bold text-primary">{letter}</h3>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {clientCount} {clientCount === 1 ? 'client' : 'clients'}
+                                  </Badge>
+                                </div>
+                                <ChevronDown
+                                  className={cn(
+                                    "h-5 w-5 text-primary transition-transform duration-300",
+                                    isExpanded ? "rotate-180" : "rotate-0"
+                                  )}
+                                />
+                              </div>
+                            </button>
+
+                            {/* Clients in this group - Collapsible */}
+                            {isExpanded && (
+                              <div className="space-y-2 pl-2 animate-in slide-in-from-top-2 fade-in duration-300">
+                                {groupedClients[letter].map((client) => (
+                                  <div
+                                    key={client.id}
+                                    onClick={() => handleClientSelect(client)}
+                                    className="group p-4 border border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.01]"
+                                  >
+                                    <div className="flex items-start justify-between gap-4">
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-semibold text-base text-foreground mb-2 truncate group-hover:text-primary transition-colors">
+                                          {client.name}
+                                        </h4>
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <span className="font-mono">{client.phone}</span>
+                                          </div>
+                                          {client.email && (
+                                            <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
+                                              <span className="truncate">{client.email}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex-shrink-0">
+                                        <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                          {client.lastVisit === 'New client' ? '🆕 New' : `Last: ${client.lastVisit}`}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant="outline" className="text-xs">
-                            Last visit: {client.lastVisit}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                        )
+                      })}
+                  </div>
                 )}
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowClientSearch(false)}>
+
+            <DialogFooter className="pt-4 border-t flex-shrink-0">
+              <Button variant="outline" onClick={() => setShowClientSearch(false)} className="w-full sm:w-auto">
                 Cancel
               </Button>
             </DialogFooter>

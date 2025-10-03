@@ -1,21 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
-import { KpiCard } from "@/components/ui/kpi-card"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { useBookings, useActivities, usePatients, useStaff, useTreatments } from "@/lib/context"
+import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { format, isToday } from "date-fns"
-import { useRouter, usePathname } from "next/navigation"
-import { formatCurrency } from "@/lib/utils"
+import { useRouter } from "next/navigation"
+import { formatCurrency, cn } from "@/lib/utils"
 import LiquidLoading from "@/components/ui/liquid-loader"
-import { useTerminology } from "@/hooks/use-terminology"
-import { TourTestButton } from "@/components/tour-test-button" // 🧪 DELETE THIS LINE AFTER TESTING
-import { EmptyState } from "@/components/ui/empty-state"
 import {
   Calendar,
   DollarSign,
@@ -23,1118 +18,531 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  UserCheck,
-  Plus,
-  FileText,
-  CalendarDays,
-  Star,
-  AlertTriangle,
-  CreditCard,
-  Scissors,
-  UserPlus,
-  MoreHorizontal,
-  Phone,
-  Mail,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Heart,
-  Sparkles,
+  ArrowRight,
+  Copy,
   Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  Star,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+
+// Color palette from palete.pdf
+const COLORS = ['#FFD6FF', '#E7C6FF', '#C8B6FF', '#B8C0FF', '#BBD0FF']
 
 export default function DashboardPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const terminology = useTerminology()
 
-  const { bookings = [], loading: bookingsLoading, updateBooking } = useBookings()
-  const { activities = [], loading: activitiesLoading } = useActivities()
+  const { bookings = [], loading: bookingsLoading } = useBookings()
   const { patients = [], loading: patientsLoading } = usePatients()
   const { staff = [], loading: staffLoading } = useStaff()
   const { treatments = [], loading: treatmentsLoading } = useTreatments()
 
-  const isLoading = bookingsLoading || activitiesLoading || patientsLoading || staffLoading || treatmentsLoading
+  const isLoading = bookingsLoading || patientsLoading || staffLoading || treatmentsLoading
 
-  const [selectedAppointment, setSelectedAppointment] = useState<any>(null)
-  const [selectedActivity, setSelectedActivity] = useState<any>(null)
-  const [selectedAlert, setSelectedAlert] = useState<any>(null)
-  const [selectedStaff, setSelectedStaff] = useState<any>(null)
-  const [activityPage, setActivityPage] = useState(0)
-  const activitiesPerPage = 5
-  const [schedulePage, setSchedulePage] = useState(0)
-  const schedulePerPage = 5
+  const [user, setUser] = useState<any>(null)
+  const [greeting, setGreeting] = useState("Good morning")
+  const [transactionPage, setTransactionPage] = useState(0)
+  const transactionsPerPage = 5
 
-  // Calculate real user balance from completed bookings
-  const completedBookingsAll = bookings?.filter((b) => b.status === "completed") || []
-  const userTotalEarnings = completedBookingsAll.reduce((total, booking) => {
-    const treatment = treatments?.find((t) => t.id === booking.treatmentId)
-    return total + (treatment?.price || 0)
-  }, 0)
-
-  // Assuming 20% withdrawal rate (you can adjust this based on your business logic)
-  const userBalance = userTotalEarnings * 0.2
-
-  const todaysBookings = bookings?.filter((booking) => isToday(new Date(booking.startAt))) || []
-
-  const completedBookings = todaysBookings.filter((b) => b.status === "completed")
-  const noShowBookings = todaysBookings.filter((b) => b.status === "no-show")
-  const attendanceRate =
-    todaysBookings.length > 0 ? Math.round((completedBookings.length / todaysBookings.length) * 100) : 0
-  const noShowRate = todaysBookings.length > 0 ? Math.round((noShowBookings.length / todaysBookings.length) * 100) : 0
-
-  const todaysRevenue = completedBookings.reduce((total, booking) => {
-    const treatment = treatments?.find((t) => t.id === booking.treatmentId)
-    return total + (treatment?.price || 0)
-  }, 0)
-
-  // Calculate real customer satisfaction from staff ratings
-  const avgCustomerSatisfaction = staff.length > 0
-    ? (staff.reduce((sum, s) => sum + (s.rating || 0), 0) / staff.length).toFixed(1)
-    : "0.0"
-  const newCustomersToday = patients?.filter((p) => isToday(new Date(p.createdAt || new Date()))).length || 0
-
-  // Function to enrich activity with full details
-  const enrichActivity = (activity: any) => {
-    if (!activity.relatedId) return activity
-    
-    const booking = bookings?.find(b => b.id === activity.relatedId)
-    if (!booking) return activity
-    
-    const patient = patients?.find(p => p.id === booking.patientId)
-    const staffMember = staff?.find(s => s.id === booking.staffId)
-    const treatment = treatments?.find(t => t.id === booking.treatmentId)
-    
-    return {
-      ...activity,
-      booking,
-      patient: patient || { name: 'Unknown Patient', phone: '-', email: '-' },
-      staff: staffMember || { name: 'Unknown Staff', role: '-' },
-      treatment: treatment || { name: 'Unknown Treatment', price: 0, duration: 0, durationMin: 0 }
+  // Load user and set greeting
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser))
+      } catch (e) {
+        console.error("Failed to parse user data")
+      }
     }
-  }
 
-  // Pagination for schedule - sorted by time
-  const allSchedule = todaysBookings.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
-  const paginatedSchedule = allSchedule.slice(
-    schedulePage * schedulePerPage,
-    (schedulePage + 1) * schedulePerPage
-  )
-  const totalSchedulePages = Math.ceil(allSchedule.length / schedulePerPage)
+    // Set greeting based on time
+    const hour = new Date().getHours()
+    if (hour < 12) setGreeting("Good morning")
+    else if (hour < 18) setGreeting("Good afternoon")
+    else setGreeting("Good evening")
+  }, [])
 
-  const treatmentCounts =
-    bookings?.reduce(
-      (acc, booking) => {
-        acc[booking.treatmentId] = (acc[booking.treatmentId] || 0) + 1
-        return acc
-      },
-      {} as Record<string, number>,
-    ) || {}
+  // Calculate metrics
+  const todaysBookings = useMemo(() =>
+    bookings?.filter((booking) => isToday(new Date(booking.startAt))) || []
+  , [bookings])
 
-  const topTreatments = Object.entries(treatmentCounts)
-    .map(([treatmentId, count]) => ({
-      treatment: treatments?.find((t) => t.id === treatmentId),
-      count,
-    }))
-    .filter((item) => item.treatment)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
+  const completedBookings = useMemo(() =>
+    todaysBookings.filter((b) => b.status === "completed")
+  , [todaysBookings])
 
-  const staffPerformance =
-    staff?.map((staffMember) => {
-      const todaysAppointments = todaysBookings.filter((b) => b.staffId === staffMember.id)
-      return {
-        ...staffMember,
-        appointments: todaysAppointments.length,
-        status: todaysAppointments.length > 0 ? "available" : "available",
+  const todaysRevenue = useMemo(() =>
+    completedBookings.reduce((total, booking) => {
+      const treatment = treatments?.find((t) => t.id === booking.treatmentId)
+      return total + (treatment?.price || 0)
+    }, 0)
+  , [completedBookings, treatments])
+
+  const totalBalance = useMemo(() => {
+    const allCompleted = bookings?.filter((b) => b.status === "completed") || []
+    return allCompleted.reduce((total, booking) => {
+      const treatment = treatments?.find((t) => t.id === booking.treatmentId)
+      return total + (treatment?.price || 0)
+    }, 0)
+  }, [bookings, treatments])
+
+  const pendingPayments = useMemo(() =>
+    todaysBookings.filter((b) => b.paymentStatus === "unpaid").reduce((total, booking) => {
+      const treatment = treatments?.find((t) => t.id === booking.treatmentId)
+      return total + (treatment?.price || 0)
+    }, 0)
+  , [todaysBookings, treatments])
+
+  const newCustomersToday = useMemo(() =>
+    patients?.filter((p) => isToday(new Date(p.createdAt || new Date()))).length || 0
+  , [patients])
+
+  // Upcoming appointments (next 5 today)
+  const upcomingAppointments = useMemo(() => {
+    const now = new Date()
+    return todaysBookings
+      .filter(b => new Date(b.startAt) > now && b.status === "confirmed")
+      .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
+      .slice(0, 5)
+  }, [todaysBookings])
+
+  // Top staff today
+  const topStaffToday = useMemo(() => {
+    const staffEarnings = staff.map(s => {
+      const staffBookings = completedBookings.filter(b => b.staffId === s.id)
+      const earnings = staffBookings.reduce((total, booking) => {
+        const treatment = treatments?.find((t) => t.id === booking.treatmentId)
+        return total + (treatment?.price || 0)
+      }, 0)
+      return { ...s, earnings, bookings: staffBookings.length }
+    })
+    return staffEarnings.sort((a, b) => b.earnings - a.earnings).slice(0, 3)
+  }, [staff, completedBookings, treatments])
+
+  // Revenue by service
+  const revenueByService = useMemo(() => {
+    const serviceRevenue: { [key: string]: number } = {}
+    completedBookings.forEach(booking => {
+      const treatment = treatments?.find((t) => t.id === booking.treatmentId)
+      if (treatment) {
+        serviceRevenue[treatment.name] = (serviceRevenue[treatment.name] || 0) + treatment.price
       }
     })
-    .sort((a, b) => b.appointments - a.appointments) // Sort by appointments descending
-    .slice(0, 5) || [] // Take top 5
+    return Object.entries(serviceRevenue).map(([name, value]) => ({ name, value }))
+  }, [completedBookings, treatments])
 
-  const pendingPayments = bookings?.filter((b) => b.paymentStatus === "unpaid").length || 0
-  const pendingConfirmations = bookings?.filter((b) => b.status === "pending").length || 0
-  const unavailableStaff = staff?.filter((s) => s.workingHours?.length === 0).length || 0
+  // Recent transactions (all completed bookings sorted)
+  const allTransactions = useMemo(() => {
+    return bookings
+      .filter(b => b.status === "completed")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [bookings])
 
-  const alerts = [
-    ...(pendingPayments > 0
-      ? [
-          {
-            id: 1,
-            type: "payment" as const,
-            message: `${pendingPayments} payments pending`,
-            priority: "medium" as const,
-            details: `${pendingPayments} customers have outstanding payments totaling ${formatCurrency(pendingPayments * 150000)}`,
-            action: "View Payment Reports",
-            actionUrl: `/reports?tab=payments`,
-          },
-        ]
-      : []),
-    ...(unavailableStaff > 0
-      ? [
-          {
-            id: 2,
-            type: "staff" as const,
-            message: `${unavailableStaff} staff unavailable today`,
-            priority: "low" as const,
-            details: `${unavailableStaff} staff members are not scheduled for today. Consider adjusting schedules to meet demand.`,
-            action: "Manage Staff Schedule",
-            actionUrl: `/staff`,
-          },
-        ]
-      : []),
-    ...(pendingConfirmations > 0
-      ? [
-          {
-            id: 3,
-            type: "appointment" as const,
-            message: `${pendingConfirmations} appointments need confirmation`,
-            priority: "high" as const,
-            details: `${pendingConfirmations} appointments are still pending confirmation. Contact customers to confirm their bookings.`,
-            action: "View Pending Appointments",
-            actionUrl: `/calendar?filter=pending`,
-          },
-        ]
-      : []),
-  ]
+  // Paginated transactions
+  const paginatedTransactions = useMemo(() => {
+    const start = transactionPage * transactionsPerPage
+    return allTransactions.slice(start, start + transactionsPerPage)
+  }, [allTransactions, transactionPage])
 
-  const groupedActivities =
-    activities?.reduce(
-      (acc, activity) => {
-        // Validate and parse the date
-        const activityDate = activity.createdAt ? new Date(activity.createdAt) : new Date()
-        
-        // Check if date is valid
-        if (isNaN(activityDate.getTime())) {
-          // If invalid date, use current date as fallback
-          const fallbackDate = new Date()
-          let day = "Today"
-          if (!acc[day]) acc[day] = []
-          acc[day].push({ ...activity, createdAt: fallbackDate.toISOString() })
-          return acc
-        }
-        
-        let day = "Older"
+  const totalTransactionPages = Math.ceil(allTransactions.length / transactionsPerPage)
 
-        if (isToday(activityDate)) {
-          day = "Today"
-        } else if (isToday(new Date(activityDate.getTime() + 24 * 60 * 60 * 1000))) {
-          day = "Yesterday"
-        }
-
-        if (!acc[day]) acc[day] = []
-        acc[day].push(activity)
-        return acc
-      },
-      {} as Record<string, typeof activities>,
-    ) || {}
-
-  const groupedActivitiesArray = Object.entries(groupedActivities).sort(([a], [b]) => {
-    const order = { Today: 0, Yesterday: 1, Older: 2 }
-    return (order[a as keyof typeof order] || 3) - (order[b as keyof typeof order] || 3)
-  })
-
-  const allActivities = groupedActivitiesArray.flatMap(([day, dayActivities]) =>
-    dayActivities.map((activity) => ({ ...activity, day })),
-  )
-  const paginatedActivities = allActivities.slice(
-    activityPage * activitiesPerPage,
-    (activityPage + 1) * activitiesPerPage,
-  )
-  const totalActivityPages = Math.ceil(allActivities.length / activitiesPerPage)
-
-  const handleBookingAction = async (bookingId: string, action: string) => {
-    try {
-      let updates: any = {}
-
-      switch (action) {
-        case "checkin":
-          updates = { status: "confirmed" }
-          toast({ title: "Success", description: "Patient checked in successfully" })
-          break
-        case "complete":
-          updates = { status: "completed" }
-          toast({ title: "Success", description: "Appointment completed successfully" })
-          break
-        case "cancel":
-          updates = { status: "cancelled" }
-          toast({ title: "Success", description: "Appointment cancelled" })
-          break
-        case "noshow":
-          updates = { status: "no-show" }
-          toast({ title: "Updated", description: "Marked as no-show" })
-          break
-      }
-
-      updateBooking?.(bookingId, updates)
-      setSelectedAppointment(null)
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to update appointment", variant: "destructive" })
-    }
+  const copyAccountNumber = () => {
+    navigator.clipboard.writeText("1234567890")
+    toast({ title: "Copied!", description: "Account number copied to clipboard" })
   }
 
-  const handleKpiClick = (type: string) => {
-    switch (type) {
-      case "bookings":
-        router.push(`/calendar`)
-        break
-      case "revenue":
-        router.push(`/reports`)
-        break
-      case "attendance":
-        router.push(`/calendar?filter=completed`)
-        break
-      case "satisfaction":
-        router.push(`/reports?tab=satisfaction`)
-        break
-    }
-  }
-
-  const handleQuickAction = (action: string) => {
-    switch (action) {
-      case "new-booking":
-        router.push(`/walk-in`)
-        break
-      case "export-report":
-        toast({ title: "Export Started", description: "Your report is being generated" })
-        break
-      case "view-calendar":
-        router.push(`/calendar`)
-        break
-    }
-  }
-
-  function getStatusBadge(status: string) {
-    switch (status) {
-      case "confirmed":
-        return (
-          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
-            Confirmed
-          </Badge>
-        )
-      case "pending":
-        return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
-            Pending
-          </Badge>
-        )
-      case "completed":
-        return (
-          <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            Completed
-          </Badge>
-        )
-      case "cancelled":
-        return (
-          <Badge variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-100">
-            Cancelled
-          </Badge>
-        )
-      case "no-show":
-        return (
-          <Badge variant="outline" className="bg-gray-100 text-gray-800 hover:bg-gray-100">
-            No Show
-          </Badge>
-        )
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
-
-  function getActivityIcon(type: string) {
-    switch (type) {
-      case "booking_created":
-        return <Calendar className="h-4 w-4 text-blue-500" />
-      case "payment_received":
-        return <CreditCard className="h-4 w-4 text-green-500" />
-      case "booking_completed":
-        return <Scissors className="h-4 w-4 text-purple-500" />
-      case "client_added":
-        return <UserPlus className="h-4 w-4 text-pink-500" />
-      default:
-        return <CheckCircle className="h-4 w-4 text-gray-500" />
-    }
-  }
-
-  function getAlertIcon(type: string) {
-    switch (type) {
-      case "payment":
-        return <CreditCard className="h-4 w-4" />
-      case "staff":
-        return <Users className="h-4 w-4" />
-      case "appointment":
-        return <Calendar className="h-4 w-4" />
-      default:
-        return <AlertTriangle className="h-4 w-4" />
-    }
-  }
-
-  function getPriorityColor(priority: string) {
-    switch (priority) {
-      case "high":
-        return "text-red-600 bg-red-50 border-red-200"
-      case "medium":
-        return "text-yellow-600 bg-yellow-50 border-yellow-200"
-      case "low":
-        return "text-blue-600 bg-blue-50 border-blue-200"
-      default:
-        return "text-gray-600 bg-gray-50 border-gray-200"
-    }
-  }
-
-  const getBookingWithDetails = (booking: any) => {
-    const patient = patients?.find((p) => p.id === booking.patientId)
-    const treatment = treatments?.find((t) => t.id === booking.treatmentId)
-    const staffMember = staff?.find((s) => s.id === booking.staffId)
-
-    return {
-      ...booking,
-      patient,
-      treatment,
-      staff: staffMember,
-      time: format(new Date(booking.startAt), "HH:mm"),
-      client: patient?.name || "Unknown Client",
-      treatmentName: treatment?.name || "Unknown Treatment",
-      staffName: staffMember?.name || "Unknown Staff",
-    }
-  }
-
-  // Check if completely empty (no data at all)
-  const hasNoData = !isLoading && (
-    (!bookings || bookings.length === 0) &&
-    (!patients || patients.length === 0) &&
-    (!staff || staff.length === 0) &&
-    (!treatments || treatments.length === 0)
-  )
-
-  return (
+  if (isLoading) {
+    return (
       <MainLayout>
-      {isLoading ? (
-        <div className="flex min-h-[600px] w-full items-center justify-center">
+        <div className="flex items-center justify-center h-[60vh]">
           <LiquidLoading />
         </div>
-      ) : hasNoData ? (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <img
-                src="/reserva_logo.webp"
-                alt="Reserva"
-                className="h-12 w-12 object-contain"
-              />
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-                <p className="text-muted-foreground">Welcome! Let's get you started.</p>
-              </div>
-            </div>
-          </div>
+      </MainLayout>
+    )
+  }
 
-          <EmptyState
-            icon={Sparkles}
-            title="Welcome to Reserva!"
-            description={`Get started by setting up your business. Add your first ${terminology.staff.toLowerCase()}, ${terminology.treatment.toLowerCase()}, and ${terminology.patient.toLowerCase()} to begin managing your ${terminology.booking.toLowerCase()}.`}
-            actionLabel={`Add ${terminology.staff}`}
-            onAction={() => router.push('/staff')}
-            secondaryActionLabel={`Add ${terminology.treatment}`}
-            onSecondaryAction={() => router.push('/treatments')}
-            tips={[
-              {
-                icon: Users,
-                title: `Setup ${terminology.staff}`,
-                description: `Add your ${terminology.staff.toLowerCase()} members first`
-              },
-              {
-                icon: Star,
-                title: `Create ${terminology.treatment}`,
-                description: `Define your services or ${terminology.treatment.toLowerCase()}`
-              },
-              {
-                icon: Calendar,
-                title: `Start Booking`,
-                description: `Create your first ${terminology.booking.toLowerCase()}`
-              }
-            ]}
-          />
-        </div>
-      ) : (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <img
-              src="/reserva_logo.webp"
-              alt="Reserva"
-              className="h-12 w-12 object-contain"
-            />
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
-            </div>
+  return (
+    <MainLayout>
+      <div className="space-y-6 pb-8">
+        {/* Greeting */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {greeting}, {user?.name || "Admin"}!
+            </h1>
+            <p className="text-gray-500 mt-1">Here's your clinic overview for today</p>
           </div>
-
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              className="bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white border-0"
-              onClick={() => handleQuickAction("new-booking")}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Booking
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAction("export-report")}
-              className="border-pink-200 text-pink-600 hover:bg-pink-50"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Export Report
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleQuickAction("view-calendar")}
-              className="border-purple-200 text-purple-600 hover:bg-purple-50"
-            >
-              <CalendarDays className="h-4 w-4 mr-2" />
-              View Calendar
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-gray-600 hover:text-gray-900"
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            {format(new Date(), "MMM dd, yyyy")}
+          </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <div onClick={() => handleKpiClick("bookings")} className="cursor-pointer">
-            <KpiCard
-              title="Today's Bookings"
-              value={todaysBookings.length}
-              change={`${completedBookings.length} completed`}
-              changeType="positive"
-              icon={Calendar}
-            />
-          </div>
-          <div onClick={() => handleKpiClick("revenue")} className="cursor-pointer">
-            <KpiCard
-              title="Revenue Today"
-              value={formatCurrency(todaysRevenue)}
-              change={`${completedBookings.length} treatments`}
-              changeType="positive"
-              icon={DollarSign}
-            />
-          </div>
-          <div onClick={() => handleKpiClick("attendance")} className="cursor-pointer">
-            <KpiCard
-              title="Attendance Rate"
-              value={`${attendanceRate}%`}
-              change={`${completedBookings.length}/${todaysBookings.length} attended`}
-              changeType="positive"
-              icon={UserCheck}
-            />
-          </div>
-          <div onClick={() => handleKpiClick("satisfaction")} className="cursor-pointer">
-            <KpiCard
-              title="Customer Satisfaction"
-              value={`${avgCustomerSatisfaction}/5`}
-              change={`${newCustomersToday} new customers`}
-              changeType="positive"
-              icon={Heart}
-            />
-          </div>
-          <div onClick={() => router.push(`/withdrawal`)} className="cursor-pointer">
-            <KpiCard
-              title="Available Balance"
-              value={formatCurrency(userBalance)}
-              change={`Total: ${formatCurrency(userTotalEarnings)}`}
-              changeType="positive"
-              icon={Wallet}
-            />
-          </div>
-        </div>
-
-        {alerts.length > 0 && (
-          <Card className="border-pink-100 bg-gradient-to-r from-pink-50/50 to-purple-50/50">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-pink-700">
-                <Sparkles className="h-5 w-5" />
-                Alerts & Reminders
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-3">
-                {alerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    onClick={() => setSelectedAlert(alert)}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-xl border cursor-pointer hover:shadow-md transition-all duration-200 ${getPriorityColor(alert.priority)}`}
-                  >
-                    {getAlertIcon(alert.type)}
-                    <span className="text-sm font-medium">{alert.message}</span>
-                  </div>
-                ))}
+        {/* Quick Stats */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Today's Bookings</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{todaysBookings.length}</p>
+                  <p className="text-xs text-green-600 mt-1 flex items-center">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    {completedBookings.length} completed
+                  </p>
+                </div>
+                <div className="p-3 bg-[#BBD0FF]/30 rounded-lg">
+                  <Calendar className="h-6 w-6 text-[#B8C0FF]" />
+                </div>
               </div>
             </CardContent>
           </Card>
-        )}
 
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Today's Revenue</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(todaysRevenue)}</p>
+                  <p className="text-xs text-gray-500 mt-1">From {completedBookings.length} bookings</p>
+                </div>
+                <div className="p-3 bg-[#E7C6FF]/30 rounded-lg">
+                  <DollarSign className="h-6 w-6 text-[#C8B6FF]" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Pending Payments</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(pendingPayments)}</p>
+                  <p className="text-xs text-orange-600 mt-1">Needs collection</p>
+                </div>
+                <div className="p-3 bg-[#FFD6FF]/30 rounded-lg">
+                  <Clock className="h-6 w-6 text-[#E7C6FF]" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">New Clients</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{newCustomersToday}</p>
+                  <p className="text-xs text-purple-600 mt-1">Today</p>
+                </div>
+                <div className="p-3 bg-[#C8B6FF]/30 rounded-lg">
+                  <Users className="h-6 w-6 text-[#B8C0FF]" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* ... existing schedule code ... */}
-          <Card className="lg:col-span-2 border-pink-100">
-            <CardHeader className="bg-gradient-to-r from-pink-50 to-purple-50">
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-pink-700">
-                  <Clock className="h-5 w-5" />
-                  Today's Schedule
-                </div>
-                {allSchedule.length > schedulePerPage && (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSchedulePage(Math.max(0, schedulePage - 1))}
-                      disabled={schedulePage === 0}
-                      className="h-6 w-6 p-0"
-                    >
-                      <ChevronLeft className="h-3 w-3" />
-                    </Button>
-                    <span className="text-xs text-muted-foreground px-2">
-                      {schedulePage + 1} of {totalSchedulePages}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSchedulePage(Math.min(totalSchedulePages - 1, schedulePage + 1))}
-                      disabled={schedulePage >= totalSchedulePages - 1}
-                      className="h-6 w-6 p-0"
-                    >
-                      <ChevronRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {paginatedSchedule.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No appointments scheduled today</div>
-                ) : (
-                  paginatedSchedule.map((booking) => {
-                    const bookingWithDetails = getBookingWithDetails(booking)
-                    return (
-                      <div
-                        key={booking.id}
-                        onClick={() => setSelectedAppointment(bookingWithDetails)}
-                        className="group flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-pink-50/50 to-purple-50/50 hover:from-pink-100/50 hover:to-purple-100/50 transition-all duration-200 cursor-pointer border border-pink-100"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="text-sm font-medium text-pink-600 min-w-[50px]">
-                            {bookingWithDetails.time}
-                          </div>
-                          <div className="flex-1">
-                            <div className="font-medium">{bookingWithDetails.client}</div>
-                            <div className="text-sm text-muted-foreground">{bookingWithDetails.treatmentName}</div>
-                            <div className="text-xs text-muted-foreground">with {bookingWithDetails.staffName}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(booking.status)}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <MoreHorizontal className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Right Column */}
-          <div className="space-y-6">
-            <Card className="border-purple-100">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-purple-700">
-                    <CheckCircle className="h-5 w-5" />
-                    Recent Activity
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setActivityPage(Math.max(0, activityPage - 1))}
-                      disabled={activityPage === 0}
-                      className="h-6 w-6 p-0"
-                    >
-                      <ChevronLeft className="h-3 w-3" />
-                    </Button>
-                    <span className="text-xs text-muted-foreground px-2">
-                      {activityPage + 1} of {totalActivityPages}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setActivityPage(Math.min(totalActivityPages - 1, activityPage + 1))}
-                      disabled={activityPage >= totalActivityPages - 1}
-                      className="h-6 w-6 p-0"
-                    >
-                      <ChevronRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {paginatedActivities.length === 0 ? (
-                    <div className="text-center py-4 text-muted-foreground">No recent activity</div>
-                  ) : (
-                    paginatedActivities.map((activity) => (
-                      <div
-                        key={activity.id}
-                        onClick={() => setSelectedActivity(enrichActivity(activity))}
-                        className="flex items-start gap-3 cursor-pointer hover:bg-gradient-to-r hover:from-purple-50/50 hover:to-pink-50/50 p-2 rounded-lg transition-all duration-200"
-                        title={activity.createdAt && !isNaN(new Date(activity.createdAt).getTime()) ? format(new Date(activity.createdAt), "PPpp") : "No date available"}
-                      >
-                        {getActivityIcon(activity.type)}
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm">
-                            <span className="font-medium">{activity.description}</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-2">
-                            <span>{activity.createdAt && !isNaN(new Date(activity.createdAt).getTime()) ? format(new Date(activity.createdAt), "HH:mm") : "--:--"}</span>
-                            <span className="text-purple-400">•</span>
-                            <span>{activity.day}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* ... existing code for other cards ... */}
-            <Card className="border-pink-100">
-              <CardHeader className="bg-gradient-to-r from-pink-50 to-purple-50">
-                <CardTitle className="flex items-center gap-2 text-pink-700">
-                  <TrendingUp className="h-5 w-5" />
-                  Top {terminology.treatment} This Week
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {topTreatments.length === 0 ? (
-                    <div className="text-center py-4 text-muted-foreground">No treatment data available</div>
-                  ) : (
-                    topTreatments.map((item, index) => (
-                      <div key={item.treatment?.id} className="flex items-center gap-3">
-                        <div className="text-xs font-medium text-muted-foreground w-4">#{index + 1}</div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium">{item.treatment?.name}</div>
-                          <div className="w-full bg-muted rounded-full h-2 mt-1">
-                            <div
-                              className="bg-gradient-to-r from-pink-400 to-purple-400 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${(item.count / topTreatments[0].count) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="text-sm font-medium text-pink-600">{item.count}</div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-purple-100">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-                <CardTitle className="flex items-center gap-2 text-purple-700">
-                  <Users className="h-5 w-5" />
-                  Top 5 Staff Today
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {staffPerformance.length === 0 ? (
-                    <div className="text-center py-4 text-muted-foreground">No staff activity today</div>
-                  ) : (
-                    staffPerformance.map((staffMember) => (
-                    <div
-                      key={staffMember.id}
-                      onClick={() => setSelectedStaff(staffMember)}
-                      className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-purple-50/50 to-pink-50/50 cursor-pointer hover:from-purple-100/50 hover:to-pink-100/50 transition-all duration-200 border border-purple-100"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-2 h-2 rounded-full ${staffMember.status === "available" ? "bg-green-500" : "bg-red-500"}`}
-                        />
-                        <div>
-                          <div className="font-medium text-sm">{staffMember.name}</div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                            {staffMember.rating || 4.5}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-purple-600">{staffMember.appointments}</div>
-                        <div className="text-xs text-muted-foreground">appointments</div>
+          {/* Left Column - Main Content (2 columns) */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Financial Overview */}
+            <Card className="border-[#C8B6FF]/30">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-[#C8B6FF]/20 rounded-lg">
+                      <Wallet className="h-5 w-5 text-[#B8C0FF]" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Main Business Account</CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-gray-500">1234567890</span>
+                        <button onClick={copyAccountNumber} className="text-gray-400 hover:text-gray-600">
+                          <Copy className="h-3 w-3" />
+                        </button>
                       </div>
                     </div>
-                  )))}
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900"
+                    onClick={() => router.push('/withdrawal')}
+                  >
+                    Withdraw
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Account Balance</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrency(totalBalance)}</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => router.push('/calendar')}
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      New Booking
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => router.push('/reports')}
+                    >
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      View Reports
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
 
-        {/* ... existing modals ... */}
-        <Dialog open={!!selectedAppointment} onOpenChange={() => setSelectedAppointment(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Appointment Details
-              </DialogTitle>
-            </DialogHeader>
-            {selectedAppointment && (
-              <div className="space-y-4">
+            {/* Recent Transactions */}
+            <Card>
+              <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold">{selectedAppointment.client}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedAppointment.treatmentName}</p>
-                  </div>
-                  {getStatusBadge(selectedAppointment.status)}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Time:</span>
-                    <p className="font-medium">{selectedAppointment.time}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Staff:</span>
-                    <p className="font-medium">{selectedAppointment.staffName}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{selectedAppointment.patient?.phone || "No phone"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span>{selectedAppointment.patient?.email || "No email"}</span>
-                  </div>
-                </div>
-
-                {selectedAppointment.patient?.notes && (
-                  <div className="pt-2 border-t">
-                    <p className="text-sm text-muted-foreground mb-2">Notes:</p>
-                    <p className="text-sm">{selectedAppointment.patient.notes}</p>
-                  </div>
-                )}
-
-                <div className="flex gap-2 flex-wrap">
-                  {selectedAppointment.status === "pending" && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleBookingAction(selectedAppointment.id, "checkin")}
-                      className="flex-1"
-                    >
-                      Check In
-                    </Button>
+                  <CardTitle className="text-lg">Recent Transactions</CardTitle>
+                  {allTransactions.length > 0 && (
+                    <div className="text-sm text-gray-500">
+                      {allTransactions.length} total
+                    </div>
                   )}
-                  {selectedAppointment.status === "confirmed" && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleBookingAction(selectedAppointment.id, "complete")}
-                      className="flex-1"
-                    >
-                      Complete
-                    </Button>
-                  )}
-                  {["pending", "confirmed"].includes(selectedAppointment.status) && (
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {allTransactions.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8">No transactions yet</p>
+                  ) : (
                     <>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleBookingAction(selectedAppointment.id, "cancel")}
-                        className="flex-1"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleBookingAction(selectedAppointment.id, "noshow")}
-                        className="flex-1"
-                      >
-                        No Show
-                      </Button>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-gray-100">
+                              <th className="text-left text-xs font-medium text-gray-500 pb-3">Date</th>
+                              <th className="text-left text-xs font-medium text-gray-500 pb-3">Client</th>
+                              <th className="text-left text-xs font-medium text-gray-500 pb-3">Service</th>
+                              <th className="text-right text-xs font-medium text-gray-500 pb-3">Amount</th>
+                              <th className="text-right text-xs font-medium text-gray-500 pb-3">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {paginatedTransactions.map((transaction) => {
+                              const treatment = treatments.find(t => t.id === transaction.treatmentId)
+                              const patient = patients.find(p => p.id === transaction.patientId)
+                              return (
+                                <tr key={transaction.id} className="border-b border-gray-50 hover:bg-gray-50">
+                                  <td className="py-3 text-sm text-gray-600">
+                                    {format(new Date(transaction.createdAt), "MMM dd")}
+                                  </td>
+                                  <td className="py-3 text-sm font-medium text-gray-900">
+                                    {patient?.name || transaction.patientName}
+                                  </td>
+                                  <td className="py-3 text-sm text-gray-600">
+                                    {treatment?.name || "Unknown"}
+                                  </td>
+                                  <td className="py-3 text-sm font-medium text-gray-900 text-right">
+                                    {formatCurrency(treatment?.price || 0)}
+                                  </td>
+                                  <td className="py-3 text-right">
+                                    <Badge variant={transaction.paymentStatus === "paid" ? "default" : "secondary"} className="text-xs">
+                                      {transaction.paymentStatus}
+                                    </Badge>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination */}
+                      {totalTransactionPages > 1 && (
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                          <div className="text-sm text-gray-500">
+                            Page {transactionPage + 1} of {totalTransactionPages}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setTransactionPage(prev => Math.max(0, prev - 1))}
+                              disabled={transactionPage === 0}
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setTransactionPage(prev => Math.min(totalTransactionPages - 1, prev + 1))}
+                              disabled={transactionPage === totalTransactionPages - 1}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Activity Details Modal */}
-        <Dialog open={!!selectedActivity} onOpenChange={() => setSelectedActivity(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {selectedActivity && getActivityIcon(selectedActivity.type)}
-                Activity Details
-              </DialogTitle>
-            </DialogHeader>
-            {selectedActivity && (
-              <div className="space-y-4">
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-purple-900">{selectedActivity.description}</h3>
-                  <p className="text-xs text-purple-600 mt-1">
-                    {format(new Date(selectedActivity.createdAt), "PPpp")}
-                  </p>
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            {/* Upcoming Appointments */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-600" />
+                  Upcoming Appointments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {upcomingAppointments.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">No upcoming appointments</p>
+                  ) : (
+                    upcomingAppointments.map((apt) => {
+                      const treatment = treatments.find(t => t.id === apt.treatmentId)
+                      const patient = patients.find(p => p.id === apt.patientId)
+                      return (
+                        <div key={apt.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                          <div className="flex-shrink-0">
+                            <div className="w-12 h-12 rounded-lg bg-blue-50 flex flex-col items-center justify-center">
+                              <span className="text-xs text-blue-600 font-medium">
+                                {format(new Date(apt.startAt), "HH:mm")}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {patient?.name || apt.patientName}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {treatment?.name || "Product"}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {apt.status}
+                          </Badge>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Patient Information */}
-                {selectedActivity.patient && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-muted-foreground">Patient Information</h4>
-                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Name:</span>
-                        <span className="text-sm font-medium">{selectedActivity.patient.name}</span>
+            {/* Top Staff Today */}
+            <Card className="bg-gradient-to-br from-[#FFD6FF]/20 to-[#E7C6FF]/20 border-[#C8B6FF]/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Star className="h-4 w-4 text-[#C8B6FF]" />
+                  Top Staff Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {topStaffToday.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">No data yet</p>
+                  ) : (
+                    topStaffToday.map((s, idx) => (
+                      <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/50 hover:bg-white/80 transition-colors">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C8B6FF] to-[#B8C0FF] flex items-center justify-center text-white font-semibold">
+                            {s.name?.charAt(0) || "?"}
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{s.name}</p>
+                          <p className="text-xs text-gray-500">{s.bookings} bookings</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-gray-900">{formatCurrency(s.earnings)}</p>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Phone:</span>
-                        <span className="text-sm">{selectedActivity.patient.phone || '-'}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Email:</span>
-                        <span className="text-sm">{selectedActivity.patient.email || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Treatment Information */}
-                {selectedActivity.treatment && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-muted-foreground">Treatment Details</h4>
-                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Treatment:</span>
-                        <span className="text-sm font-medium">{selectedActivity.treatment.name}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Duration:</span>
-                        <span className="text-sm">{selectedActivity.treatment.duration || selectedActivity.treatment.durationMin || 0} min</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Price:</span>
-                        <span className="text-sm font-medium">{formatCurrency(selectedActivity.treatment.price || 0)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Staff Information */}
-                {selectedActivity.staff && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-muted-foreground">Staff Assigned</h4>
-                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Name:</span>
-                        <span className="text-sm font-medium">{selectedActivity.staff.name}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Role:</span>
-                        <span className="text-sm">{selectedActivity.staff.role || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Booking Status */}
-                {selectedActivity.booking && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-muted-foreground">Booking Status</h4>
-                    <div className="bg-muted/50 p-3 rounded-lg space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Status:</span>
-                        <Badge variant={
-                          selectedActivity.booking.status === 'completed' ? 'default' :
-                          selectedActivity.booking.status === 'confirmed' ? 'secondary' :
-                          selectedActivity.booking.status === 'cancelled' ? 'destructive' :
-                          'outline'
-                        }>
-                          {selectedActivity.booking.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Payment:</span>
-                        <Badge variant={
-                          selectedActivity.booking.paymentStatus === 'paid' ? 'default' :
-                          selectedActivity.booking.paymentStatus === 'deposit' ? 'secondary' :
-                          'outline'
-                        }>
-                          {selectedActivity.booking.paymentStatus}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Time:</span>
-                        <span className="text-sm">
-                          {selectedActivity.booking.startAt ? format(new Date(selectedActivity.booking.startAt), "HH:mm") : '-'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      if (selectedActivity.relatedId) {
-                        router.push(`/calendar?booking=${selectedActivity.relatedId}`)
-                      }
-                    }}
-                  >
-                    <Calendar className="h-4 w-4 mr-2" />
-                    View in Calendar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setSelectedActivity(null)}
-                  >
-                    Close
-                  </Button>
+                    ))
+                  )}
                 </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full mt-3 text-[#C8B6FF] hover:text-[#B8C0FF] hover:bg-[#FFD6FF]/20"
+                  onClick={() => router.push('/staff')}
+                >
+                  View All Staff
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </CardContent>
+            </Card>
 
-        <Dialog open={!!selectedAlert} onOpenChange={() => setSelectedAlert(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                {selectedAlert && getAlertIcon(selectedAlert.type)}
-                Alert Details
-              </DialogTitle>
-            </DialogHeader>
-            {selectedAlert && (
-              <div className="space-y-4">
-                <div className={`p-4 rounded-lg border ${getPriorityColor(selectedAlert.priority)}`}>
-                  <p className="font-medium text-lg">{selectedAlert.message}</p>
-                  <p className="text-sm mt-2">{selectedAlert.details}</p>
-                  <div className="flex items-center gap-2 mt-3">
-                    <span className="text-xs font-medium">Priority:</span>
-                    <Badge variant="outline" className="text-xs capitalize">
-                      {selectedAlert.priority}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500"
-                    onClick={() => {
-                      router.push(selectedAlert.actionUrl)
-                      setSelectedAlert(null)
-                    }}
-                  >
-                    {selectedAlert.action}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setSelectedAlert(null)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Staff Details Modal */}
-        <Dialog open={!!selectedStaff} onOpenChange={() => setSelectedStaff(null)}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Staff Details
-              </DialogTitle>
-            </DialogHeader>
-            {selectedStaff && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-3 h-3 rounded-full ${selectedStaff.status === "available" ? "bg-green-500" : "bg-red-500"}`}
-                  />
-                  <div>
-                    <h3 className="font-semibold">{selectedStaff.name}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedStaff.role}</p>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                      {selectedStaff.rating || 4.5} rating
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Today's Appointments:</span>
-                    <p className="font-medium text-lg">{selectedStaff.appointments}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Status:</span>
-                    <p className="font-medium capitalize">{selectedStaff.status}</p>
-                  </div>
-                </div>
-
-                {selectedStaff.skills && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Skills:</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedStaff.skills.map((skill: string) => (
-                        <Badge key={skill} variant="secondary" className="text-xs">
-                          {skill}
-                        </Badge>
+            {/* Revenue by Service */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                  Revenue by Service
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {revenueByService.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">No revenue data yet</p>
+                ) : (
+                  <>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie
+                          data={revenueByService}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {revenueByService.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-2 mt-4">
+                      {revenueByService.slice(0, 5).map((service, idx) => (
+                        <div key={service.name} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                            <span className="text-xs text-gray-600">{service.name}</span>
+                          </div>
+                          <span className="text-xs font-medium text-gray-900">{formatCurrency(service.value)}</span>
+                        </div>
                       ))}
                     </div>
-                  </div>
+                  </>
                 )}
-
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => {
-                    router.push(`/calendar?staff=${selectedStaff.id}`)
-                    setSelectedStaff(null)
-                  }}
-                >
-                  View Full Schedule
-                </Button>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
-      )}
-
-      {/* 🧪 TESTING COMPONENT - DELETE AFTER TESTING */}
-      <TourTestButton />
-      {/* 🧪 END TESTING COMPONENT */}
-
-      </MainLayout>
+    </MainLayout>
   )
 }
