@@ -1,10 +1,5 @@
-import dynamic from "next/dynamic"
+import { redirect } from "next/navigation"
 
-// Dynamically import the client component
-const LandingPageClient = dynamic(() => import("./landing-page"), {
-  ssr: false,
-})
-
-export default function LandingPage() {
-  return <LandingPageClient />
+export default function HomePage() {
+  redirect("/signin")
 }
