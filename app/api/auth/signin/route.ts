@@ -1,24 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectMongoDB } from '@/lib/mongodb'
-import User from '@/models/User'
-import { verifyPassword, createToken } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
+const FASTAPI_URL = process.env.FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'
+
 export async function POST(req: NextRequest) {
   try {
-    // Log environment variable status
-    console.log('🔍 Environment Check:', {
-      NODE_ENV: process.env.NODE_ENV,
-      MONGO_URI_exists: !!process.env.MONGO_URI,
-      MONGO_URI_length: process.env.MONGO_URI?.length,
-      MONGO_URI_masked: process.env.MONGO_URI ?
-        process.env.MONGO_URI.replace(/mongodb(\+srv)?:\/\/[^@]+@/, 'mongodb$1://***:***@') :
-        'NOT SET',
-      JWT_SECRET_exists: !!process.env.JWT_SECRET
-    })
-
-    const { email, password } = await req.json()
+    const { email, password, tenant_slug } = await req.json()
 
     console.log('Sign in attempt for:', email)
 
@@ -29,58 +17,84 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    await connectMongoDB()
-
-    // Find user by email
-    const user = await User.findByEmail(email)
-
-    if (!user) {
-      console.log('User not found for email:', email)
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      )
-    }
-
-    // Verify password
-    console.log('Verifying password for user:', user.email)
-    const isValid = await verifyPassword(password, user.password)
-
-    if (!isValid) {
-      console.log('Password verification failed')
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      )
-    }
-
-    console.log('Password verified successfully')
-
-    // Create JWT token
-    const token = createToken({
-      userId: user._id.toString(),
-      email: user.email,
-      name: user.name,
+    // Call FastAPI login endpoint
+    const loginResponse = await fetch(`${FASTAPI_URL}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        tenant_slug: tenant_slug || null
+      })
     })
+
+    const data = await loginResponse.json()
+
+    if (!loginResponse.ok) {
+      console.log('Login failed:', data)
+      return NextResponse.json(
+        { error: data.detail || 'Invalid email or password' },
+        { status: loginResponse.status }
+      )
+    }
+
+    // Check if multi-tenant response (requires tenant selection)
+    if (data.requires_tenant_selection) {
+      return NextResponse.json({
+        success: false,
+        requires_tenant_selection: true,
+        available_tenants: data.available_tenants,
+        auth_token: data.auth_token,
+        message: data.message
+      })
+    }
+
+    // Direct login success - LoginResponse
+    console.log('Login successful for user:', data.user)
 
     // Create response with cookie
     const response = NextResponse.json({
       success: true,
-      user: {
-        id: user._id.toString(),
-        email: user.email,
-        name: user.name,
-      },
+      user: data.user,
+      tenant: data.tenant,
+      outlets: data.outlets,
+      access_type: data.access_type,
+      permissions: data.permissions,
+      subscription_status: data.subscription_status
     })
 
-    // Set cookie on response
-    response.cookies.set('auth-token', token, {
+    // Set JWT token in httpOnly cookie
+    response.cookies.set('auth-token', data.access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: data.expires_in || 1800, // Use token expiration from API
       path: '/',
     })
+
+    // Store refresh token if provided
+    if (data.refresh_token) {
+      response.cookies.set('refresh-token', data.refresh_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days for refresh token
+        path: '/',
+      })
+    }
+
+    // Store tenant info in cookie for API routes
+    if (data.tenant) {
+      response.cookies.set('tenant', JSON.stringify(data.tenant), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/',
+      })
+    }
 
     return response
   } catch (error) {

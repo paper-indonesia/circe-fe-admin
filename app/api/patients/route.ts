@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import connectMongoDB from '@/lib/mongodb'
-import Patient from '@/models/Patient'
-import { requireAuth, getScopedQuery } from '@/lib/auth'
+import fs from 'fs'
+import path from 'path'
+
+const DATA_FILE = path.join(process.cwd(), 'data', 'patients.json')
+
+function readData() {
+  try {
+    const data = fs.readFileSync(DATA_FILE, 'utf-8')
+    return JSON.parse(data)
+  } catch {
+    return []
+  }
+}
+
+function writeData(data: any[]) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2))
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const user = requireAuth(request)
-
-    await connectMongoDB()
-    const patients = await Patient.find(getScopedQuery(user.userId)).sort({ createdAt: -1 })
+    const patients = readData()
     return NextResponse.json(patients)
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
-    }
     console.error('Error fetching patients:', error)
     return NextResponse.json({ error: 'Failed to fetch patients' }, { status: 500 })
   }
@@ -21,58 +29,36 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = requireAuth(request)
-
-    await connectMongoDB()
     const body = await request.json()
+    const patients = readData()
 
-    // First check if patient with this phone already exists for this user
+    // Check if patient with this phone already exists
     if (body.phone) {
-      const existingPatient = await Patient.findOne(getScopedQuery(user.userId, {
-        phone: body.phone
-      }))
-
-      if (existingPatient) {
-        // Update existing patient instead of creating new one
-        Object.assign(existingPatient, {
-          name: body.name || existingPatient.name,
-          email: body.email || existingPatient.email,
-          notes: body.notes || existingPatient.notes
-        })
-        await existingPatient.save()
-        return NextResponse.json(existingPatient, { status: 200 })
-      }
-    }
-
-    // Create new patient if not exists
-    const patient = await Patient.create({
-      ...body,
-      ownerId: user.userId
-    })
-    return NextResponse.json(patient, { status: 201 })
-  } catch (error: any) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
-    }
-
-    console.error('Error creating patient:', error)
-
-    // Handle duplicate key error
-    if (error.code === 11000 && error.keyPattern?.phone) {
-      try {
-        const user = requireAuth(request)
-        // Try to find and return existing patient
-        const existingPatient = await Patient.findOne(getScopedQuery(user.userId, {
-          phone: body.phone
-        }))
-        if (existingPatient) {
-          return NextResponse.json(existingPatient, { status: 200 })
+      const existingIndex = patients.findIndex((p: any) => p.phone === body.phone)
+      if (existingIndex !== -1) {
+        // Update existing patient
+        patients[existingIndex] = {
+          ...patients[existingIndex],
+          name: body.name || patients[existingIndex].name,
+          email: body.email || patients[existingIndex].email,
+          notes: body.notes || patients[existingIndex].notes
         }
-      } catch (findError) {
-        console.error('Error finding existing patient:', findError)
+        writeData(patients)
+        return NextResponse.json(patients[existingIndex], { status: 200 })
       }
     }
 
+    // Create new patient
+    const newPatient = {
+      id: Date.now().toString(),
+      ...body,
+      createdAt: new Date().toISOString()
+    }
+    patients.push(newPatient)
+    writeData(patients)
+    return NextResponse.json(newPatient, { status: 201 })
+  } catch (error: any) {
+    console.error('Error creating patient:', error)
     return NextResponse.json({
       error: 'Failed to create patient',
       message: error.message

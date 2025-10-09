@@ -44,18 +44,29 @@ export default function DashboardPage() {
   const isLoading = bookingsLoading || patientsLoading || staffLoading || treatmentsLoading
 
   const [user, setUser] = useState<any>(null)
+  const [tenant, setTenant] = useState<any>(null)
   const [greeting, setGreeting] = useState("Good morning")
   const [transactionPage, setTransactionPage] = useState(0)
   const transactionsPerPage = 5
 
-  // Load user and set greeting
+  // Load user, tenant and set greeting
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
+    const storedTenant = localStorage.getItem("tenant")
+
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser))
       } catch (e) {
         console.error("Failed to parse user data")
+      }
+    }
+
+    if (storedTenant) {
+      try {
+        setTenant(JSON.parse(storedTenant))
+      } catch (e) {
+        console.error("Failed to parse tenant data")
       }
     }
 
@@ -65,6 +76,14 @@ export default function DashboardPage() {
     else if (hour < 18) setGreeting("Good afternoon")
     else setGreeting("Good evening")
   }, [])
+
+  // Get display name
+  const getDisplayName = () => {
+    if (!user) return 'Admin'
+    if (user.first_name) return user.first_name
+    if (user.name) return user.name
+    return user.email?.split('@')[0] || 'Admin'
+  }
 
   // Calculate metrics
   const todaysBookings = useMemo(() =>
@@ -172,7 +191,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {greeting}, {user?.name || "Admin"}!
+              {greeting}, {getDisplayName()}!
             </h1>
             <p className="text-gray-500 mt-1">Here's your clinic overview for today</p>
           </div>

@@ -26,7 +26,10 @@
       "Bash(do echo \"=== $page ===\")",
       "Bash(for file in calendar clients staff treatments walk-in)",
       "Bash(head:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "WebFetch(domain:circe-fastapi-backend-740443181568.europe-west1.run.app)",
+      "Bash(python:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

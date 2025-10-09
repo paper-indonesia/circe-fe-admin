@@ -1,28 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
-import connectMongoDB from '@/lib/mongodb'
-import Booking from '@/models/Booking'
-import { requireAuth, getScopedQuery } from '@/lib/auth'
+import fs from 'fs'
+import path from 'path'
+
+const DATA_FILE = path.join(process.cwd(), 'data', 'bookings.json')
+
+function readData() {
+  try {
+    const data = fs.readFileSync(DATA_FILE, 'utf-8')
+    return JSON.parse(data)
+  } catch {
+    return []
+  }
+}
+
+function writeData(data: any[]) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2))
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const user = requireAuth(request)
-
-    await connectMongoDB()
     const { searchParams } = new URL(request.url)
     const source = searchParams.get('source')
 
-    let query = getScopedQuery(user.userId)
-    if (source === 'walk-in') {
-      query.source = 'walk-in'
-    }
+    let bookings = readData()
 
-    const bookings = await Booking.find(query).sort({ startAt: -1 })
+    if (source === 'walk-in') {
+      bookings = bookings.filter((b: any) => b.source === 'walk-in')
+    }
 
     return NextResponse.json(bookings)
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
-    }
     console.error('Error fetching bookings:', error)
     return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 })
   }
@@ -30,19 +37,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = requireAuth(request)
-
-    await connectMongoDB()
     const body = await request.json()
-    const booking = await Booking.create({
+    const bookings = readData()
+
+    const newBooking = {
+      id: Date.now().toString(),
       ...body,
-      ownerId: user.userId
-    })
-    return NextResponse.json(booking, { status: 201 })
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      createdAt: new Date().toISOString()
     }
+
+    bookings.push(newBooking)
+    writeData(bookings)
+    return NextResponse.json(newBooking, { status: 201 })
+  } catch (error) {
     console.error('Error creating booking:', error)
     return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 })
   }

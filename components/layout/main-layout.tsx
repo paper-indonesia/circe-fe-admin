@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState, createContext, useContext } from "react"
 import { Sidebar } from "./sidebar"
-import { OnboardingProvider } from "@/components/onboarding-provider"
 import { FTUEProvider } from "@/components/ftue-provider"
 import { NavigationLoader } from "@/components/navigation-loader"
 
@@ -41,19 +40,17 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <LayoutContext.Provider value={{ isCollapsed, setIsCollapsed: handleSetCollapsed }}>
-      <OnboardingProvider>
-        <FTUEProvider>
-          <NavigationLoader />
-          <div className="min-h-screen bg-gray-50">
-            <Sidebar />
-            <div className={`transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
-              <main className="py-6 px-4 lg:px-8">
-                {children}
-              </main>
-            </div>
+      <FTUEProvider>
+        <NavigationLoader />
+        <div className="min-h-screen bg-gray-50">
+          <Sidebar />
+          <div className={`transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
+            <main className="py-6 px-4 lg:px-8">
+              {children}
+            </main>
           </div>
-        </FTUEProvider>
-      </OnboardingProvider>
+        </div>
+      </FTUEProvider>
     </LayoutContext.Provider>
   )
 }

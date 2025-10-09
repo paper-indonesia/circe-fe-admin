@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectMongoDB } from '@/lib/mongodb'
-import Booking from '@/models/Booking'
-import { requireAuth, verifyOwnership } from '@/lib/auth'
+import fs from 'fs'
+import path from 'path'
+
+const DATA_FILE = path.join(process.cwd(), 'data', 'bookings.json')
+
+function readData() {
+  try {
+    const data = fs.readFileSync(DATA_FILE, 'utf-8')
+    return JSON.parse(data)
+  } catch {
+    return []
+  }
+}
+
+function writeData(data: any[]) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2))
+}
 
 // PUT /api/bookings/[id] - Update booking
 export async function PUT(
@@ -9,44 +23,27 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = requireAuth(req)
     const updates = await req.json()
+    const bookings = readData()
 
-    await connectMongoDB()
+    const index = bookings.findIndex((b: any) => b.id === params.id)
 
-    // Find the booking first to verify ownership
-    const booking = await Booking.findById(params.id)
-
-    if (!booking) {
+    if (index === -1) {
       return NextResponse.json(
         { error: 'Booking not found' },
         { status: 404 }
       )
     }
 
-    // Verify ownership
-    if (!verifyOwnership(booking, user.userId)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
+    bookings[index] = {
+      ...bookings[index],
+      ...updates,
+      updatedAt: new Date().toISOString()
     }
 
-    // Update the booking
-    const updatedBooking = await Booking.findByIdAndUpdate(
-      params.id,
-      {
-        ...updates,
-        updatedAt: new Date()
-      },
-      { new: true }
-    )
-
-    return NextResponse.json(updatedBooking)
+    writeData(bookings)
+    return NextResponse.json(bookings[index])
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
-    }
     console.error('Update booking error:', error)
     return NextResponse.json(
       { error: 'Failed to update booking' },
@@ -61,36 +58,20 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = requireAuth(req)
+    const bookings = readData()
+    const index = bookings.findIndex((b: any) => b.id === params.id)
 
-    await connectMongoDB()
-
-    // Find the booking first to verify ownership
-    const booking = await Booking.findById(params.id)
-
-    if (!booking) {
+    if (index === -1) {
       return NextResponse.json(
         { error: 'Booking not found' },
         { status: 404 }
       )
     }
 
-    // Verify ownership
-    if (!verifyOwnership(booking, user.userId)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
-    }
-
-    // Delete the booking
-    await Booking.findByIdAndDelete(params.id)
-
+    bookings.splice(index, 1)
+    writeData(bookings)
     return NextResponse.json({ success: true })
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
-    }
     console.error('Delete booking error:', error)
     return NextResponse.json(
       { error: 'Failed to delete booking' },
@@ -105,14 +86,8 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = requireAuth(req)
-
-    await connectMongoDB()
-
-    const booking = await Booking.findById(params.id)
-      .populate('patientId')
-      .populate('staffId')
-      .populate('treatmentId')
+    const bookings = readData()
+    const booking = bookings.find((b: any) => b.id === params.id)
 
     if (!booking) {
       return NextResponse.json(
@@ -121,19 +96,8 @@ export async function GET(
       )
     }
 
-    // Verify ownership
-    if (!verifyOwnership(booking, user.userId)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 403 }
-      )
-    }
-
     return NextResponse.json(booking)
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
-    }
     console.error('Get booking error:', error)
     return NextResponse.json(
       { error: 'Failed to get booking' },

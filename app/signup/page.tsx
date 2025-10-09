@@ -7,55 +7,282 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Mail, Lock, User, Building2 } from "lucide-react"
+import { Loader2, Mail, Lock, User, Building2, Phone, Globe, FileText, Sparkles, CheckCircle, ChevronRight, ChevronLeft, Rocket, Shield, GraduationCap, Briefcase, Dumbbell, Heart, Scissors, Waves, Settings2, Check, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import { LiquidLoading } from "@/components/ui/liquid-loader"
-import { useAuth } from "@/lib/auth-context"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { motion, AnimatePresence } from "framer-motion"
+import { Badge } from "@/components/ui/badge"
+
+const BUSINESS_TYPES = [
+  {
+    value: "beauty",
+    label: "Beauty & Wellness",
+    icon: Sparkles,
+    gradient: "from-pink-500 via-rose-500 to-pink-600",
+    description: "Clinics & wellness centers"
+  },
+  {
+    value: "education",
+    label: "Education",
+    icon: GraduationCap,
+    gradient: "from-blue-500 via-cyan-500 to-blue-600",
+    description: "Tutoring & learning centers"
+  },
+  {
+    value: "consulting",
+    label: "Consulting",
+    icon: Briefcase,
+    gradient: "from-purple-500 via-indigo-500 to-purple-600",
+    description: "Professional services"
+  },
+  {
+    value: "fitness",
+    label: "Fitness",
+    icon: Dumbbell,
+    gradient: "from-orange-500 via-amber-500 to-orange-600",
+    description: "Gyms & training studios"
+  },
+  {
+    value: "healthcare",
+    label: "Healthcare",
+    icon: Heart,
+    gradient: "from-green-500 via-emerald-500 to-green-600",
+    description: "Medical & health services"
+  },
+  {
+    value: "salon",
+    label: "Salon",
+    icon: Scissors,
+    gradient: "from-fuchsia-500 via-pink-500 to-fuchsia-600",
+    description: "Hair & beauty salons"
+  },
+  {
+    value: "spa",
+    label: "Spa & Massage",
+    icon: Waves,
+    gradient: "from-teal-500 via-cyan-500 to-teal-600",
+    description: "Spa & relaxation"
+  },
+  {
+    value: "custom",
+    label: "Other",
+    icon: Settings2,
+    gradient: "from-gray-500 via-slate-500 to-gray-600",
+    description: "Custom business type"
+  },
+]
+
+const STEPS = [
+  { id: 1, title: "Business Info", description: "Tell us about your business" },
+  { id: 2, title: "Admin Account", description: "Create your admin account" },
+  { id: 3, title: "Review & Confirm", description: "Review and accept terms" },
+]
 
 export default function SignUpPage() {
   const router = useRouter()
-  const { signup } = useAuth()
+  const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
+    // Business Information
+    business_name: "",
+    business_email: "",
+    business_phone: "",
+    business_type: "",
+    description: "",
+    website: "",
+    preferred_slug: "",
+    // Admin Information
+    admin_first_name: "",
+    admin_last_name: "",
+    admin_email: "",
+    admin_password: "",
     confirmPassword: "",
+    // Agreements
+    terms_accepted: false,
+    privacy_accepted: false,
   })
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value, type } = e.target
     setFormData({
       ...formData,
-      [e.target.id]: e.target.value,
+      [id]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     })
+    setError("")
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData({
+      ...formData,
+      [field]: value,
+    })
+    setError("")
+  }
+
+  const handleCheckboxChange = (field: string, checked: boolean) => {
+    setFormData({
+      ...formData,
+      [field]: checked,
+    })
+    setError("")
+  }
+
+  const validateStep = (step: number): boolean => {
     setError("")
 
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
-      return
+    if (step === 1) {
+      // Validate Business Information
+      if (!formData.business_name.trim()) {
+        setError("Business name is required")
+        return false
+      }
+      if (!formData.business_email.trim()) {
+        setError("Business email is required")
+        return false
+      }
+      if (!formData.business_phone.trim()) {
+        setError("Business phone is required")
+        return false
+      }
+      if (!formData.business_type) {
+        setError("Please select a business type")
+        return false
+      }
+      return true
     }
 
-    // Validate password strength
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long")
+    if (step === 2) {
+      // Validate Admin Account
+      if (!formData.admin_first_name.trim()) {
+        setError("First name is required")
+        return false
+      }
+      if (!formData.admin_last_name.trim()) {
+        setError("Last name is required")
+        return false
+      }
+      if (!formData.admin_email.trim()) {
+        setError("Admin email is required")
+        return false
+      }
+      if (!formData.admin_password) {
+        setError("Password is required")
+        return false
+      }
+      if (formData.admin_password.length < 8) {
+        setError("Password must be at least 8 characters long")
+        return false
+      }
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
+      if (!passwordRegex.test(formData.admin_password)) {
+        setError("Password must contain at least one uppercase letter, one lowercase letter, and one number")
+        return false
+      }
+      if (formData.admin_password !== formData.confirmPassword) {
+        setError("Passwords do not match")
+        return false
+      }
+      return true
+    }
+
+    if (step === 3) {
+      // Validate Terms & Privacy
+      if (!formData.terms_accepted || !formData.privacy_accepted) {
+        setError("You must accept the Terms of Service and Privacy Policy")
+        return false
+      }
+      return true
+    }
+
+    return true
+  }
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep(currentStep + 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handleBack = () => {
+    setCurrentStep(currentStep - 1)
+    setError("")
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleSubmit = async () => {
+    if (!validateStep(3)) {
       return
     }
 
     setIsLoading(true)
+    setError("")
+    setSuccess("")
 
     try {
-      // Use AuthContext signup function
-      await signup(formData.name, formData.email, formData.password)
-      // signup function will handle redirect to dashboard
+      // Call FastAPI registration endpoint
+      const response = await fetch('https://circe-fastapi-backend-740443181568.europe-west1.run.app/api/v1/public/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          business_name: formData.business_name,
+          business_email: formData.business_email,
+          business_phone: formData.business_phone,
+          business_type: formData.business_type,
+          description: formData.description || undefined,
+          website: formData.website || undefined,
+          admin_first_name: formData.admin_first_name,
+          admin_last_name: formData.admin_last_name,
+          admin_email: formData.admin_email,
+          admin_password: formData.admin_password,
+          preferred_slug: formData.preferred_slug || undefined,
+          terms_accepted: formData.terms_accepted,
+          privacy_accepted: formData.privacy_accepted,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSuccess(data.message || "Registration successful! Redirecting to sign in...")
+
+        // Redirect to sign in page after 2 seconds
+        setTimeout(() => {
+          router.push('/signin?registered=true')
+        }, 2000)
+      } else {
+        // Handle API errors
+        if (data.detail) {
+          if (typeof data.detail === 'string') {
+            setError(data.detail)
+          } else if (Array.isArray(data.detail)) {
+            setError(data.detail.map((err: any) => err.msg).join(', '))
+          } else {
+            setError(JSON.stringify(data.detail))
+          }
+        } else {
+          setError(data.message || 'Registration failed. Please try again.')
+        }
+      }
     } catch (err: any) {
+      console.error('Registration error:', err)
       setError(err.message || "An error occurred. Please try again.")
     } finally {
       setIsLoading(false)
@@ -70,152 +297,788 @@ export default function SignUpPage() {
     )
   }
 
+  const getSelectedBusinessType = () => {
+    return BUSINESS_TYPES.find(type => type.value === formData.business_type)
+  }
+
+  const pageVariants = {
+    initial: { opacity: 0, x: 20 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -20 }
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-indigo-50">
-      <div className="w-full max-w-md px-4">
-        <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center mb-4">
-            <img
-              src="/reserva_logo.webp"
-              alt="Reserva"
-              className="h-16 w-16 object-contain drop-shadow-xl"
-            />
-          </div>
-          <div className="mb-2">
-            <img
-              src="/reserva_name.webp"
-              alt="Reserva"
-              className="h-10 mx-auto object-contain"
-            />
-          </div>
-          <p className="text-sm text-gray-600">Complete Booking & Appointment Management Platform</p>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100">
+        <div className="absolute top-0 left-0 w-full h-full">
+          <div className="absolute top-20 left-20 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-float" />
+          <div className="absolute top-40 right-20 w-96 h-96 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-float" style={{ animationDelay: '2s' }} />
+          <div className="absolute bottom-20 left-40 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-60 animate-float" style={{ animationDelay: '4s' }} />
         </div>
+      </div>
 
-        <Card className="border-0 shadow-xl">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Create your business account</CardTitle>
-            <CardDescription className="text-center">
-              Start managing your bookings in minutes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="name">Business Name</Label>
-                <div className="relative">
-                  <Building2 className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Your Business Name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="pl-10"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <p className="text-xs text-gray-500">This will be your business name in the system</p>
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4 py-12">
+        <div className={`w-full max-w-4xl ${mounted ? 'animate-fadeIn' : 'opacity-0'}`}>
+          {/* Logo and Header */}
+          <div className="mb-8 text-center">
+            <div className="relative inline-flex items-center justify-center mb-6">
+              <div className="absolute inset-0 w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full blur-xl opacity-60 animate-pulse" />
+              <div className="relative">
+                <img
+                  src="/reserva_logo.webp"
+                  alt="Reserva"
+                  className="h-16 w-16 object-contain drop-shadow-2xl"
+                />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="name@example.com"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="pl-10"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Create a strong password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="pl-10"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <p className="text-xs text-gray-500">Must be at least 8 characters</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    className="pl-10"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div className="text-xs text-gray-600">
-                By signing up, you agree to our{" "}
-                <Link href="/terms" className="text-purple-600 hover:text-purple-700">
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link href="/privacy" className="text-purple-600 hover:text-purple-700">
-                  Privacy Policy
-                </Link>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
-                  </>
-                ) : (
-                  "Sign Up"
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{" "}
-                <Link
-                  href="/signin"
-                  className="text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  Sign in
-                </Link>
-              </p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="mb-4">
+              <img
+                src="/reserva_name.webp"
+                alt="Reserva"
+                className="h-12 mx-auto object-contain"
+              />
+            </div>
+            <p className="text-gray-600 text-sm">
+              Complete Booking & Appointment Management Platform
+            </p>
+          </div>
+
+          {/* Progress Steps */}
+          <div className="mb-10">
+            <div className="flex items-center justify-between max-w-3xl mx-auto px-4">
+              {STEPS.map((step, index) => (
+                <div key={step.id} className="flex-1 flex items-center">
+                  <div className="flex flex-col items-center flex-1 relative">
+                    {/* Step Circle */}
+                    <motion.div
+                      initial={false}
+                      animate={{
+                        scale: currentStep === step.id ? 1 : 0.9,
+                      }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      className="relative z-10"
+                    >
+                      <div className={`relative flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 ${
+                        currentStep > step.id
+                          ? 'bg-gradient-to-br from-purple-600 to-pink-600 shadow-lg shadow-purple-500/50'
+                          : currentStep === step.id
+                          ? 'bg-white border-2 border-purple-600 shadow-lg shadow-purple-300/50'
+                          : 'bg-white/50 border-2 border-gray-200'
+                      }`}>
+                        {currentStep > step.id ? (
+                          <Check className="h-6 w-6 text-white" strokeWidth={3} />
+                        ) : (
+                          <span className={`font-bold text-lg ${
+                            currentStep === step.id ? 'text-purple-600' : 'text-gray-400'
+                          }`}>
+                            {step.id}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Active Ring */}
+                      {currentStep === step.id && (
+                        <motion.div
+                          layoutId="activeStep"
+                          className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 opacity-20"
+                          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        />
+                      )}
+                    </motion.div>
+
+                    {/* Step Label */}
+                    <div className="mt-3 text-center hidden md:block">
+                      <motion.p
+                        animate={{
+                          scale: currentStep === step.id ? 1 : 0.95,
+                        }}
+                        className={`text-sm font-semibold mb-0.5 ${
+                          currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'
+                        }`}
+                      >
+                        {step.title}
+                      </motion.p>
+                      <p className="text-xs text-gray-400 max-w-[140px]">{step.description}</p>
+                    </div>
+                  </div>
+
+                  {/* Connector Line */}
+                  {index < STEPS.length - 1 && (
+                    <div className="flex-1 h-1 bg-gray-200 mx-3 rounded-full relative overflow-hidden">
+                      <motion.div
+                        initial={{ width: '0%' }}
+                        animate={{
+                          width: currentStep > step.id ? '100%' : '0%'
+                        }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                        className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full"
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sign Up Card */}
+          <Card className="border-0 shadow-2xl backdrop-blur-sm bg-white/95">
+            <div className="h-2 bg-gradient-to-r from-purple-600 to-pink-600" />
+            <CardHeader className="space-y-1 pb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl font-bold">
+                    {STEPS[currentStep - 1].title}
+                  </CardTitle>
+                  <CardDescription className="text-gray-600 mt-1">
+                    {STEPS[currentStep - 1].description}
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="text-xs px-3 py-1">
+                  Step {currentStep} of {STEPS.length}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pb-8">
+              <div className="space-y-6">
+                {error && (
+                  <Alert variant="destructive" className="animate-fadeIn">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                {success && (
+                  <Alert className="animate-fadeIn bg-green-50 border-green-200 text-green-800">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription>{success}</AlertDescription>
+                  </Alert>
+                )}
+
+                <AnimatePresence mode="wait">
+                  {/* Step 1: Business Information */}
+                  {currentStep === 1 && (
+                    <motion.div
+                      key="step1"
+                      variants={pageVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      {/* Business Type Selection */}
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-base font-semibold text-gray-900">Select Your Business Type</Label>
+                          <p className="text-sm text-gray-500 mt-1">Choose the category that best describes your business</p>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {BUSINESS_TYPES.map((type) => {
+                            const IconComponent = type.icon
+                            const isSelected = formData.business_type === type.value
+
+                            return (
+                              <motion.button
+                                key={type.value}
+                                type="button"
+                                whileHover={{ y: -4 }}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() => handleSelectChange('business_type', type.value)}
+                                className={`group relative p-5 rounded-2xl border transition-all duration-300 ${
+                                  isSelected
+                                    ? 'border-transparent bg-white shadow-xl shadow-purple-200/50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-lg'
+                                }`}
+                              >
+                                {/* Gradient Background for Selected */}
+                                {isSelected && (
+                                  <motion.div
+                                    layoutId="selectedBusiness"
+                                    className={`absolute inset-0 bg-gradient-to-br ${type.gradient} opacity-10 rounded-2xl`}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                  />
+                                )}
+
+                                {/* Icon Container */}
+                                <div className={`relative mb-3 flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-300 ${
+                                  isSelected
+                                    ? `bg-gradient-to-br ${type.gradient}`
+                                    : 'bg-gray-100 group-hover:bg-gray-200'
+                                }`}>
+                                  <IconComponent
+                                    className={`h-6 w-6 transition-colors ${
+                                      isSelected ? 'text-white' : 'text-gray-600'
+                                    }`}
+                                    strokeWidth={2}
+                                  />
+                                </div>
+
+                                {/* Label */}
+                                <div className="relative">
+                                  <p className={`text-sm font-semibold mb-1 transition-colors ${
+                                    isSelected ? 'text-gray-900' : 'text-gray-700 group-hover:text-gray-900'
+                                  }`}>
+                                    {type.label}
+                                  </p>
+                                  <p className="text-xs text-gray-500 leading-tight">
+                                    {type.description}
+                                  </p>
+                                </div>
+
+                                {/* Check Badge */}
+                                {isSelected && (
+                                  <motion.div
+                                    initial={{ scale: 0, rotate: -180 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                    className={`absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-br ${type.gradient} rounded-full flex items-center justify-center shadow-lg`}
+                                  >
+                                    <Check className="h-4 w-4 text-white" strokeWidth={3} />
+                                  </motion.div>
+                                )}
+                              </motion.button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="business_name">Business Name *</Label>
+                          <Input
+                            id="business_name"
+                            type="text"
+                            placeholder="Your Business Name"
+                            value={formData.business_name}
+                            onChange={handleChange}
+                            className="h-11"
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="business_email">Business Email *</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="business_email"
+                              type="email"
+                              placeholder="contact@business.com"
+                              value={formData.business_email}
+                              onChange={handleChange}
+                              className="pl-10 h-11"
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="business_phone">Business Phone *</Label>
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="business_phone"
+                              type="tel"
+                              placeholder="+62-XXX-XXX-XXXX"
+                              value={formData.business_phone}
+                              onChange={handleChange}
+                              className="pl-10 h-11"
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="website">Website (Optional)</Label>
+                          <div className="relative">
+                            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="website"
+                              type="url"
+                              placeholder="https://yourbusiness.com"
+                              value={formData.website}
+                              onChange={handleChange}
+                              className="pl-10 h-11"
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="description">Business Description (Optional)</Label>
+                          <Textarea
+                            id="description"
+                            placeholder="Tell us about your business..."
+                            value={formData.description}
+                            onChange={handleChange}
+                            className="min-h-[80px] resize-none"
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="preferred_slug">Preferred Slug (Optional)</Label>
+                          <Input
+                            id="preferred_slug"
+                            type="text"
+                            placeholder="my-business-slug"
+                            value={formData.preferred_slug}
+                            onChange={handleChange}
+                            className="h-11"
+                            disabled={isLoading}
+                          />
+                          <p className="text-xs text-gray-500">This will be used in your business URL. Leave blank for auto-generation.</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Step 2: Admin Account */}
+                  {currentStep === 2 && (
+                    <motion.div
+                      key="step2"
+                      variants={pageVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="admin_first_name">First Name *</Label>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="admin_first_name"
+                              type="text"
+                              placeholder="John"
+                              value={formData.admin_first_name}
+                              onChange={handleChange}
+                              className="pl-10 h-11"
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="admin_last_name">Last Name *</Label>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="admin_last_name"
+                              type="text"
+                              placeholder="Doe"
+                              value={formData.admin_last_name}
+                              onChange={handleChange}
+                              className="pl-10 h-11"
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="admin_email">Email Address *</Label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="admin_email"
+                              type="email"
+                              placeholder="admin@business.com"
+                              value={formData.admin_email}
+                              onChange={handleChange}
+                              className="pl-10 h-11"
+                              disabled={isLoading}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500">This will be your login email</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="admin_password">Password *</Label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="admin_password"
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Create a strong password"
+                              value={formData.admin_password}
+                              onChange={handleChange}
+                              className="pl-10 pr-10 h-11"
+                              disabled={isLoading}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                              tabIndex={-1}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                          <p className="text-xs text-gray-500">Min. 8 chars with uppercase, lowercase, and number</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                          <div className="relative">
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              id="confirmPassword"
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="Confirm your password"
+                              value={formData.confirmPassword}
+                              onChange={handleChange}
+                              className="pl-10 pr-10 h-11"
+                              disabled={isLoading}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                              tabIndex={-1}
+                            >
+                              {showConfirmPassword ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Password Requirements Card */}
+                      <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                            <Shield className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-900 mb-3">Password Requirements</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {[
+                                { label: 'At least 8 characters', check: formData.admin_password.length >= 8 },
+                                { label: 'Uppercase letter (A-Z)', check: /[A-Z]/.test(formData.admin_password) },
+                                { label: 'Lowercase letter (a-z)', check: /[a-z]/.test(formData.admin_password) },
+                                { label: 'Number (0-9)', check: /\d/.test(formData.admin_password) },
+                              ].map((req, index) => (
+                                <motion.div
+                                  key={index}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.1 }}
+                                  className="flex items-center gap-2"
+                                >
+                                  <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
+                                    req.check
+                                      ? 'bg-green-500 scale-100'
+                                      : 'bg-gray-200 scale-90'
+                                  }`}>
+                                    {req.check && (
+                                      <motion.div
+                                        initial={{ scale: 0 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                                      >
+                                        <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                                      </motion.div>
+                                    )}
+                                  </div>
+                                  <span className={`text-xs transition-colors ${
+                                    req.check ? 'text-green-700 font-medium' : 'text-gray-600'
+                                  }`}>
+                                    {req.label}
+                                  </span>
+                                </motion.div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Step 3: Review & Confirm */}
+                  {currentStep === 3 && (
+                    <motion.div
+                      key="step3"
+                      variants={pageVariants}
+                      initial="initial"
+                      animate="animate"
+                      exit="exit"
+                      transition={{ duration: 0.3 }}
+                      className="space-y-6"
+                    >
+                      {/* Summary Card */}
+                      <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+                        {/* Header with gradient */}
+                        <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                              <Sparkles className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-white text-lg">Registration Summary</h3>
+                              <p className="text-sm text-white/80">Review your information before submitting</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 space-y-6">
+                          {/* Business Section */}
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Business Information</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
+                                <Building2 className="h-5 w-5 text-purple-600 mt-0.5" />
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Business Name</p>
+                                  <p className="font-semibold text-gray-900">{formData.business_name}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
+                                {(() => {
+                                  const selectedType = getSelectedBusinessType()
+                                  const IconComponent = selectedType?.icon
+                                  return (
+                                    <>
+                                      {IconComponent && <IconComponent className="h-5 w-5 text-purple-600 mt-0.5" />}
+                                      <div>
+                                        <p className="text-xs text-gray-500 mb-1">Business Type</p>
+                                        <p className="font-semibold text-gray-900">{selectedType?.label}</p>
+                                      </div>
+                                    </>
+                                  )
+                                })()}
+                              </div>
+
+                              <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
+                                <Mail className="h-5 w-5 text-purple-600 mt-0.5" />
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Business Email</p>
+                                  <p className="font-semibold text-gray-900 break-all">{formData.business_email}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
+                                <Phone className="h-5 w-5 text-purple-600 mt-0.5" />
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Phone Number</p>
+                                  <p className="font-semibold text-gray-900">{formData.business_phone}</p>
+                                </div>
+                              </div>
+
+                              {formData.website && (
+                                <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 md:col-span-2">
+                                  <Globe className="h-5 w-5 text-purple-600 mt-0.5" />
+                                  <div>
+                                    <p className="text-xs text-gray-500 mb-1">Website</p>
+                                    <p className="font-semibold text-gray-900 break-all">{formData.website}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Admin Section */}
+                          <div>
+                            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Administrator Account</h4>
+                            <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
+                                <User className="h-5 w-5 text-white" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500 mb-1">Full Name & Email</p>
+                                <p className="font-semibold text-gray-900 mb-1">
+                                  {formData.admin_first_name} {formData.admin_last_name}
+                                </p>
+                                <p className="text-sm text-gray-600 break-all">{formData.admin_email}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Terms and Privacy */}
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Legal Agreements</h4>
+
+                        <motion.div
+                          whileHover={{ x: 2 }}
+                          className={`relative flex items-start gap-4 p-5 rounded-xl border-2 transition-all duration-200 ${
+                            formData.terms_accepted
+                              ? 'border-purple-200 bg-purple-50/50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex-shrink-0 pt-0.5">
+                            <Checkbox
+                              id="terms_accepted"
+                              checked={formData.terms_accepted}
+                              onCheckedChange={(checked) => handleCheckboxChange('terms_accepted', checked as boolean)}
+                              disabled={isLoading}
+                              className="w-5 h-5 border-2 border-gray-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                            />
+                          </div>
+                          <Label htmlFor="terms_accepted" className="text-sm text-gray-700 cursor-pointer leading-relaxed flex-1">
+                            I have read and agree to the{" "}
+                            <Link
+                              href="/terms"
+                              target="_blank"
+                              className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Terms of Service
+                            </Link>
+                          </Label>
+                          {formData.terms_accepted && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg"
+                            >
+                              <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                            </motion.div>
+                          )}
+                        </motion.div>
+
+                        <motion.div
+                          whileHover={{ x: 2 }}
+                          className={`relative flex items-start gap-4 p-5 rounded-xl border-2 transition-all duration-200 ${
+                            formData.privacy_accepted
+                              ? 'border-purple-200 bg-purple-50/50'
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex-shrink-0 pt-0.5">
+                            <Checkbox
+                              id="privacy_accepted"
+                              checked={formData.privacy_accepted}
+                              onCheckedChange={(checked) => handleCheckboxChange('privacy_accepted', checked as boolean)}
+                              disabled={isLoading}
+                              className="w-5 h-5 border-2 border-gray-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                            />
+                          </div>
+                          <Label htmlFor="privacy_accepted" className="text-sm text-gray-700 cursor-pointer leading-relaxed flex-1">
+                            I have read and agree to the{" "}
+                            <Link
+                              href="/privacy"
+                              target="_blank"
+                              className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Privacy Policy
+                            </Link>
+                          </Label>
+                          {formData.privacy_accepted && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg"
+                            >
+                              <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                            </motion.div>
+                          )}
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Navigation Buttons */}
+                <div className="flex items-center justify-between pt-8 border-t border-gray-100">
+                  {currentStep > 1 ? (
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleBack}
+                        disabled={isLoading}
+                        className="gap-2 h-12 px-6 border-gray-300 hover:bg-gray-50"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span className="hidden sm:inline">Back</span>
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    <div />
+                  )}
+
+                  <div className="flex items-center gap-3">
+                    {currentStep < STEPS.length ? (
+                      <Button
+                        type="button"
+                        onClick={handleNext}
+                        disabled={isLoading}
+                        className="gap-2 h-12 px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                      >
+                        <span>Continue</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button
+                          type="button"
+                          onClick={handleSubmit}
+                          disabled={isLoading}
+                          className="gap-2 h-12 px-8 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 bg-[length:200%_100%] hover:bg-right"
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="h-5 w-5 animate-spin" />
+                              <span>Creating account...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Rocket className="h-5 w-5" />
+                              <span>Create Business Account</span>
+                            </>
+                          )}
+                        </Button>
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-gray-100">
+                <p className="text-center text-sm text-gray-600">
+                  Already have an account?{" "}
+                  <Link
+                    href="/signin"
+                    className="text-purple-600 hover:text-purple-700 font-semibold transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Back to home link */}
+          <div className="mt-6 text-center">
+            <Link
+              href="/"
+              className="text-sm text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center gap-2"
+            >
+              ← Back to home
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   )

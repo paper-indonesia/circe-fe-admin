@@ -18,30 +18,22 @@ export function FTUEProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Only show on dashboard after onboarding is complete
+      // Only show on dashboard
       if (pathname !== '/dashboard') {
         setLoading(false)
         return
       }
 
-      try {
-        const response = await fetch('/api/settings/terminology')
-        if (response.ok) {
-          const data = await response.json()
+      // Show tour if not completed yet
+      const ftueCompleted = localStorage.getItem('ftue-completed')
 
-          // Show tour if onboarding is completed but FTUE not done yet
-          const ftueCompleted = localStorage.getItem('ftue-completed')
-
-          if (data.onboardingCompleted && !ftueCompleted) {
-            // Small delay to let dashboard render
-            setTimeout(() => {
-              setShowTour(true)
-            }, 1000)
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check FTUE status:', error)
-      } finally {
+      if (!ftueCompleted) {
+        // Small delay to let dashboard render
+        setTimeout(() => {
+          setShowTour(true)
+          setLoading(false)
+        }, 1000)
+      } else {
         setLoading(false)
       }
     }
@@ -77,22 +69,15 @@ export function FTUEProvider({ children }: { children: React.ReactNode }) {
     },
     {
       target: '[data-tour="sidebar-clients"]',
-      title: "Your Customers 👥",
+      title: "Customers Management 👥",
       description: "Manage your customer database. Add new customers, view their history, and track their preferences.",
       position: "right" as const,
       highlight: true
     },
     {
       target: '[data-tour="sidebar-staff"]',
-      title: "Manage Your Staff 👨‍💼",
+      title: "Staff Management 👨‍💼",
       description: "Add and manage your staff members. Set their schedules, assign services, and track their performance.",
-      position: "right" as const,
-      highlight: true
-    },
-    {
-      target: '[data-tour="sidebar-treatments"]',
-      title: "Your Products ⭐",
-      description: "Create and manage your products and services. Set prices, durations, and assign them to your staff.",
       position: "right" as const,
       highlight: true
     },
@@ -100,6 +85,13 @@ export function FTUEProvider({ children }: { children: React.ReactNode }) {
       target: '[data-tour="sidebar-walkin"]',
       title: "Walk-in Bookings 🚶",
       description: "Quick booking feature for walk-in customers. Perfect for handling last-minute appointments without going through the full booking flow.",
+      position: "right" as const,
+      highlight: true
+    },
+    {
+      target: '[data-tour="sidebar-treatments"]',
+      title: "Products & Services ⭐",
+      description: "Create and manage your products and services. Set prices, durations, and assign them to your staff members.",
       position: "right" as const,
       highlight: true
     },
@@ -112,7 +104,7 @@ export function FTUEProvider({ children }: { children: React.ReactNode }) {
     },
     {
       target: '[data-tour="sidebar-withdrawal"]',
-      title: "Manage Your Earnings 💰",
+      title: "Earnings & Withdrawals 💰",
       description: "Track your earnings and request withdrawals. Monitor your revenue and manage your finances all in one place.",
       position: "right" as const,
       highlight: true

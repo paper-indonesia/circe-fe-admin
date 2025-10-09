@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import connectMongoDB from '@/lib/mongodb'
-import Staff from '@/models/Staff'
-import { requireAuth, getScopedQuery } from '@/lib/auth'
+import fs from 'fs'
+import path from 'path'
+
+const DATA_FILE = path.join(process.cwd(), 'data', 'staff.json')
+
+function readData() {
+  try {
+    const data = fs.readFileSync(DATA_FILE, 'utf-8')
+    return JSON.parse(data)
+  } catch {
+    return []
+  }
+}
+
+function writeData(data: any[]) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2))
+}
 
 export async function GET(request: NextRequest) {
   try {
-    const user = requireAuth(request)
-
-    await connectMongoDB()
-    const staff = await Staff.find(getScopedQuery(user.userId, { isActive: true })).sort({ rating: -1 })
+    const staff = readData().filter((s: any) => s.isActive !== false)
     return NextResponse.json(staff)
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
-    }
     console.error('Error fetching staff:', error)
     return NextResponse.json({ error: 'Failed to fetch staff' }, { status: 500 })
   }
@@ -21,19 +29,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = requireAuth(request)
-
-    await connectMongoDB()
     const body = await request.json()
-    const staff = await Staff.create({
+    const staff = readData()
+
+    const newStaff = {
+      id: Date.now().toString(),
       ...body,
-      ownerId: user.userId
-    })
-    return NextResponse.json(staff, { status: 201 })
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('Unauthorized')) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      isActive: true,
+      createdAt: new Date().toISOString()
     }
+
+    staff.push(newStaff)
+    writeData(staff)
+    return NextResponse.json(newStaff, { status: 201 })
+  } catch (error) {
     console.error('Error creating staff:', error)
     return NextResponse.json({ error: 'Failed to create staff' }, { status: 500 })
   }

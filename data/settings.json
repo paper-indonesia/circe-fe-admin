@@ -1,0 +1,21 @@
+{
+  "terminology": {
+    "staff": "Staff",
+    "staffSingular": "Staff",
+    "treatment": "Products",
+    "treatmentSingular": "Product",
+    "patient": "Customers",
+    "patientSingular": "Customer",
+    "booking": "Bookings",
+    "bookingSingular": "Booking"
+  },
+  "businessType": "beauty",
+  "businessName": "My Beauty Clinic",
+  "categories": [],
+  "customFields": {
+    "staff": [],
+    "treatment": [],
+    "patient": []
+  },
+  "onboardingCompleted": true
+}
