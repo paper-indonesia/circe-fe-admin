@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
       outlets: data.outlets,
       access_type: data.access_type,
       permissions: data.permissions,
-      subscription_status: data.subscription_status
+      subscription_status: data.subscription_status,
+      subscription_id: data.subscription_id
     })
 
     // Set JWT token in httpOnly cookie

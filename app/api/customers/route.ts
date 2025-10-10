@@ -9,7 +9,7 @@ function getAuthToken(req: NextRequest) {
   return req.cookies.get('auth-token')?.value
 }
 
-// GET - List all users
+// GET - List all customers
 export async function GET(req: NextRequest) {
   try {
     const authToken = getAuthToken(req)
@@ -28,11 +28,14 @@ export async function GET(req: NextRequest) {
     if (searchParams.get('page')) params.append('page', searchParams.get('page')!)
     if (searchParams.get('size')) params.append('size', searchParams.get('size')!)
     if (searchParams.get('search')) params.append('search', searchParams.get('search')!)
-    if (searchParams.get('role')) params.append('role', searchParams.get('role')!)
-    if (searchParams.get('is_active')) params.append('is_active', searchParams.get('is_active')!)
+    if (searchParams.get('tags')) params.append('tags', searchParams.get('tags')!)
+    if (searchParams.get('has_password')) params.append('has_password', searchParams.get('has_password')!)
+    if (searchParams.get('email_verified')) params.append('email_verified', searchParams.get('email_verified')!)
+    if (searchParams.get('created_from')) params.append('created_from', searchParams.get('created_from')!)
+    if (searchParams.get('created_to')) params.append('created_to', searchParams.get('created_to')!)
 
     const queryString = params.toString()
-    const url = `${FASTAPI_URL}/api/v1/users${queryString ? '?' + queryString : ''}`
+    const url = `${FASTAPI_URL}/api/v1/customers${queryString ? '?' + queryString : ''}`
 
     const response = await fetch(url, {
       method: 'GET',
@@ -46,22 +49,22 @@ export async function GET(req: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.detail || 'Failed to fetch users' },
+        { error: data.detail || 'Failed to fetch customers' },
         { status: response.status }
       )
     }
 
-    // Map _id to id for all users in the response
+    // Map _id to id for all customers in the response
     if (data.items && Array.isArray(data.items)) {
-      data.items = data.items.map((user: any) => ({
-        ...user,
-        id: user._id || user.id,
+      data.items = data.items.map((customer: any) => ({
+        ...customer,
+        id: customer._id || customer.id,
       }))
     }
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Error fetching users:', error)
+    console.error('Error fetching customers:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -69,7 +72,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST - Create new user
+// POST - Create new customer
 export async function POST(req: NextRequest) {
   try {
     const authToken = getAuthToken(req)
@@ -83,9 +86,9 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
-    console.log('Creating user with payload:', body)
+    console.log('Creating customer with payload:', body)
 
-    const response = await fetch(`${FASTAPI_URL}/api/v1/users`, {
+    const response = await fetch(`${FASTAPI_URL}/api/v1/customers`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -97,9 +100,9 @@ export async function POST(req: NextRequest) {
     const data = await response.json()
 
     if (!response.ok) {
-      console.error('Failed to create user:', data)
+      console.error('Failed to create customer:', data)
       return NextResponse.json(
-        { error: data.detail || 'Failed to create user' },
+        { error: data.detail || 'Failed to create customer' },
         { status: response.status }
       )
     }
@@ -111,7 +114,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Error creating user:', error)
+    console.error('Error creating customer:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

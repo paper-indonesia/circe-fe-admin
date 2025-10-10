@@ -72,6 +72,9 @@ export default function SignInPage() {
         localStorage.setItem("outlets", JSON.stringify(data.outlets))
         localStorage.setItem("permissions", JSON.stringify(data.permissions))
         localStorage.setItem("access_type", data.access_type)
+        if (data.subscription_id) {
+          localStorage.setItem("subscription_id", data.subscription_id)
+        }
 
         console.log("Login successful! User:", data.user, "Tenant:", data.tenant)
 
@@ -117,6 +120,9 @@ export default function SignInPage() {
         localStorage.setItem("outlets", JSON.stringify(data.outlets))
         localStorage.setItem("permissions", JSON.stringify(data.permissions))
         localStorage.setItem("access_type", data.access_type)
+        if (data.subscription_id) {
+          localStorage.setItem("subscription_id", data.subscription_id)
+        }
 
         console.log("Login successful with tenant:", data.tenant)
         window.location.replace('/dashboard')

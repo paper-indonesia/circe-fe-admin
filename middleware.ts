@@ -28,7 +28,7 @@ export function middleware(request: NextRequest) {
     const possibleTenants = ['default', 'jakarta', 'bandung', 'surabaya', 'bali', 'medan']
 
     if (possibleTenants.includes(firstSegment) ||
-        (firstSegment.length < 20 && !['signin', 'signup', 'dashboard', 'calendar', 'clients', 'staff', 'treatments', 'walk-in', 'withdrawal', 'reports', 'settings', 'user-management', 'outlet-management'].includes(firstSegment))) {
+        (firstSegment.length < 20 && !['signin', 'signup', 'dashboard', 'calendar', 'clients', 'staff', 'treatments', 'walk-in', 'withdrawal', 'reports', 'settings', 'user-management', 'outlet-management', 'subscription'].includes(firstSegment))) {
 
       // Build new path without tenant
       const newPath = '/' + segments.slice(1).join('/')
@@ -74,10 +74,10 @@ export function middleware(request: NextRequest) {
     const cookies = request.cookies.getAll()
     const authToken = cookies.find(c => c.name === 'auth-token')
 
-    // Debug logging for user-management route
-    if (pathname === '/user-management') {
-      console.log('User-management route - cookies:', cookies.map(c => c.name))
-      console.log('Auth token found:', authToken ? 'YES' : 'NO')
+    // Debug logging for user-management and subscription routes
+    if (pathname === '/user-management' || pathname.startsWith('/subscription')) {
+      console.log(`[Middleware] ${pathname} - cookies:`, cookies.map(c => c.name))
+      console.log(`[Middleware] ${pathname} - auth token found:`, authToken ? 'YES' : 'NO')
     }
 
     // Simple check - just verify token exists

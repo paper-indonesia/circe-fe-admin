@@ -211,6 +211,28 @@ export default function UserManagementPage() {
     try {
       setError("")
 
+      // Validate required fields
+      if (!formData.password) {
+        setError('Password is required')
+        return
+      }
+
+      // Validate password requirements
+      if (formData.password.length < 8) {
+        setError('Password must be at least 8 characters long')
+        return
+      }
+
+      const hasUpperCase = /[A-Z]/.test(formData.password)
+      const hasLowerCase = /[a-z]/.test(formData.password)
+      const hasNumber = /[0-9]/.test(formData.password)
+      const hasSpecialChar = /[!@#$%^&*]/.test(formData.password)
+
+      if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
+        setError('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (!@#$%^&*)')
+        return
+      }
+
       // Get tenant_id from localStorage
       const tenantData = localStorage.getItem('tenant')
       let tenantId = null
@@ -236,11 +258,11 @@ export default function UserManagementPage() {
         role: formData.role.toLowerCase(), // API expects lowercase
         tenant_ids: [tenantId], // Array of tenant IDs
         send_welcome_email: false,
+        password: formData.password, // Password is now mandatory
       }
 
       // Optional fields
       if (formData.phone) payload.phone = formData.phone
-      if (formData.password) payload.password = formData.password
       if (formData.position) payload.position = formData.position
       if (formData.employment_type) payload.employment_type = formData.employment_type
       if (formData.outlets.length > 0) payload.outlet_ids = formData.outlets // Use outlet_ids
@@ -679,15 +701,16 @@ export default function UserManagementPage() {
 
             {/* Password */}
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Password *</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Leave empty to auto-generate"
+                  placeholder="Enter secure password"
                   className="pr-10"
+                  required
                 />
                 <button
                   type="button"
@@ -697,12 +720,9 @@ export default function UserManagementPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs text-gray-500">Optional: Auto-generated if not provided</p>
-                <p className="text-xs text-amber-600 font-medium">
-                  Requirements: Min 8 chars, uppercase, lowercase, number, special character (!@#$%^&*)
-                </p>
-              </div>
+              <p className="text-xs text-amber-600 font-medium">
+                Requirements: Min 8 chars, uppercase, lowercase, number, special character (!@#$%^&*)
+              </p>
             </div>
 
             {/* Role & Employment */}

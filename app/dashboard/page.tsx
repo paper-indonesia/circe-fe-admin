@@ -26,6 +26,9 @@ import {
   Star,
   ChevronRight,
   ChevronLeft,
+  Crown,
+  Zap,
+  Shield,
 } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 
@@ -48,6 +51,8 @@ export default function DashboardPage() {
   const [greeting, setGreeting] = useState("Good morning")
   const [transactionPage, setTransactionPage] = useState(0)
   const transactionsPerPage = 5
+  const [subscription, setSubscription] = useState<any>(null)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
 
   // Load user, tenant and set greeting
   useEffect(() => {
@@ -76,6 +81,32 @@ export default function DashboardPage() {
     else if (hour < 18) setGreeting("Good afternoon")
     else setGreeting("Good evening")
   }, [])
+
+  // Fetch subscription data - only for tenant_admin
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      // Only fetch if user is tenant_admin
+      if (user?.role !== 'tenant_admin') {
+        setSubscriptionLoading(false)
+        return
+      }
+
+      setSubscriptionLoading(true)
+      try {
+        const response = await fetch('/api/subscription')
+        if (response.ok) {
+          const data = await response.json()
+          setSubscription(data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch subscription:", error)
+      } finally {
+        setSubscriptionLoading(false)
+      }
+    }
+
+    fetchSubscription()
+  }, [user])
 
   // Get display name
   const getDisplayName = () => {
@@ -204,6 +235,106 @@ export default function DashboardPage() {
             {format(new Date(), "MMM dd, yyyy")}
           </Button>
         </div>
+
+        {/* Subscription Card - Only for tenant_admin */}
+        {subscription && user?.role === 'tenant_admin' && (
+          <Card className={cn(
+            "border-2 overflow-hidden transition-all duration-300",
+            subscription.plan === "free"
+              ? "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300"
+              : "bg-gradient-to-br from-[#FFD6FF]/20 via-[#E7C6FF]/20 to-[#C8B6FF]/20 border-[#C8B6FF]"
+          )}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "p-3 rounded-xl",
+                    subscription.plan === "free"
+                      ? "bg-gray-200"
+                      : "bg-gradient-to-br from-[#C8B6FF] to-[#B8C0FF]"
+                  )}>
+                    {subscription.plan === "free" ? (
+                      <Shield className="h-6 w-6 text-gray-600" />
+                    ) : (
+                      <Crown className="h-6 w-6 text-white" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-bold text-gray-900 capitalize">
+                        {subscription.plan} Plan
+                      </h3>
+                      {subscription.plan !== "free" && (
+                        <Badge className="bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] text-white border-0">
+                          Active
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {subscription.plan === "free"
+                        ? "Basic features for getting started"
+                        : subscription.plan === "basic"
+                        ? "Essential features for growing clinics"
+                        : subscription.plan === "professional"
+                        ? "Advanced features for professional clinics"
+                        : "Full access to all premium features"}
+                    </p>
+                    {subscription.end_date && subscription.plan !== "free" && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {subscription.status === "active" ? "Renews" : "Expires"} on {format(new Date(subscription.end_date), "MMM dd, yyyy")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {subscription.plan === "free" && (
+                  <Button
+                    className="bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] hover:from-[#B8B0EF] hover:to-[#A8A0DF] text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                    onClick={() => router.push('/subscription/upgrade')}
+                  >
+                    <Zap className="h-4 w-4 mr-2" />
+                    Upgrade Plan
+                  </Button>
+                )}
+
+                {subscription.plan !== "free" && (
+                  <Button
+                    variant="outline"
+                    className="border-[#C8B6FF] text-[#B8C0FF] hover:bg-[#C8B6FF]/10"
+                    onClick={() => router.push('/subscription/manage')}
+                  >
+                    Manage Subscription
+                  </Button>
+                )}
+              </div>
+
+              {/* Plan Features Preview */}
+              {subscription.plan === "free" && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-600 mb-2">Upgrade to unlock:</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Unlimited Bookings
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Advanced Reports
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Priority Support
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Custom Branding
+                    </Badge>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

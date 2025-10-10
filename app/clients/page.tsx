@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
-import { useAppContext } from "@/lib/context"
 import { format, parseISO, isValid } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { useRouter } from "next/navigation"
@@ -36,24 +35,20 @@ import {
   X,
   CalendarDays,
   AlertTriangle,
+  AlertCircle,
 } from "lucide-react"
 
 export default function ClientsPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  const {
-    patients = [],
-    bookings = [],
-    treatments = [],
-    staff = [],
-    loading,
-    addPatient,
-    updatePatient,
-    deletePatient,
-  } = useAppContext()
+  const [customers, setCustomers] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [totalCustomers, setTotalCustomers] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
 
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [spendingFilter, setSpendingFilter] = useState("all")
   const [visitCountFilter, setVisitCountFilter] = useState("all")
@@ -68,73 +63,112 @@ export default function ClientsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<any>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 10
+  const pageSize = 20
 
-  const [clientForm, setClientForm] = useState({ name: "", phone: "", email: "", notes: "" })
+  const [clientForm, setClientForm] = useState({
+    first_name: "",
+    last_name: "",
+    phone: "",
+    email: "",
+    gender: ""
+  })
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
+  // Debounce search query
   useEffect(() => {
-    // Removed load functions since context doesn't expose them
-  }, []) // Removed load functions from dependency array to prevent infinite loop
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Fetch customers when page, search, or filters change
+  useEffect(() => {
+    fetchCustomers()
+  }, [currentPage, debouncedSearchQuery, joinDateFrom, joinDateTo])
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true)
+
+      // Build query parameters
+      const params = new URLSearchParams()
+      params.append('page', currentPage.toString())
+      params.append('size', pageSize.toString())
+
+      if (debouncedSearchQuery) {
+        params.append('search', debouncedSearchQuery)
+      }
+
+      if (joinDateFrom) {
+        params.append('created_from', format(joinDateFrom, 'yyyy-MM-dd'))
+      }
+
+      if (joinDateTo) {
+        params.append('created_to', format(joinDateTo, 'yyyy-MM-dd'))
+      }
+
+      const response = await fetch(`/api/customers?${params.toString()}`)
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to fetch customers')
+      }
+
+      const data = await response.json()
+      setCustomers(data.items || [])
+      setTotalCustomers(data.total || 0)
+      setTotalPages(data.pages || 0)
+    } catch (error: any) {
+      console.error('Error fetching customers:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load customers",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const clientsWithStats = useMemo(() => {
-    return patients.map((patient) => {
-      const clientBookings = bookings.filter((b) => b.patientId === patient.id)
-      const completedBookings = clientBookings.filter((b) => b.status === "completed")
+    return customers.map((customer) => {
+      // Map customer data from API to expected format
+      const name = `${customer.first_name || ''} ${customer.last_name || ''}`.trim()
+      const totalAppointments = customer.total_appointments || 0
 
-      const totalSpent = completedBookings.reduce((total, booking) => {
-        const treatment = treatments.find((t) => t.id === booking.treatmentId)
-        return total + (treatment?.price || 0)
-      }, 0)
-
-      const lastVisit =
-        patient.lastVisitAt && typeof patient.lastVisitAt === "string"
-          ? (() => {
-              try {
-                const parsed = parseISO(patient.lastVisitAt)
-                return isValid(parsed) ? parsed : null
-              } catch {
-                return null
-              }
-            })()
-          : null
-
-      const daysSinceLastVisit = lastVisit
-        ? Math.floor((new Date().getTime() - lastVisit.getTime()) / (1000 * 60 * 60 * 24))
-        : null
-
+      // Determine status based on loyalty_points or total_appointments
       let status = "new"
-      if (totalSpent > 5000000) status = "vip"
-      else if (patient.totalVisits > 3) status = "active"
+      if (customer.loyalty_points > 500) status = "vip"
+      else if (totalAppointments > 3) status = "active"
 
       return {
-        ...patient,
-        totalSpent,
-        completedBookings: completedBookings.length,
-        lastVisitFormatted: lastVisit
-          ? daysSinceLastVisit === 0
-            ? "Today"
-            : daysSinceLastVisit === 1
-              ? "Yesterday"
-              : daysSinceLastVisit < 7
-                ? `${daysSinceLastVisit} days ago`
-                : daysSinceLastVisit < 30
-                  ? `${Math.floor(daysSinceLastVisit / 7)} weeks ago`
-                  : `${Math.floor(daysSinceLastVisit / 30)} months ago`
-          : "Never",
+        id: customer.id,
+        name,
+        first_name: customer.first_name,
+        last_name: customer.last_name,
+        phone: customer.phone,
+        email: customer.email,
+        gender: customer.gender,
+        totalVisits: totalAppointments,
+        totalSpent: 0, // Not available in customer API, would need to calculate from appointments
+        completedBookings: totalAppointments,
+        lastVisitFormatted: "Unknown", // Would need appointments data
         status,
-        bookingHistory: clientBookings.sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime()),
+        createdAt: customer.created_at,
+        is_active: customer.is_active,
+        email_verified: customer.email_verified,
+        loyalty_points: customer.loyalty_points,
+        preferences: customer.preferences,
+        bookingHistory: [], // Would need to fetch from appointments endpoint
       }
     })
-  }, [patients, bookings, treatments])
+  }, [customers])
 
+  // Client-side filtering for status and other filters not supported by API
   const filteredClients = useMemo(() => {
     return clientsWithStats.filter((client) => {
-      const matchesSearch =
-        searchQuery === "" ||
-        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.phone.includes(searchQuery) ||
-        (client.email && client.email.toLowerCase().includes(searchQuery.toLowerCase()))
-
       const matchesStatus = statusFilter === "all" || client.status === statusFilter
 
       const matchesSpending = (() => {
@@ -163,85 +197,220 @@ export default function ClientsPage() {
         }
       })()
 
-      const matchesJoinDate = (() => {
-        if (!joinDateFrom && !joinDateTo) return true
-
-        const clientJoinDate =
-          client.createdAt && typeof client.createdAt === "string"
-            ? (() => {
-                try {
-                  const parsed = parseISO(client.createdAt)
-                  return isValid(parsed) ? parsed : null
-                } catch {
-                  return null
-                }
-              })()
-            : null
-
-        if (!clientJoinDate) return false
-
-        if (joinDateFrom && clientJoinDate < joinDateFrom) return false
-        if (joinDateTo && clientJoinDate > joinDateTo) return false
-
-        return true
-      })()
-
-      return matchesSearch && matchesStatus && matchesSpending && matchesVisitCount && matchesJoinDate
+      return matchesStatus && matchesSpending && matchesVisitCount
     })
-  }, [clientsWithStats, searchQuery, statusFilter, spendingFilter, visitCountFilter, joinDateFrom, joinDateTo])
+  }, [clientsWithStats, statusFilter, spendingFilter, visitCountFilter])
 
-  const totalPages = Math.ceil(filteredClients.length / pageSize)
-  const paginatedClients = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize
-    return filteredClients.slice(startIndex, startIndex + pageSize)
-  }, [filteredClients, currentPage, pageSize])
-
+  // Reset to page 1 when search or filters change
   useEffect(() => {
-    setCurrentPage(1)
-  }, [searchQuery, statusFilter, spendingFilter, visitCountFilter, joinDateFrom, joinDateTo])
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+    }
+  }, [debouncedSearchQuery, joinDateFrom, joinDateTo])
+
+  const validateEmail = (email: string): boolean => {
+    if (!email) return true // Email is optional
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  const validatePhone = (phone: string): boolean => {
+    if (!phone) return false
+    // Remove spaces and special characters for validation
+    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '')
+    // Check if it has at least 10 digits
+    return /^\+?\d{10,15}$/.test(cleanPhone)
+  }
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    if (!clientForm.first_name.trim()) {
+      errors.first_name = "First name is required"
+    }
+
+    if (!clientForm.phone.trim()) {
+      errors.phone = "Phone number is required"
+    } else if (!validatePhone(clientForm.phone)) {
+      errors.phone = "Invalid phone format. Use format: +62 xxx xxxx xxxx or 08xx xxxx xxxx"
+    }
+
+    if (clientForm.email && !validateEmail(clientForm.email)) {
+      errors.email = "Invalid email format"
+    }
+
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }
 
   const handleAddClient = async () => {
-    if (!clientForm.name || !clientForm.phone) {
-      toast({ title: "Error", description: "Name and phone are required", variant: "destructive" })
+    // Clear previous errors
+    setFormErrors({})
+
+    // Validate form
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please check the form and fix the errors",
+        variant: "destructive"
+      })
       return
     }
 
     try {
-      await addPatient({
-        name: clientForm.name,
-        phone: clientForm.phone,
-        email: clientForm.email || undefined,
-        notes: clientForm.notes || undefined,
+      // Get tenant_id from user data
+      const userStr = localStorage.getItem('user')
+      if (!userStr) {
+        throw new Error('User not found. Please login again.')
+      }
+
+      const user = JSON.parse(userStr)
+      const tenantId = user.tenant_id
+
+      if (!tenantId) {
+        throw new Error('Tenant ID not found. Please login again.')
+      }
+
+      // Build request body
+      const requestBody: any = {
+        first_name: clientForm.first_name.trim(),
+        phone: clientForm.phone.trim(),
+        tenant_id: tenantId
+      }
+
+      // Only add optional fields if they have values
+      if (clientForm.last_name && clientForm.last_name.trim()) {
+        requestBody.last_name = clientForm.last_name.trim()
+      }
+
+      if (clientForm.email && clientForm.email.trim()) {
+        requestBody.email = clientForm.email.trim()
+      }
+
+      if (clientForm.gender) {
+        requestBody.gender = clientForm.gender
+      }
+
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
       })
 
-      toast({ title: "Success", description: "Client added successfully" })
+      if (!response.ok) {
+        const error = await response.json()
+
+        // Handle validation errors from API
+        if (error.error && Array.isArray(error.error)) {
+          const apiErrors: Record<string, string> = {}
+          error.error.forEach((err: any) => {
+            if (err.loc && err.loc.length > 1) {
+              const field = err.loc[1] // Get field name from loc array
+              apiErrors[field] = err.msg
+            }
+          })
+          setFormErrors(apiErrors)
+
+          const errorMessages = error.error.map((err: any) => err.msg).join(', ')
+          throw new Error(errorMessages)
+        }
+
+        throw new Error(error.error || 'Failed to add customer')
+      }
+
+      toast({ title: "Success", description: "Customer added successfully" })
       setShowAddDialog(false)
-      setClientForm({ name: "", phone: "", email: "", notes: "" })
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to add client", variant: "destructive" })
+      setClientForm({ first_name: "", last_name: "", phone: "", email: "", gender: "" })
+      setFormErrors({})
+      fetchCustomers() // Reload customer list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add customer",
+        variant: "destructive"
+      })
     }
   }
 
   const handleEditClient = async () => {
-    if (!editingClient || !clientForm.name || !clientForm.phone) {
-      toast({ title: "Error", description: "Name and phone are required", variant: "destructive" })
+    if (!editingClient) return
+
+    // Clear previous errors
+    setFormErrors({})
+
+    // Validate form
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please check the form and fix the errors",
+        variant: "destructive"
+      })
       return
     }
 
     try {
-      await updatePatient(editingClient.id, {
-        name: clientForm.name,
-        phone: clientForm.phone,
-        email: clientForm.email || undefined,
-        notes: clientForm.notes || undefined,
+      // Build request body
+      const requestBody: any = {
+        first_name: clientForm.first_name.trim(),
+        phone: clientForm.phone.trim()
+      }
+
+      // Only add optional fields if they have values
+      if (clientForm.last_name && clientForm.last_name.trim()) {
+        requestBody.last_name = clientForm.last_name.trim()
+      }
+
+      if (clientForm.email && clientForm.email.trim()) {
+        requestBody.email = clientForm.email.trim()
+      }
+
+      if (clientForm.gender) {
+        requestBody.gender = clientForm.gender
+      }
+
+      const response = await fetch(`/api/customers/${editingClient.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
       })
 
-      toast({ title: "Success", description: "Client updated successfully" })
+      if (!response.ok) {
+        const error = await response.json()
+
+        // Handle validation errors from API
+        if (error.error && Array.isArray(error.error)) {
+          const apiErrors: Record<string, string> = {}
+          error.error.forEach((err: any) => {
+            if (err.loc && err.loc.length > 1) {
+              const field = err.loc[1]
+              apiErrors[field] = err.msg
+            }
+          })
+          setFormErrors(apiErrors)
+
+          const errorMessages = error.error.map((err: any) => err.msg).join(', ')
+          throw new Error(errorMessages)
+        }
+
+        throw new Error(error.error || 'Failed to update customer')
+      }
+
+      toast({ title: "Success", description: "Customer updated successfully" })
       setEditingClient(null)
       setShowClientDialog(false)
-      setClientForm({ name: "", phone: "", email: "", notes: "" })
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to update client", variant: "destructive" })
+      setClientForm({ first_name: "", last_name: "", phone: "", email: "", gender: "" })
+      setFormErrors({})
+      fetchCustomers() // Reload customer list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update customer",
+        variant: "destructive"
+      })
     }
   }
 
@@ -254,29 +423,41 @@ export default function ClientsPage() {
     if (!clientToDelete) return
 
     try {
-      await deletePatient(clientToDelete.id)
-      toast({ title: "Success", description: "Client deleted successfully" })
+      const response = await fetch(`/api/customers/${clientToDelete.id}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to delete customer')
+      }
+
+      toast({ title: "Success", description: "Customer deleted successfully" })
       setSelectedClient(null)
       setShowClientDialog(false)
       setShowDeleteDialog(false)
       setClientToDelete(null)
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to delete client", variant: "destructive" })
+      fetchCustomers() // Reload customer list
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to delete customer", variant: "destructive" })
     }
   }
 
   const openAddDialog = () => {
-    setClientForm({ name: "", phone: "", email: "", notes: "" })
+    setClientForm({ first_name: "", last_name: "", phone: "", email: "", gender: "" })
+    setFormErrors({})
     setShowAddDialog(true)
   }
 
   const openEditDialog = (client: any) => {
     setClientForm({
-      name: client.name,
+      first_name: client.first_name || "",
+      last_name: client.last_name || "",
       phone: client.phone,
       email: client.email || "",
-      notes: client.notes || "",
+      gender: client.gender || "",
     })
+    setFormErrors({})
     setEditingClient(client)
   }
 
@@ -340,7 +521,7 @@ export default function ClientsPage() {
   }
 
   // Check if data is completely empty
-  const hasNoData = !loading && (!patients || patients.length === 0)
+  const hasNoData = !loading && (!customers || customers.length === 0)
 
   return (
     <MainLayout>
@@ -374,15 +555,15 @@ export default function ClientsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Client Management</h1>
-            <p className="text-muted-foreground">Manage your client database and relationships</p>
+            <h1 className="text-3xl font-bold text-foreground">Customer Management</h1>
+            <p className="text-muted-foreground">Manage your customer database and relationships</p>
           </div>
           <Button
             onClick={openAddDialog}
             className="bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] hover:from-[#E7C6FF] hover:to-[#C8B6FF] text-purple-800 border-0"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Client
+            Add Customer
           </Button>
         </div>
 
@@ -395,7 +576,7 @@ export default function ClientsPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search clients by name, phone, or email..."
+                      placeholder="Search customers by name, phone, or email..."
                       className="pl-10 border-pink-200 focus:border-pink-400"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
@@ -530,7 +711,7 @@ export default function ClientsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              All Clients ({filteredClients.length})
+              All Customers ({totalCustomers})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -542,8 +723,8 @@ export default function ClientsPage() {
                 visitCountFilter !== "all" ||
                 joinDateFrom ||
                 joinDateTo
-                  ? "No clients match your search criteria"
-                  : "No clients found"}
+                  ? "No customers match your search criteria"
+                  : "No customers found"}
               </div>
             ) : (
               <>
@@ -553,15 +734,15 @@ export default function ClientsPage() {
                       <tr className="border-b border-border">
                         <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Name</th>
                         <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Contact</th>
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Last Visit</th>
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Total Spent</th>
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Visits</th>
+                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Gender</th>
+                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Appointments</th>
+                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Loyalty Points</th>
                         <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Status</th>
                         <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedClients.map((client) => (
+                      {filteredClients.map((client) => (
                         <tr key={client.id} className="border-b border-border/50 hover:bg-muted/30">
                           <td className="py-4 px-2">
                             <div>
@@ -570,9 +751,9 @@ export default function ClientsPage() {
                             </div>
                           </td>
                           <td className="py-4 px-2 text-sm text-muted-foreground">{client.phone}</td>
-                          <td className="py-4 px-2 text-sm">{client.lastVisitFormatted}</td>
-                          <td className="py-4 px-2 font-medium">Rp {client.totalSpent.toLocaleString("id-ID")}</td>
+                          <td className="py-4 px-2 text-sm capitalize">{client.gender || "-"}</td>
                           <td className="py-4 px-2 text-sm">{client.totalVisits}</td>
+                          <td className="py-4 px-2 font-medium">{client.loyalty_points || 0}</td>
                           <td className="py-4 px-2">{getStatusBadge(client.status)}</td>
                           <td className="py-4 px-2">
                             <div className="flex gap-1">
@@ -604,8 +785,7 @@ export default function ClientsPage() {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
-                      Showing {(currentPage - 1) * pageSize + 1} to{" "}
-                      {Math.min(currentPage * pageSize, filteredClients.length)} of {filteredClients.length} clients
+                      Page {currentPage} of {totalPages} • Total: {totalCustomers} customers
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -618,17 +798,56 @@ export default function ClientsPage() {
                         Previous
                       </Button>
                       <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="w-8 h-8 p-0"
-                          >
-                            {page}
-                          </Button>
-                        ))}
+                        {/* Show first page */}
+                        {currentPage > 3 && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(1)}
+                              className="w-8 h-8 p-0"
+                            >
+                              1
+                            </Button>
+                            {currentPage > 4 && <span className="px-2">...</span>}
+                          </>
+                        )}
+
+                        {/* Show pages around current page */}
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(page => {
+                            return page === currentPage ||
+                                   page === currentPage - 1 ||
+                                   page === currentPage + 1 ||
+                                   (page === currentPage - 2 && currentPage <= 3) ||
+                                   (page === currentPage + 2 && currentPage >= totalPages - 2)
+                          })
+                          .map((page) => (
+                            <Button
+                              key={page}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {page}
+                            </Button>
+                          ))}
+
+                        {/* Show last page */}
+                        {currentPage < totalPages - 2 && (
+                          <>
+                            {currentPage < totalPages - 3 && <span className="px-2">...</span>}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(totalPages)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {totalPages}
+                            </Button>
+                          </>
+                        )}
                       </div>
                       <Button
                         variant="outline"
@@ -655,28 +874,81 @@ export default function ClientsPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <UserPlus className="h-5 w-5" />
-                Add New Client
+                Add New Customer
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="Client name"
-                  value={clientForm.name}
-                  onChange={(e) => setClientForm((prev) => ({ ...prev, name: e.target.value }))}
-                />
+              {Object.keys(formErrors).length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-800">Please fix the following errors:</p>
+                    <ul className="text-sm text-red-700 mt-1 list-disc list-inside">
+                      {Object.entries(formErrors).map(([field, error]) => (
+                        <li key={field}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="first_name">First Name *</Label>
+                  <Input
+                    id="first_name"
+                    placeholder="First name"
+                    value={clientForm.first_name}
+                    onChange={(e) => {
+                      setClientForm((prev) => ({ ...prev, first_name: e.target.value }))
+                      if (formErrors.first_name) {
+                        setFormErrors((prev) => ({ ...prev, first_name: "" }))
+                      }
+                    }}
+                    className={formErrors.first_name ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  />
+                  {formErrors.first_name && (
+                    <p className="text-sm text-red-600 mt-1">{formErrors.first_name}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="last_name">Last Name</Label>
+                  <Input
+                    id="last_name"
+                    placeholder="Last name (optional)"
+                    value={clientForm.last_name}
+                    onChange={(e) => {
+                      setClientForm((prev) => ({ ...prev, last_name: e.target.value }))
+                      if (formErrors.last_name) {
+                        setFormErrors((prev) => ({ ...prev, last_name: "" }))
+                      }
+                    }}
+                    className={formErrors.last_name ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  />
+                  {formErrors.last_name && (
+                    <p className="text-sm text-red-600 mt-1">{formErrors.last_name}</p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
                 <Input
                   id="phone"
-                  placeholder="+62 812 345 6789"
+                  placeholder="+62 812 345 6789 or 08123456789"
                   value={clientForm.phone}
-                  onChange={(e) => setClientForm((prev) => ({ ...prev, phone: e.target.value }))}
+                  onChange={(e) => {
+                    setClientForm((prev) => ({ ...prev, phone: e.target.value }))
+                    if (formErrors.phone) {
+                      setFormErrors((prev) => ({ ...prev, phone: "" }))
+                    }
+                  }}
+                  className={formErrors.phone ? "border-red-500 focus-visible:ring-red-500" : ""}
                 />
+                {formErrors.phone && (
+                  <p className="text-sm text-red-600 mt-1">{formErrors.phone}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -684,25 +956,50 @@ export default function ClientsPage() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="client@email.com"
+                  placeholder="customer@email.com (optional)"
                   value={clientForm.email}
-                  onChange={(e) => setClientForm((prev) => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => {
+                    setClientForm((prev) => ({ ...prev, email: e.target.value }))
+                    if (formErrors.email) {
+                      setFormErrors((prev) => ({ ...prev, email: "" }))
+                    }
+                  }}
+                  className={formErrors.email ? "border-red-500 focus-visible:ring-red-500" : ""}
                 />
+                {formErrors.email && (
+                  <p className="text-sm text-red-600 mt-1">{formErrors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Additional notes about the client..."
-                  value={clientForm.notes}
-                  onChange={(e) => setClientForm((prev) => ({ ...prev, notes: e.target.value }))}
-                />
+                <Label htmlFor="gender">Gender</Label>
+                <Select value={clientForm.gender} onValueChange={(value) => setClientForm((prev) => ({ ...prev, gender: value }))}>
+                  <SelectTrigger className={formErrors.gender ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Select gender (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+                {formErrors.gender && (
+                  <p className="text-sm text-red-600 mt-1">{formErrors.gender}</p>
+                )}
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-800 font-medium mb-1">Format Guidelines:</p>
+                <ul className="text-xs text-blue-700 space-y-0.5">
+                  <li>• Phone: +62 xxx xxxx xxxx or 08xx xxxx xxxx</li>
+                  <li>• Email: example@email.com (optional)</li>
+                  <li>• Last name is optional</li>
+                </ul>
               </div>
 
               <div className="flex gap-2">
                 <Button onClick={handleAddClient} className="flex-1">
-                  Add Client
+                  Add Customer
                 </Button>
                 <Button variant="outline" onClick={() => setShowAddDialog(false)}>
                   Cancel
@@ -725,29 +1022,83 @@ export default function ClientsPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                {editingClient ? "Edit Client" : "Client Details"}
+                {editingClient ? "Edit Customer" : "Customer Details"}
               </DialogTitle>
             </DialogHeader>
             {selectedClient && (
               <div className="space-y-6">
                 {editingClient ? (
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-name">Name *</Label>
-                      <Input
-                        id="edit-name"
-                        value={clientForm.name}
-                        onChange={(e) => setClientForm((prev) => ({ ...prev, name: e.target.value }))}
-                      />
+                    {Object.keys(formErrors).length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-red-800">Please fix the following errors:</p>
+                          <ul className="text-sm text-red-700 mt-1 list-disc list-inside">
+                            {Object.entries(formErrors).map(([field, error]) => (
+                              <li key={field}>{error}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-first-name">First Name *</Label>
+                        <Input
+                          id="edit-first-name"
+                          value={clientForm.first_name}
+                          onChange={(e) => {
+                            setClientForm((prev) => ({ ...prev, first_name: e.target.value }))
+                            if (formErrors.first_name) {
+                              setFormErrors((prev) => ({ ...prev, first_name: "" }))
+                            }
+                          }}
+                          className={formErrors.first_name ? "border-red-500 focus-visible:ring-red-500" : ""}
+                        />
+                        {formErrors.first_name && (
+                          <p className="text-sm text-red-600 mt-1">{formErrors.first_name}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-last-name">Last Name</Label>
+                        <Input
+                          id="edit-last-name"
+                          placeholder="Last name (optional)"
+                          value={clientForm.last_name}
+                          onChange={(e) => {
+                            setClientForm((prev) => ({ ...prev, last_name: e.target.value }))
+                            if (formErrors.last_name) {
+                              setFormErrors((prev) => ({ ...prev, last_name: "" }))
+                            }
+                          }}
+                          className={formErrors.last_name ? "border-red-500 focus-visible:ring-red-500" : ""}
+                        />
+                        {formErrors.last_name && (
+                          <p className="text-sm text-red-600 mt-1">{formErrors.last_name}</p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="edit-phone">Phone *</Label>
                       <Input
                         id="edit-phone"
+                        placeholder="+62 812 345 6789 or 08123456789"
                         value={clientForm.phone}
-                        onChange={(e) => setClientForm((prev) => ({ ...prev, phone: e.target.value }))}
+                        onChange={(e) => {
+                          setClientForm((prev) => ({ ...prev, phone: e.target.value }))
+                          if (formErrors.phone) {
+                            setFormErrors((prev) => ({ ...prev, phone: "" }))
+                          }
+                        }}
+                        className={formErrors.phone ? "border-red-500 focus-visible:ring-red-500" : ""}
                       />
+                      {formErrors.phone && (
+                        <p className="text-sm text-red-600 mt-1">{formErrors.phone}</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -755,18 +1106,45 @@ export default function ClientsPage() {
                       <Input
                         id="edit-email"
                         type="email"
+                        placeholder="customer@email.com (optional)"
                         value={clientForm.email}
-                        onChange={(e) => setClientForm((prev) => ({ ...prev, email: e.target.value }))}
+                        onChange={(e) => {
+                          setClientForm((prev) => ({ ...prev, email: e.target.value }))
+                          if (formErrors.email) {
+                            setFormErrors((prev) => ({ ...prev, email: "" }))
+                          }
+                        }}
+                        className={formErrors.email ? "border-red-500 focus-visible:ring-red-500" : ""}
                       />
+                      {formErrors.email && (
+                        <p className="text-sm text-red-600 mt-1">{formErrors.email}</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="edit-notes">Notes</Label>
-                      <Textarea
-                        id="edit-notes"
-                        value={clientForm.notes}
-                        onChange={(e) => setClientForm((prev) => ({ ...prev, notes: e.target.value }))}
-                      />
+                      <Label htmlFor="edit-gender">Gender</Label>
+                      <Select value={clientForm.gender} onValueChange={(value) => setClientForm((prev) => ({ ...prev, gender: value }))}>
+                        <SelectTrigger className={formErrors.gender ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select gender (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {formErrors.gender && (
+                        <p className="text-sm text-red-600 mt-1">{formErrors.gender}</p>
+                      )}
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-800 font-medium mb-1">Format Guidelines:</p>
+                      <ul className="text-xs text-blue-700 space-y-0.5">
+                        <li>• Phone: +62 xxx xxxx xxxx or 08xx xxxx xxxx</li>
+                        <li>• Email: example@email.com (optional)</li>
+                        <li>• Last name is optional</li>
+                      </ul>
                     </div>
 
                     <div className="flex gap-2">
@@ -818,12 +1196,23 @@ export default function ClientsPage() {
                           </div>
                         </div>
 
-                        {selectedClient.notes && (
-                          <div>
-                            <h4 className="font-medium mb-2">Notes</h4>
-                            <p className="text-sm text-muted-foreground">{selectedClient.notes}</p>
+                        <div>
+                          <h4 className="font-medium mb-2">Account Status</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Email Verified:</span>
+                              <span className="font-medium">{selectedClient.email_verified ? "Yes" : "No"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Active:</span>
+                              <span className="font-medium">{selectedClient.is_active ? "Yes" : "No"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Gender:</span>
+                              <span className="font-medium capitalize">{selectedClient.gender || "Not specified"}</span>
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </div>
 
                       <div className="space-y-4">
@@ -831,16 +1220,12 @@ export default function ClientsPage() {
                           <h4 className="font-medium mb-2">Statistics</h4>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Total Visits:</span>
+                              <span className="text-muted-foreground">Total Appointments:</span>
                               <span className="font-medium">{selectedClient.totalVisits}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-muted-foreground">Total Spent:</span>
-                              <span className="font-medium">Rp {selectedClient.totalSpent.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Last Visit:</span>
-                              <span className="font-medium">{selectedClient.lastVisitFormatted}</span>
+                              <span className="text-muted-foreground">Loyalty Points:</span>
+                              <span className="font-medium">{selectedClient.loyalty_points || 0}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-muted-foreground">Member Since:</span>
@@ -864,51 +1249,18 @@ export default function ClientsPage() {
 
                     <div>
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-medium">Booking History</h4>
-                        <Button size="sm" onClick={() => handleNewBooking(selectedClient)}>
+                        <h4 className="font-medium">Quick Actions</h4>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleNewBooking(selectedClient)} className="flex-1">
                           <CalendarIcon className="h-4 w-4 mr-2" />
                           New Booking
                         </Button>
+                        <Button size="sm" variant="outline" onClick={() => openEditDialog(selectedClient)} className="flex-1">
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Customer
+                        </Button>
                       </div>
-
-                      {selectedClient.bookingHistory.length === 0 ? (
-                        <div className="text-center py-4 text-muted-foreground">No booking history</div>
-                      ) : (
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
-                          {selectedClient.bookingHistory.slice(0, 10).map((booking: any) => {
-                            const treatment = treatments.find((t) => t.id === booking.treatmentId)
-                            const staffMember = staff.find((s) => s.id === booking.staffId)
-
-                            return (
-                              <div
-                                key={booking.id}
-                                className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
-                              >
-                                <div>
-                                  <div className="font-medium text-sm">{treatment?.name || "Unknown Product"}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {format(parseISO(booking.startAt), "MMM d, yyyy HH:mm")} •{" "}
-                                    {staffMember?.name || "Unknown Staff"}
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <Badge
-                                    variant={booking.status === "completed" ? "default" : "secondary"}
-                                    className="text-xs"
-                                  >
-                                    {booking.status}
-                                  </Badge>
-                                  {booking.status === "completed" && treatment && (
-                                    <div className="text-xs text-muted-foreground mt-1">
-                                      Rp {treatment.price.toLocaleString()}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
                     </div>
                   </>
                 )}
