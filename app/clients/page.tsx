@@ -258,17 +258,17 @@ export default function ClientsPage() {
     }
 
     try {
-      // Get tenant_id from user data
-      const userStr = localStorage.getItem('user')
-      if (!userStr) {
-        throw new Error('User not found. Please login again.')
+      // Get tenant_id from tenant data (saved during login)
+      const tenantStr = localStorage.getItem('tenant')
+      if (!tenantStr) {
+        throw new Error('Session expired. Please login again.')
       }
 
-      const user = JSON.parse(userStr)
-      const tenantId = user.tenant_id
+      const tenant = JSON.parse(tenantStr)
+      const tenantId = tenant.id || tenant._id
 
       if (!tenantId) {
-        throw new Error('Tenant ID not found. Please login again.')
+        throw new Error('Tenant information not found. Please login again.')
       }
 
       // Build request body
