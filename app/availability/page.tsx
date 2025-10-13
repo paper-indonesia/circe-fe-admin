@@ -78,7 +78,7 @@ export default function AvailabilityCalendarPage() {
   const { treatments = [] } = useTreatments()
 
   const [viewMode, setViewMode] = useState<ViewMode>("week")
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(() => new Date())
   const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>("all")
   const [availabilityData, setAvailabilityData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)

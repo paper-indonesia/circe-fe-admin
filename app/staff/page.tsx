@@ -79,7 +79,7 @@ export default function StaffPage() {
     notes: "",
     assignedTreatments: [] as string[],
   })
-  const [newStaffForm, setNewStaffForm] = useState({
+  const [newStaffForm, setNewStaffForm] = useState(() => ({
     name: "",
     role: "",
     email: "",
@@ -102,7 +102,7 @@ export default function StaffPage() {
     isBookable: true,
     acceptsOnlineBooking: true,
     maxAdvanceBookingDays: 30,
-  })
+  }))
   const [skillInput, setSkillInput] = useState("")
   const [editSkillInput, setEditSkillInput] = useState("")
   const [newTimeRange, setNewTimeRange] = useState({ start: "09:00", end: "17:00" })
@@ -113,7 +113,7 @@ export default function StaffPage() {
   const [availabilityTab, setAvailabilityTab] = useState<'working_hours' | 'break' | 'blocked' | 'vacation'>('working_hours')
   const [showAddAvailability, setShowAddAvailability] = useState(false)
   const [editingAvailability, setEditingAvailability] = useState<any>(null)
-  const [availabilityForm, setAvailabilityForm] = useState({
+  const [availabilityForm, setAvailabilityForm] = useState(() => ({
     date: new Date().toISOString().split('T')[0],
     start_time: "09:00",
     end_time: "17:00",
@@ -124,10 +124,13 @@ export default function StaffPage() {
     is_available: true,
     notes: "",
     service_ids: [] as string[],
-  })
-  const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
+  }))
+  const [dateRange, setDateRange] = useState(() => {
+    const today = new Date()
+    return {
+      start: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0],
+      end: new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0],
+    }
   })
 
   // Fetch outlets on mount
