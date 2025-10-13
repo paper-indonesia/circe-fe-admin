@@ -22,8 +22,8 @@ export function NavigationLoader() {
       setLoadingText('Loading Clients')
     } else if (pathname.includes('/staff')) {
       setLoadingText('Loading Staff')
-    } else if (pathname.includes('/treatments')) {
-      setLoadingText('Loading Treatments')
+    } else if (pathname.includes('/products')) {
+      setLoadingText('Loading Products')
     } else if (pathname.includes('/walk-in')) {
       setLoadingText('Loading Walk-in')
     } else if (pathname.includes('/reports')) {

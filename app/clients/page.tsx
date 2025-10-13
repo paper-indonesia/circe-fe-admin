@@ -419,11 +419,12 @@ export default function ClientsPage() {
     setShowDeleteDialog(true)
   }
 
-  const confirmDeleteClient = async () => {
+  const confirmDeleteClient = async (permanent: boolean = false) => {
     if (!clientToDelete) return
 
     try {
-      const response = await fetch(`/api/customers/${clientToDelete.id}`, {
+      // Use soft delete by default (permanent=false)
+      const response = await fetch(`/api/customers/${clientToDelete.id}?permanent=${permanent}`, {
         method: 'DELETE'
       })
 
@@ -432,14 +433,22 @@ export default function ClientsPage() {
         throw new Error(error.error || 'Failed to delete customer')
       }
 
-      toast({ title: "Success", description: "Customer deleted successfully" })
+      const data = await response.json()
+      toast({
+        title: "Success",
+        description: data.message || "Customer deleted successfully"
+      })
       setSelectedClient(null)
       setShowClientDialog(false)
       setShowDeleteDialog(false)
       setClientToDelete(null)
       fetchCustomers() // Reload customer list
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to delete customer", variant: "destructive" })
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete customer",
+        variant: "destructive"
+      })
     }
   }
 
@@ -649,7 +658,7 @@ export default function ClientsPage() {
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="flex-1 justify-start text-left border-pink-200 bg-transparent"
+                              className="flex-1 justify-start text-left border-pink-200 bg-white text-pink-700 hover:bg-pink-50"
                             >
                               <CalendarDays className="mr-2 h-4 w-4" />
                               {joinDateFrom ? format(joinDateFrom, "MMM d") : "From"}
@@ -668,7 +677,7 @@ export default function ClientsPage() {
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="flex-1 justify-start text-left border-pink-200 bg-transparent"
+                              className="flex-1 justify-start text-left border-pink-200 bg-white text-pink-700 hover:bg-pink-50"
                             >
                               <CalendarDays className="mr-2 h-4 w-4" />
                               {joinDateTo ? format(joinDateTo, "MMM d") : "To"}
@@ -693,7 +702,7 @@ export default function ClientsPage() {
                         variant="outline"
                         size="sm"
                         onClick={clearAllFilters}
-                        className="border-pink-300 text-pink-700 hover:bg-pink-100 bg-transparent"
+                        className="border-pink-300 text-pink-700 bg-white hover:bg-pink-100"
                       >
                         <X className="h-4 w-4 mr-2" />
                         Clear All Filters
@@ -1275,24 +1284,24 @@ export default function ClientsPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-red-600">
                 <AlertTriangle className="h-5 w-5" />
-                Delete Client
+                Delete Customer
               </DialogTitle>
             </DialogHeader>
             {clientToDelete && (
               <div className="space-y-4">
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-800 mb-3">
-                    Are you sure you want to delete this client? This action cannot be undone and will also remove:
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800 mb-2">
+                    <strong>Soft Delete:</strong> This customer will be deactivated but data will be preserved for audit purposes.
                   </p>
-                  <ul className="text-sm text-red-700 space-y-1 ml-4">
-                    <li>• All booking history ({clientToDelete.bookingHistory?.length || 0} bookings)</li>
-                    <li>• Client contact information</li>
-                    <li>• All associated data</li>
+                  <ul className="text-sm text-blue-700 space-y-1 ml-4">
+                    <li>• Customer will be marked as deleted and inactive</li>
+                    <li>• Appointment history will be preserved</li>
+                    <li>• Data can be restored if needed</li>
                   </ul>
                 </div>
 
                 <div className="p-4 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg">
-                  <h4 className="font-medium text-pink-800 mb-2">Client Details:</h4>
+                  <h4 className="font-medium text-pink-800 mb-2">Customer Details:</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-pink-700">Name:</span>
@@ -1303,14 +1312,12 @@ export default function ClientsPage() {
                       <span className="font-medium text-pink-900">{clientToDelete.phone}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-pink-700">Total Visits:</span>
+                      <span className="text-pink-700">Total Appointments:</span>
                       <span className="font-medium text-pink-900">{clientToDelete.totalVisits}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-pink-700">Total Spent:</span>
-                      <span className="font-medium text-pink-900">
-                        Rp {clientToDelete.totalSpent?.toLocaleString("id-ID") || "0"}
-                      </span>
+                      <span className="text-pink-700">Loyalty Points:</span>
+                      <span className="font-medium text-pink-900">{clientToDelete.loyalty_points || "0"}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-pink-700">Status:</span>
@@ -1320,9 +1327,9 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="flex gap-3">
-                  <Button onClick={confirmDeleteClient} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
+                  <Button onClick={() => confirmDeleteClient(false)} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Yes, Delete Client
+                    Delete Customer (Soft)
                   </Button>
                   <Button
                     variant="outline"

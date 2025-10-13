@@ -525,7 +525,7 @@ export default function WalkInPage() {
           actionLabel={`Setup Staff`}
           onAction={() => router.push('/staff')}
           secondaryActionLabel={`Add Products`}
-          onSecondaryAction={() => router.push('/treatments')}
+          onSecondaryAction={() => router.push('/products')}
           tips={[
             {
               icon: UserPlus,

@@ -21,16 +21,16 @@ interface AppContextType {
   deletePatient: (id: string) => void
 
   addStaff: (staff: Omit<Staff, "id">) => Promise<void>
-  updateStaff: (id: string, updates: Partial<Staff>) => void
-  deleteStaff: (id: string) => void
+  updateStaff: (id: string, updates: Partial<Staff>) => Promise<void>
+  deleteStaff: (id: string) => Promise<void>
 
   addBooking: (booking: Omit<Booking, "id">) => Promise<void>
   updateBooking: (id: string, updates: Partial<Booking>) => Promise<void>
   deleteBooking: (id: string) => Promise<void>
 
   addTreatment: (treatment: Omit<Treatment, "id">) => Promise<void>
-  updateTreatment: (id: string, updates: Partial<Treatment>) => void
-  deleteTreatment: (id: string) => void
+  updateTreatment: (id: string, updates: Partial<Treatment>) => Promise<void>
+  deleteTreatment: (id: string) => Promise<void>
 
   addActivity: (activity: Omit<Activity, "id">) => void
 }
@@ -48,79 +48,140 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Fetch all data from API
-        const [mongoPatients, mongoStaff, mongoTreatments, mongoBookings] = await Promise.all([
-          apiClient.getPatients(),
-          apiClient.getStaff(),
-          apiClient.getTreatments(),
-          apiClient.getBookings(),
+        console.log('[Context] Loading data from API...')
+
+        // Fetch data with individual error handling
+        const [mongoStaff, mongoTreatments, mongoBookings] = await Promise.all([
+          apiClient.getStaff().catch(err => {
+            console.warn('[Context] Failed to load staff:', err)
+            return { items: [] }
+          }),
+          apiClient.getTreatments().catch(err => {
+            console.warn('[Context] Failed to load treatments:', err)
+            return { items: [] }
+          }),
+          apiClient.getBookings().catch(err => {
+            console.warn('[Context] Failed to load bookings:', err)
+            return { items: [] }
+          }),
         ])
 
-        // Map MongoDB data to frontend format
-        const patients = mongoPatients.map((p: any) => ({
-          id: p._id || p.id,
-          name: p.name,
-          phone: p.phone,
-          email: p.email || '',
-          dateOfBirth: p.dateOfBirth ? new Date(p.dateOfBirth) : undefined,
-          notes: p.notes || '',
-          lastVisit: p.lastVisitAt ? new Date(p.lastVisitAt) : new Date(),
-          totalVisits: p.totalVisits || 0,
-          createdAt: new Date(p.createdAt),
-        }))
+        console.log('[Context] Raw API responses:', {
+          staff: mongoStaff,
+          treatments: mongoTreatments,
+          bookings: mongoBookings
+        })
 
-        const staff = mongoStaff.map((s: any) => ({
-          id: s._id || s.id,
-          name: s.name,
-          role: s.role || 'Staff',
+        // Map MongoDB data to frontend format
+        // Handle paginated response from API
+        const staffArray = Array.isArray(mongoStaff)
+          ? mongoStaff
+          : (mongoStaff.items || [])
+
+        const staff = staffArray.map((s: any) => ({
+          id: s.id || s._id,
+          tenant_id: s.tenant_id || s.tenantId,
+          outlet_id: s.outlet_id || s.outletId,
+          first_name: s.first_name || s.name?.split(' ')[0] || '',
+          last_name: s.last_name || s.name?.split(' ').slice(1).join(' ') || '',
+          display_name: s.display_name || s.name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
+          name: s.name || s.display_name || `${s.first_name || ''} ${s.last_name || ''}`.trim(),
           email: s.email || '',
           phone: s.phone || '',
-          skills: s.skills || [],
-          hourlyRate: 50000,
-          avatar: s.avatar || '',
-          isActive: s.isActive !== false,
-          workingHours: s.workingHours || [],
-          rating: s.rating || 0,
-          balance: s.balance || 0,
-          totalEarnings: s.totalEarnings || 0,
+          position: s.position || s.role || 'Staff',
+          role: s.role || s.position || 'Staff',
+          employment_type: s.employment_type || 'full_time',
+          employee_id: s.employee_id,
+          hire_date: s.hire_date,
+          birth_date: s.birth_date,
+          hourly_rate: s.hourly_rate || s.hourlyRate,
+          salary: s.salary,
+          is_bookable: s.is_bookable !== false,
+          accepts_online_booking: s.accepts_online_booking !== false,
+          max_advance_booking_days: s.max_advance_booking_days || 30,
+          bio: s.bio,
+          profile_image_url: s.profile_image_url || s.avatar,
+          avatar: s.avatar || s.profile_image_url,
+          instagram_handle: s.instagram_handle,
+          is_active: s.is_active !== false && s.isActive !== false,
+          isActive: s.isActive !== false && s.is_active !== false,
+          status: s.status || 'active',
+          skills: s.skills,
+          average_rating: s.average_rating || s.rating,
+          rating: s.rating || s.average_rating || 0,
+          rating_count: s.rating_count || 0,
+          total_bookings: s.total_bookings || 0,
+          next_available_slot: s.next_available_slot,
+          workingHours: s.workingHours || s.working_hours || [],
+          workingSchedule: s.workingSchedule || s.working_schedule || {},
+          workingDays: s.workingDays || s.working_days || [],
           capacity: s.capacity || 1,
+          balance: s.balance || 0,
+          totalEarnings: s.totalEarnings || s.total_earnings || 0,
+          notes: s.notes || s.bio || '',
+          created_at: s.created_at || s.createdAt,
+          updated_at: s.updated_at || s.updatedAt,
         }))
 
-        const treatments = mongoTreatments.map((t: any) => ({
+        // Handle paginated response from API
+        const treatmentsArray = Array.isArray(mongoTreatments)
+          ? mongoTreatments
+          : (mongoTreatments.items || [])
+
+        const treatments = treatmentsArray.map((t: any) => ({
           id: t._id || t.id,
           name: t.name,
+          slug: t.slug || '',
           category: t.category || 'Beauty',
-          duration: t.durationMin || 60,
-          price: t.price || 0,
+          duration: t.durationMin || t.duration_minutes || t.duration || 60,
+          durationMin: t.durationMin || t.duration_minutes || 60,
+          price: parseFloat(t.price || t.pricing?.base_price || 0),
+          currency: t.currency || t.pricing?.currency || 'USD',
           description: t.description || '',
           popularity: t.popularity || 0,
-          assignedStaff: t.assignedStaff || [],
-          isActive: t.isActive !== false,
+          assignedStaff: t.assignedStaff || t.assigned_staff || [],
+          photo: t.photo || t.image_url || '',
+          isActive: t.isActive !== false && t.is_active !== false,
+          status: t.status || 'active',
+          tags: t.tags || [],
         }))
 
-        const bookings = mongoBookings.map((b: any) => ({
+        // Handle paginated response from API
+        const bookingsArray = Array.isArray(mongoBookings)
+          ? mongoBookings
+          : (mongoBookings.items || [])
+
+        const bookings = bookingsArray.map((b: any) => ({
           id: b._id || b.id,
-          patientId: b.patientId,
-          patientName: b.patientName || patients.find(p => p.id === b.patientId)?.name || 'Unknown',
-          staffId: b.staffId,
-          treatmentId: b.treatmentId,
-          startAt: b.startAt,
-          endAt: b.endAt,
+          patientId: b.patientId || b.customer_id,
+          patientName: b.patientName || b.customer_name || 'Unknown',
+          staffId: b.staffId || b.staff_id,
+          treatmentId: b.treatmentId || b.service_id,
+          startAt: b.startAt || b.start_at,
+          endAt: b.endAt || b.end_at,
           status: b.status || 'confirmed',
           source: b.source || 'online',
-          paymentStatus: b.paymentStatus || 'unpaid',
+          paymentStatus: b.paymentStatus || b.payment_status || 'unpaid',
           notes: b.notes || '',
-          queueNumber: b.queueNumber,
-          createdAt: new Date(b.createdAt || Date.now()),
+          queueNumber: b.queueNumber || b.queue_number,
+          createdAt: new Date(b.createdAt || b.created_at || Date.now()),
         }))
 
-        setPatients(patients)
+        console.log('[Context] Parsed data:', {
+          staff: staff.length,
+          treatments: treatments.length,
+          bookings: bookings.length
+        })
+
+        setPatients([]) // No patients endpoint yet
         setStaff(staff)
         setTreatments(treatments)
         setBookings(bookings)
 
+        console.log('[Context] Data loaded successfully!')
+
       } catch (error) {
-        console.error('Failed to load data:', error)
+        console.error('[Context] Failed to load data:', error)
       } finally {
         setLoading(false)
       }
@@ -130,33 +191,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const addPatient = async (patient: Omit<Patient, "id">) => {
-    try {
-      const newPatient = await apiClient.createPatient({
-        name: patient.name,
-        phone: patient.phone,
-        email: patient.email,
-        notes: patient.notes,
-      })
-
-      const mappedPatient: Patient = {
-        id: newPatient._id || newPatient.id,
-        name: newPatient.name,
-        phone: newPatient.phone,
-        email: newPatient.email || '',
-        dateOfBirth: newPatient.dateOfBirth ? new Date(newPatient.dateOfBirth) : undefined,
-        notes: newPatient.notes || '',
-        lastVisit: new Date(),
-        totalVisits: 0,
-        createdAt: new Date(),
-      }
-
-      setPatients(prev => [...prev, mappedPatient])
-      return mappedPatient
-
-    } catch (error) {
-      console.error('Failed to add patient:', error)
-      throw error
-    }
+    // TODO: Re-implement when patients endpoint is available
+    console.warn('addPatient: Patients endpoint not available yet')
+    return
   }
 
   const updatePatient = (id: string, updates: Partial<Patient>) => {
@@ -169,45 +206,111 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addStaff = async (staff: Omit<Staff, "id">) => {
     try {
-      const newStaff = await apiClient.createStaff({
-        name: staff.name,
-        role: staff.role,
-        email: staff.email,
-        skills: staff.skills,
-        workingHours: staff.workingHours,
-        capacity: staff.capacity,
-      })
+      const newStaff = await apiClient.createStaff(staff)
 
       const mappedStaff: Staff = {
-        id: newStaff._id || newStaff.id,
-        name: newStaff.name,
-        role: newStaff.role || 'Staff',
-        email: newStaff.email || '',
-        phone: '',
-        skills: newStaff.skills || [],
-        hourlyRate: 50000,
-        avatar: '',
-        isActive: true,
-        workingHours: newStaff.workingHours || [],
-        rating: 0,
-        balance: 0,
-        totalEarnings: 0,
-        capacity: newStaff.capacity || 1,
+        id: newStaff.id || newStaff._id,
+        tenant_id: newStaff.tenant_id,
+        outlet_id: newStaff.outlet_id,
+        first_name: newStaff.first_name || staff.first_name,
+        last_name: newStaff.last_name || staff.last_name,
+        display_name: newStaff.display_name || `${newStaff.first_name} ${newStaff.last_name}`.trim(),
+        name: `${newStaff.first_name || ''} ${newStaff.last_name || ''}`.trim(),
+        email: newStaff.email,
+        phone: newStaff.phone,
+        position: newStaff.position,
+        role: newStaff.position,
+        employment_type: newStaff.employment_type,
+        employee_id: newStaff.employee_id,
+        hire_date: newStaff.hire_date,
+        birth_date: newStaff.birth_date,
+        hourly_rate: newStaff.hourly_rate,
+        salary: newStaff.salary,
+        is_bookable: newStaff.is_bookable,
+        accepts_online_booking: newStaff.accepts_online_booking,
+        max_advance_booking_days: newStaff.max_advance_booking_days,
+        bio: newStaff.bio,
+        profile_image_url: newStaff.profile_image_url,
+        avatar: newStaff.profile_image_url,
+        instagram_handle: newStaff.instagram_handle,
+        is_active: newStaff.is_active,
+        isActive: newStaff.is_active,
+        status: newStaff.status,
+        skills: newStaff.skills,
+        average_rating: newStaff.average_rating,
+        rating: newStaff.average_rating || 0,
+        rating_count: newStaff.rating_count,
+        total_bookings: newStaff.total_bookings,
+        next_available_slot: newStaff.next_available_slot,
+        created_at: newStaff.created_at,
+        updated_at: newStaff.updated_at,
       }
 
       setStaff(prev => [...prev, mappedStaff])
 
     } catch (error) {
       console.error('Failed to add staff:', error)
+      throw error
     }
   }
 
-  const updateStaff = (id: string, updates: Partial<Staff>) => {
-    setStaff(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s))
+  const updateStaff = async (id: string, updates: Partial<Staff>) => {
+    try {
+      const updatedStaff = await apiClient.updateStaff(id, updates)
+
+      const mappedStaff: Staff = {
+        id: updatedStaff.id || updatedStaff._id,
+        tenant_id: updatedStaff.tenant_id,
+        outlet_id: updatedStaff.outlet_id,
+        first_name: updatedStaff.first_name,
+        last_name: updatedStaff.last_name,
+        display_name: updatedStaff.display_name || `${updatedStaff.first_name} ${updatedStaff.last_name}`.trim(),
+        name: `${updatedStaff.first_name || ''} ${updatedStaff.last_name || ''}`.trim(),
+        email: updatedStaff.email,
+        phone: updatedStaff.phone,
+        position: updatedStaff.position,
+        role: updatedStaff.position,
+        employment_type: updatedStaff.employment_type,
+        employee_id: updatedStaff.employee_id,
+        hire_date: updatedStaff.hire_date,
+        birth_date: updatedStaff.birth_date,
+        hourly_rate: updatedStaff.hourly_rate,
+        salary: updatedStaff.salary,
+        is_bookable: updatedStaff.is_bookable,
+        accepts_online_booking: updatedStaff.accepts_online_booking,
+        max_advance_booking_days: updatedStaff.max_advance_booking_days,
+        bio: updatedStaff.bio,
+        profile_image_url: updatedStaff.profile_image_url,
+        avatar: updatedStaff.profile_image_url,
+        instagram_handle: updatedStaff.instagram_handle,
+        is_active: updatedStaff.is_active,
+        isActive: updatedStaff.is_active,
+        status: updatedStaff.status,
+        skills: updatedStaff.skills,
+        average_rating: updatedStaff.average_rating,
+        rating: updatedStaff.average_rating || 0,
+        rating_count: updatedStaff.rating_count,
+        total_bookings: updatedStaff.total_bookings,
+        next_available_slot: updatedStaff.next_available_slot,
+        created_at: updatedStaff.created_at,
+        updated_at: updatedStaff.updated_at,
+      }
+
+      setStaff(prev => prev.map(s => s.id === id ? mappedStaff : s))
+    } catch (error) {
+      console.error('Failed to update staff:', error)
+      throw error
+    }
   }
 
-  const deleteStaff = (id: string) => {
-    setStaff(prev => prev.filter(s => s.id !== id))
+  const deleteStaff = async (id: string) => {
+    try {
+      await apiClient.deleteStaff(id)
+      setStaff(prev => prev.filter(s => s.id !== id))
+    } catch (error) {
+      console.error('Failed to delete staff:', error)
+      throw error
+    }
   }
 
   const addBooking = async (booking: Omit<Booking, "id">) => {
@@ -279,13 +382,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const mappedTreatment: Treatment = {
         id: newTreatment._id || newTreatment.id,
         name: newTreatment.name,
+        slug: newTreatment.slug || '',
         category: newTreatment.category || 'Beauty',
-        duration: newTreatment.durationMin || 60,
-        price: newTreatment.price || 0,
+        duration: newTreatment.durationMin || newTreatment.duration_minutes || 60,
+        durationMin: newTreatment.durationMin || newTreatment.duration_minutes || 60,
+        price: parseFloat(newTreatment.price || newTreatment.pricing?.base_price || 0),
+        currency: newTreatment.currency || newTreatment.pricing?.currency || 'USD',
         description: newTreatment.description || '',
         popularity: 0,
-        assignedStaff: newTreatment.assignedStaff || [],
-        isActive: true,
+        assignedStaff: newTreatment.assignedStaff || newTreatment.assigned_staff || [],
+        photo: newTreatment.photo || newTreatment.image_url || '',
+        isActive: newTreatment.isActive !== false && newTreatment.is_active !== false,
+        status: newTreatment.status || 'active',
+        tags: newTreatment.tags || [],
       }
 
       setTreatments(prev => [...prev, mappedTreatment])
@@ -297,12 +406,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateTreatment = (id: string, updates: Partial<Treatment>) => {
-    setTreatments(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t))
+  const updateTreatment = async (id: string, updates: Partial<Treatment>) => {
+    try {
+      const updatedTreatment = await apiClient.updateTreatment(id, updates)
+
+      const mappedTreatment: Treatment = {
+        id: updatedTreatment._id || updatedTreatment.id,
+        name: updatedTreatment.name,
+        slug: updatedTreatment.slug || '',
+        category: updatedTreatment.category || 'Beauty',
+        duration: updatedTreatment.durationMin || updatedTreatment.duration_minutes || 60,
+        durationMin: updatedTreatment.durationMin || updatedTreatment.duration_minutes || 60,
+        price: parseFloat(updatedTreatment.price || updatedTreatment.pricing?.base_price || 0),
+        currency: updatedTreatment.currency || updatedTreatment.pricing?.currency || 'USD',
+        description: updatedTreatment.description || '',
+        popularity: updatedTreatment.popularity || 0,
+        assignedStaff: updatedTreatment.assignedStaff || updatedTreatment.assigned_staff || [],
+        photo: updatedTreatment.photo || updatedTreatment.image_url || '',
+        isActive: updatedTreatment.isActive !== false && updatedTreatment.is_active !== false,
+        status: updatedTreatment.status || 'active',
+        tags: updatedTreatment.tags || [],
+      }
+
+      setTreatments(prev => prev.map(t => t.id === id ? mappedTreatment : t))
+    } catch (error) {
+      console.error('Failed to update treatment:', error)
+      throw error
+    }
   }
 
-  const deleteTreatment = (id: string) => {
-    setTreatments(prev => prev.filter(t => t.id !== id))
+  const deleteTreatment = async (id: string) => {
+    try {
+      await apiClient.deleteTreatment(id)
+      setTreatments(prev => prev.filter(t => t.id !== id))
+    } catch (error) {
+      console.error('Failed to delete treatment:', error)
+      throw error
+    }
   }
 
   const addActivity = (activity: Omit<Activity, "id">) => {

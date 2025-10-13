@@ -28,7 +28,7 @@ export function middleware(request: NextRequest) {
     const possibleTenants = ['default', 'jakarta', 'bandung', 'surabaya', 'bali', 'medan']
 
     if (possibleTenants.includes(firstSegment) ||
-        (firstSegment.length < 20 && !['signin', 'signup', 'dashboard', 'calendar', 'clients', 'staff', 'treatments', 'walk-in', 'withdrawal', 'reports', 'settings', 'user-management', 'outlet-management', 'subscription'].includes(firstSegment))) {
+        (firstSegment.length < 20 && !['signin', 'signup', 'dashboard', 'calendar', 'clients', 'staff', 'products', 'walk-in', 'withdrawal', 'reports', 'settings', 'user-management', 'outlet-management', 'subscription'].includes(firstSegment))) {
 
       // Build new path without tenant
       const newPath = '/' + segments.slice(1).join('/')

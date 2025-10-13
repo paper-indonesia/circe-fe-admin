@@ -129,15 +129,22 @@ export async function DELETE(
 
     const customerId = params.id
 
-    console.log('Deleting customer:', customerId)
+    // Get permanent parameter from query string (default to false for soft delete)
+    const searchParams = req.nextUrl.searchParams
+    const permanent = searchParams.get('permanent') === 'true'
 
-    const response = await fetch(`${FASTAPI_URL}/api/v1/customers/${customerId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    console.log('Deleting customer:', customerId, 'permanent:', permanent)
+
+    const response = await fetch(
+      `${FASTAPI_URL}/api/v1/customers/${customerId}?permanent=${permanent}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
 
     if (!response.ok) {
       const data = await response.json()
@@ -149,7 +156,12 @@ export async function DELETE(
     }
 
     // Return success response
-    return NextResponse.json({ success: true, message: 'Customer deleted successfully' })
+    return NextResponse.json({
+      success: true,
+      message: permanent
+        ? 'Customer permanently deleted'
+        : 'Customer deleted successfully'
+    })
   } catch (error) {
     console.error('Error deleting customer:', error)
     return NextResponse.json(
