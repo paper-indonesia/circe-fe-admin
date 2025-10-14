@@ -6,6 +6,20 @@ export interface ApiResponse<T> {
   error?: string
 }
 
+export class ApiError extends Error {
+  details?: string
+  statusCode?: number
+  userFriendlyMessage?: string
+
+  constructor(message: string, details?: string, statusCode?: number, userFriendlyMessage?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.details = details
+    this.statusCode = statusCode
+    this.userFriendlyMessage = userFriendlyMessage
+  }
+}
+
 class ApiClient {
   private async request<T>(
     endpoint: string,
@@ -24,7 +38,91 @@ class ApiClient {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error || `API Error: ${response.statusText}`)
+
+      // Handle different error formats
+      let errorMessage = `API Error: ${response.statusText}`
+      let errorDetails: string | undefined = undefined
+      let userFriendlyMessage: string | undefined = undefined
+
+      if (errorData.error) {
+        errorMessage = typeof errorData.error === 'string'
+          ? errorData.error
+          : JSON.stringify(errorData.error)
+      }
+
+      if (errorData.details) {
+        errorDetails = typeof errorData.details === 'string'
+          ? errorData.details
+          : JSON.stringify(errorData.details, null, 2)
+      }
+
+      // Handle FastAPI validation errors
+      if (errorData.detail) {
+        if (typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail
+        } else if (Array.isArray(errorData.detail)) {
+          // Format validation errors in user-friendly way
+          errorMessage = "Validation Error"
+          const fieldErrors: string[] = []
+
+          errorData.detail.forEach((err: any) => {
+            const fieldName = err.loc?.[err.loc.length - 1] || 'field'
+
+            // Map field names to Indonesian
+            const fieldTranslations: Record<string, string> = {
+              'employment_type': 'Jenis Pekerjaan',
+              'email': 'Email',
+              'phone': 'Nomor Telepon',
+              'name': 'Nama',
+              'first_name': 'Nama Depan',
+              'last_name': 'Nama Belakang',
+              'position': 'Posisi',
+              'outlet_id': 'Outlet',
+              'birth_date': 'Tanggal Lahir',
+              'hire_date': 'Tanggal Masuk',
+            }
+
+            const friendlyField = fieldTranslations[fieldName] ||
+              fieldName.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+
+            // Translate common error messages to Indonesian
+            let friendlyMsg = err.msg
+            if (err.msg.includes("Input should be")) {
+              const expected = err.ctx?.expected || ''
+              friendlyMsg = `Harus berupa salah satu dari: ${expected}`
+            } else if (err.msg.includes("field required")) {
+              friendlyMsg = "Wajib diisi"
+            } else if (err.msg.includes("invalid")) {
+              friendlyMsg = "Format tidak valid"
+            }
+
+            fieldErrors.push(`${friendlyField}: ${friendlyMsg}`)
+          })
+
+          errorDetails = fieldErrors.join('\n')
+          userFriendlyMessage = fieldErrors.length === 1
+            ? fieldErrors[0]
+            : `Terdapat ${fieldErrors.length} kesalahan pada form:\n${fieldErrors.join('\n')}`
+        } else if (typeof errorData.detail === 'object') {
+          errorMessage = errorData.detail.error || errorMessage
+          errorDetails = errorData.detail.details || JSON.stringify(errorData.detail, null, 2)
+        }
+      }
+
+      // Create user-friendly message for common errors
+      if (!userFriendlyMessage) {
+        if (errorMessage.toLowerCase().includes('staff limit reached')) {
+          userFriendlyMessage = 'Anda telah mencapai batas maksimal staff untuk outlet ini. Silakan upgrade paket langganan Anda untuk menambah lebih banyak staff.'
+        } else if (errorMessage.toLowerCase().includes('unauthorized')) {
+          userFriendlyMessage = 'Sesi Anda telah berakhir. Silakan login kembali.'
+        } else if (errorMessage.toLowerCase().includes('not found')) {
+          userFriendlyMessage = 'Data tidak ditemukan.'
+        } else {
+          userFriendlyMessage = errorMessage
+        }
+      }
+
+      throw new ApiError(errorMessage, errorDetails, response.status, userFriendlyMessage)
     }
 
     // Handle 204 No Content responses (e.g., successful DELETE operations)

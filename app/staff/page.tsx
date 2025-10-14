@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useStaff, useBookings, useTreatments } from "@/lib/context"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
-import { apiClient } from "@/lib/api-client"
+import { apiClient, ApiError } from "@/lib/api-client"
 import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2 } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
@@ -50,6 +50,12 @@ export default function StaffPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [staffToDelete, setStaffToDelete] = useState<any>(null)
   const [isEditMode, setIsEditMode] = useState(false)
+  const [showErrorDialog, setShowErrorDialog] = useState(false)
+  const [errorInfo, setErrorInfo] = useState<{ title: string; message: string; details?: string }>({
+    title: "",
+    message: "",
+    details: undefined,
+  })
   const [editStaffForm, setEditStaffForm] = useState({
     name: "",
     first_name: "",
@@ -61,7 +67,7 @@ export default function StaffPage() {
     phone: "",
     photo: "",
     profile_image_url: "",
-    employment_type: "full_time" as "full_time" | "part_time" | "contractor",
+    employment_type: "full_time" as "full_time" | "part_time" | "contract" | "freelance" | "intern",
     employee_id: "",
     hire_date: "",
     birth_date: "",
@@ -100,7 +106,7 @@ export default function StaffPage() {
     outletId: "",
     commissionRate: 0.15, // Default 15%
     yearsExperience: 0,
-    employmentType: "full_time" as "full_time" | "part_time" | "contractor",
+    employmentType: "full_time" as "full_time" | "part_time" | "contract" | "freelance" | "intern",
     employeeId: "",
     bio: "",
     instagramHandle: "",
@@ -635,16 +641,28 @@ export default function StaffPage() {
     } catch (error: any) {
       console.error("Error updating staff:", error)
 
-      let errorMessage = "Gagal mengupdate staff"
-      if (error.message) {
-        errorMessage = error.message
-      }
+      // Check if it's an ApiError with detailed information
+      if (error instanceof ApiError) {
+        // Use user-friendly message if available
+        const displayMessage = error.userFriendlyMessage || error.message || "Gagal mengupdate staff"
 
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
+        setErrorInfo({
+          title: "Gagal Mengupdate Staff",
+          message: displayMessage,
+          details: undefined, // Don't show technical details to end users
+        })
+        setShowErrorDialog(true)
+        setIsEditMode(false)
+        setShowStaffDialog(false)
+      } else {
+        // Fallback for other types of errors
+        const errorMessage = error.message || "Gagal mengupdate staff"
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -669,20 +687,38 @@ export default function StaffPage() {
     } catch (error: any) {
       console.error("Error deleting staff:", error)
 
-      let errorMessage = "Gagal menghapus staff"
+      // Check if it's an ApiError with detailed information
+      if (error instanceof ApiError) {
+        // Use user-friendly message if available
+        let displayMessage = error.userFriendlyMessage || error.message || "Gagal menghapus staff"
 
-      // Check if error is related to upcoming appointments
-      if (error.message?.includes("appointment") || error.message?.includes("booking")) {
-        errorMessage = "Tidak dapat menghapus staff yang memiliki janji temu (appointment) yang akan datang"
-      } else if (error.message) {
-        errorMessage = error.message
+        // Add specific handling for appointment-related errors
+        if (displayMessage.toLowerCase().includes("appointment") || displayMessage.toLowerCase().includes("booking")) {
+          displayMessage = "Tidak dapat menghapus staff yang memiliki janji temu (appointment) yang akan datang. Silakan batalkan atau selesaikan appointment tersebut terlebih dahulu."
+        }
+
+        setErrorInfo({
+          title: "Gagal Menghapus Staff",
+          message: displayMessage,
+          details: undefined, // Don't show technical details to end users
+        })
+        setShowErrorDialog(true)
+        setShowDeleteDialog(false)
+      } else {
+        // Fallback for other types of errors
+        let errorMessage = "Gagal menghapus staff"
+        if (error.message?.includes("appointment") || error.message?.includes("booking")) {
+          errorMessage = "Tidak dapat menghapus staff yang memiliki janji temu (appointment) yang akan datang"
+        } else if (error.message) {
+          errorMessage = error.message
+        }
+
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
       }
-
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
     }
   }
 
@@ -928,17 +964,27 @@ export default function StaffPage() {
     } catch (error: any) {
       console.error('Error adding staff:', error)
 
-      // Extract error message from API response
-      let errorMessage = "Gagal menambahkan staff member"
-      if (error.message) {
-        errorMessage = error.message
-      }
+      // Check if it's an ApiError with detailed information
+      if (error instanceof ApiError) {
+        // Use user-friendly message if available
+        const displayMessage = error.userFriendlyMessage || error.message || "Gagal menambahkan staff member"
 
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
+        setErrorInfo({
+          title: "Gagal Menambahkan Staff",
+          message: displayMessage,
+          details: undefined, // Don't show technical details to end users
+        })
+        setShowErrorDialog(true)
+        setShowAddStaffDialog(false)
+      } else {
+        // Fallback for other types of errors
+        const errorMessage = error.message || "Gagal menambahkan staff member"
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -1799,7 +1845,7 @@ export default function StaffPage() {
                         </Label>
                         <Select
                           value={editStaffForm.employment_type}
-                          onValueChange={(value: "full_time" | "part_time" | "contractor") =>
+                          onValueChange={(value: "full_time" | "part_time" | "contract" | "freelance" | "intern") =>
                             setEditStaffForm((prev) => ({ ...prev, employment_type: value }))
                           }
                         >
@@ -1809,7 +1855,9 @@ export default function StaffPage() {
                           <SelectContent>
                             <SelectItem value="full_time">Full Time</SelectItem>
                             <SelectItem value="part_time">Part Time</SelectItem>
-                            <SelectItem value="contractor">Contractor</SelectItem>
+                            <SelectItem value="contract">Contract</SelectItem>
+                            <SelectItem value="freelance">Freelance</SelectItem>
+                            <SelectItem value="intern">Intern</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -2655,7 +2703,7 @@ export default function StaffPage() {
                   </Label>
                   <Select
                     value={newStaffForm.employmentType}
-                    onValueChange={(value: "full_time" | "part_time" | "contractor") =>
+                    onValueChange={(value: "full_time" | "part_time" | "contract" | "freelance" | "intern") =>
                       setNewStaffForm((prev) => ({ ...prev, employmentType: value }))
                     }
                   >
@@ -2665,7 +2713,9 @@ export default function StaffPage() {
                     <SelectContent>
                       <SelectItem value="full_time">Full Time</SelectItem>
                       <SelectItem value="part_time">Part Time</SelectItem>
-                      <SelectItem value="contractor">Contractor</SelectItem>
+                      <SelectItem value="contract">Contract</SelectItem>
+                      <SelectItem value="freelance">Freelance</SelectItem>
+                      <SelectItem value="intern">Intern</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -3090,6 +3140,41 @@ export default function StaffPage() {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Hapus Staff
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Error Dialog */}
+        <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                <X className="h-5 w-5" />
+                {errorInfo.title}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3 pt-2">
+                <div className="text-gray-700 text-base whitespace-pre-line">
+                  {errorInfo.message}
+                </div>
+                {(errorInfo.message.toLowerCase().includes('subscription') ||
+                  errorInfo.message.toLowerCase().includes('limit') ||
+                  errorInfo.message.toLowerCase().includes('upgrade') ||
+                  errorInfo.message.toLowerCase().includes('batas')) && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-900">
+                      <strong>💡 Info:</strong> Upgrade paket langganan Anda untuk menambah batas staff dan fitur lainnya.
+                    </p>
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                onClick={() => setShowErrorDialog(false)}
+                className="bg-gradient-to-r from-[#E7C6FF] to-[#C8B6FF] hover:from-[#C8B6FF] hover:to-[#B8C0FF] text-purple-800"
+              >
+                Mengerti
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
