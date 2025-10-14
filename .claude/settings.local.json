@@ -31,7 +31,8 @@
       "Bash(python:*)",
       "Bash(cat:*)",
       "Bash(netstat:*)",
-      "Bash(xargs -r taskkill //PID //F)"
+      "Bash(xargs -r taskkill //PID //F)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

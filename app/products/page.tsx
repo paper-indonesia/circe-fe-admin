@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/context"
-import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, DollarSign, AlertCircle } from "lucide-react"
+import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, DollarSign, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp } from "lucide-react"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { EmptyState } from "@/components/ui/empty-state"
 
@@ -37,6 +37,9 @@ export default function TreatmentsPage() {
   const [staffFilter, setStaffFilter] = useState("all")
   const [staffAssignSearchQuery, setStaffAssignSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
+  const [categoryTemplates, setCategoryTemplates] = useState<string[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
   const pageSize = 10
 
   const [treatmentForm, setTreatmentForm] = useState({
@@ -45,10 +48,9 @@ export default function TreatmentsPage() {
     category: "",
     durationMin: 60,
     price: 0,
-    currency: "USD",
+    currency: "IDR",
     photo: "",
     description: "",
-    assignedStaff: [] as string[], // Staff IDs who can perform this treatment
     preparationMinutes: 0,
     cleanupMinutes: 0,
     maxAdvanceBookingDays: 30,
@@ -62,7 +64,29 @@ export default function TreatmentsPage() {
     status: "active" as "active" | "inactive" | "draft",
   })
 
-  useEffect(() => {}, [])
+  useEffect(() => {
+    const fetchCategoryTemplates = async () => {
+      setLoadingCategories(true)
+      try {
+        const response = await fetch('/api/services/categories/templates')
+        if (response.ok) {
+          const data = await response.json()
+          // API returns array of category strings
+          if (Array.isArray(data)) {
+            setCategoryTemplates(data)
+          } else if (data.categories && Array.isArray(data.categories)) {
+            setCategoryTemplates(data.categories)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch category templates:', error)
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+
+    fetchCategoryTemplates()
+  }, [])
 
   const treatmentsWithStats = useMemo(() => {
     return treatments.map((treatment) => {
@@ -73,17 +97,14 @@ export default function TreatmentsPage() {
       if (treatmentBookings.length > 20) popularity = "high"
       else if (treatmentBookings.length > 10) popularity = "medium"
 
-      const assignedStaffMembers = staff.filter((s) => treatment.assignedStaff?.includes(s.id) || false)
-
       return {
         ...treatment,
         bookingCount: treatmentBookings.length,
         completedCount: completedBookings.length,
         popularity,
-        assignedStaffMembers,
       }
     })
-  }, [treatments, bookings, staff])
+  }, [treatments, bookings])
 
   const filteredTreatments = useMemo(() => {
     return treatmentsWithStats.filter((treatment) => {
@@ -93,11 +114,10 @@ export default function TreatmentsPage() {
         treatment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         treatment.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         treatment.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStaff = staffFilter === "all" || treatment.assignedStaffMembers.some((s) => s.id === staffFilter)
 
-      return matchesCategory && matchesSearch && matchesStaff
+      return matchesCategory && matchesSearch
     })
-  }, [treatmentsWithStats, categoryFilter, searchQuery, staffFilter])
+  }, [treatmentsWithStats, categoryFilter, searchQuery])
 
   const totalPages = Math.ceil(filteredTreatments.length / pageSize)
   const paginatedTreatments = useMemo(() => {
@@ -107,7 +127,7 @@ export default function TreatmentsPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [categoryFilter, searchQuery, staffFilter])
+  }, [categoryFilter, searchQuery])
 
   const categories = useMemo(() => {
     const uniqueCategories = [...new Set(treatments.map((t) => t.category))]
@@ -127,46 +147,57 @@ export default function TreatmentsPage() {
       return
     }
 
-    console.log("[v0] Validation passed, calling addTreatment...")
+    console.log("[v0] Validation passed, calling API...")
 
     try {
-      await addTreatment({
-        name: treatmentForm.name,
-        slug: treatmentForm.slug,
-        category: treatmentForm.category,
-        durationMin: treatmentForm.durationMin,
-        price: treatmentForm.price,
-        currency: treatmentForm.currency,
-        photo: treatmentForm.photo,
-        description: treatmentForm.description,
-        assignedStaff: treatmentForm.assignedStaff,
-        preparation_minutes: treatmentForm.preparationMinutes,
-        cleanup_minutes: treatmentForm.cleanupMinutes,
-        max_advance_booking_days: treatmentForm.maxAdvanceBookingDays,
-        min_advance_booking_hours: treatmentForm.minAdvanceBookingHours,
-        requires_staff: treatmentForm.requiresStaff,
-        required_staff_count: treatmentForm.requiredStaffCount,
-        allow_parallel_bookings: treatmentForm.allowParallelBookings,
-        max_parallel_bookings: treatmentForm.maxParallelBookings,
-        tags: treatmentForm.tags,
-        is_active: treatmentForm.isActive,
-        status: treatmentForm.status,
+      // Call API directly using POST /api/v1/services
+      const response = await fetch('/api/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: treatmentForm.name,
+          slug: treatmentForm.slug || undefined,
+          category: treatmentForm.category,
+          description: treatmentForm.description || undefined,
+          duration_minutes: treatmentForm.durationMin,
+          preparation_minutes: treatmentForm.preparationMinutes || undefined,
+          cleanup_minutes: treatmentForm.cleanupMinutes || undefined,
+          max_advance_booking_days: treatmentForm.maxAdvanceBookingDays || 30,
+          min_advance_booking_hours: treatmentForm.minAdvanceBookingHours || 2,
+          requires_staff: treatmentForm.requiresStaff,
+          required_staff_count: treatmentForm.requiredStaffCount || 1,
+          allow_parallel_bookings: treatmentForm.allowParallelBookings || false,
+          max_parallel_bookings: treatmentForm.maxParallelBookings || 1,
+          pricing: {
+            base_price: treatmentForm.price,
+            currency: treatmentForm.currency || "IDR",
+          },
+          tags: treatmentForm.tags,
+          image_url: treatmentForm.photo || undefined,
+          is_active: treatmentForm.isActive,
+          status: treatmentForm.status,
+        }),
       })
 
-      console.log("[v0] Product added successfully")
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.detail || "Failed to add product")
+      }
+
+      const data = await response.json()
+      console.log("[v0] Product added successfully:", data)
+
+      // Refresh treatments list
+      await addTreatment(data)
+
       toast({ title: "Success", description: "Product added successfully" })
       setShowAddDialog(false)
       resetForm()
     } catch (error: any) {
       console.log("[v0] Error adding treatment:", error)
-
-      // Extract error message from API response
-      let errorMessage = "Failed to add product"
-      if (error.message) {
-        errorMessage = error.message
-      }
-
-      toast({ title: "Error", description: errorMessage, variant: "destructive" })
+      toast({ title: "Error", description: error.message || "Failed to add product", variant: "destructive" })
     }
   }
 
@@ -177,38 +208,49 @@ export default function TreatmentsPage() {
     }
 
     try {
-      await updateTreatment(editingTreatment.id, {
-        name: treatmentForm.name,
-        slug: treatmentForm.slug,
-        category: treatmentForm.category,
-        durationMin: treatmentForm.durationMin,
-        price: treatmentForm.price,
-        currency: treatmentForm.currency,
-        photo: treatmentForm.photo,
-        description: treatmentForm.description,
-        assignedStaff: treatmentForm.assignedStaff,
-        preparation_minutes: treatmentForm.preparationMinutes,
-        cleanup_minutes: treatmentForm.cleanupMinutes,
-        max_advance_booking_days: treatmentForm.maxAdvanceBookingDays,
-        min_advance_booking_hours: treatmentForm.minAdvanceBookingHours,
-        requires_staff: treatmentForm.requiresStaff,
-        required_staff_count: treatmentForm.requiredStaffCount,
-        allow_parallel_bookings: treatmentForm.allowParallelBookings,
-        max_parallel_bookings: treatmentForm.maxParallelBookings,
-        tags: treatmentForm.tags,
-        is_active: treatmentForm.isActive,
-        status: treatmentForm.status,
+      const response = await fetch(`/api/services/${editingTreatment.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: treatmentForm.name,
+          slug: treatmentForm.slug || undefined,
+          category: treatmentForm.category,
+          description: treatmentForm.description || undefined,
+          duration_minutes: treatmentForm.durationMin,
+          preparation_minutes: treatmentForm.preparationMinutes || undefined,
+          cleanup_minutes: treatmentForm.cleanupMinutes || undefined,
+          max_advance_booking_days: treatmentForm.maxAdvanceBookingDays || 30,
+          min_advance_booking_hours: treatmentForm.minAdvanceBookingHours || 2,
+          requires_staff: treatmentForm.requiresStaff,
+          required_staff_count: treatmentForm.requiredStaffCount || 1,
+          allow_parallel_bookings: treatmentForm.allowParallelBookings || false,
+          max_parallel_bookings: treatmentForm.maxParallelBookings || 1,
+          pricing: {
+            base_price: treatmentForm.price,
+            currency: treatmentForm.currency || "IDR",
+          },
+          tags: treatmentForm.tags,
+          image_url: treatmentForm.photo || undefined,
+          is_active: treatmentForm.isActive,
+          status: treatmentForm.status,
+        }),
       })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || errorData.detail || "Failed to update product")
+      }
+
+      const data = await response.json()
+      await updateTreatment(editingTreatment.id, data)
 
       toast({ title: "Success", description: "Product updated successfully" })
       setEditingTreatment(null)
       resetForm()
     } catch (error: any) {
-      let errorMessage = "Failed to update product"
-      if (error.message) {
-        errorMessage = error.message
-      }
-      toast({ title: "Error", description: errorMessage, variant: "destructive" })
+      toast({ title: "Error", description: error.message || "Failed to update product", variant: "destructive" })
     }
   }
 
@@ -249,12 +291,11 @@ export default function TreatmentsPage() {
       name: treatment.name,
       slug: treatment.slug || "",
       category: treatment.category,
-      durationMin: treatment.durationMin,
-      price: treatment.price,
-      currency: treatment.currency || "USD",
-      photo: treatment.photo || "",
+      durationMin: treatment.durationMin || treatment.duration_minutes || 60,
+      price: treatment.price || treatment.pricing?.base_price || 0,
+      currency: treatment.currency || treatment.pricing?.currency || "USD",
+      photo: treatment.photo || treatment.image_url || "",
       description: treatment.description || "",
-      assignedStaff: treatment.assignedStaff || [],
       preparationMinutes: treatment.preparation_minutes || treatment.preparationMinutes || 0,
       cleanupMinutes: treatment.cleanup_minutes || treatment.cleanupMinutes || 0,
       maxAdvanceBookingDays: treatment.max_advance_booking_days || treatment.maxAdvanceBookingDays || 30,
@@ -277,10 +318,9 @@ export default function TreatmentsPage() {
       category: "",
       durationMin: 60,
       price: 0,
-      currency: "USD",
+      currency: "IDR",
       photo: "",
       description: "",
-      assignedStaff: [],
       preparationMinutes: 0,
       cleanupMinutes: 0,
       maxAdvanceBookingDays: 30,
@@ -399,20 +439,6 @@ export default function TreatmentsPage() {
               ))}
             </SelectContent>
           </Select>
-
-          <Select value={staffFilter} onValueChange={setStaffFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="All staff" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All staff</SelectItem>
-              {staff.map((member) => (
-                <SelectItem key={member.id} value={member.id}>
-                  {member.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {loading ? (
@@ -433,7 +459,6 @@ export default function TreatmentsPage() {
                       <th className="text-left p-4 font-semibold text-gray-800">Product</th>
                       <th className="text-left p-4 font-semibold text-gray-800">Category</th>
                       <th className="text-left p-4 font-semibold text-gray-800">Duration & Price</th>
-                      <th className="text-left p-4 font-semibold text-gray-800">Assigned Staff</th>
                       <th className="text-left p-4 font-semibold text-gray-800">Popularity</th>
                       <th className="text-left p-4 font-semibold text-gray-800">Bookings</th>
                       <th className="text-right p-4 font-semibold text-gray-800">Actions</th>
@@ -479,43 +504,6 @@ export default function TreatmentsPage() {
                             <div className="font-semibold text-[#C8B6FF]">
                               Rp {treatment.price.toLocaleString("id-ID")}
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            {treatment.assignedStaffMembers.length > 0 ? (
-                              <>
-                                <div className="flex -space-x-2">
-                                  {treatment.assignedStaffMembers.slice(0, 3).map((staffMember) => (
-                                    <div
-                                      key={staffMember.id}
-                                      className="w-8 h-8 rounded-full border-2 border-white overflow-hidden bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center"
-                                      title={staffMember.name}
-                                    >
-                                      <img
-                                        src={`/abstract-geometric-shapes.png?key=kymfx&height=32&width=32&query=${encodeURIComponent(`${staffMember.name} professional portrait`)}`}
-                                        alt={staffMember.name}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                                {treatment.assignedStaffMembers.length > 3 && (
-                                  <span className="text-xs text-gray-500">
-                                    +{treatment.assignedStaffMembers.length - 3} more
-                                  </span>
-                                )}
-                                <div className="text-xs text-gray-600">
-                                  {treatment.assignedStaffMembers
-                                    .slice(0, 2)
-                                    .map((s) => s.name)
-                                    .join(", ")}
-                                  {treatment.assignedStaffMembers.length > 2 && "..."}
-                                </div>
-                              </>
-                            ) : (
-                              <span className="text-sm text-gray-400 italic">No staff assigned</span>
-                            )}
                           </div>
                         </td>
                         <td className="p-4">{getPopularityBadge(treatment.popularity)}</td>
@@ -628,363 +616,350 @@ export default function TreatmentsPage() {
           setShowAddDialog(false)
           setEditingTreatment(null)
           setStaffAssignSearchQuery("")
+          setShowAdvancedSettings(false)
           resetForm()
         }}
       >
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF]">
+                <Star className="h-5 w-5 text-gray-800" />
+              </div>
               {editingTreatment ? "Edit Product" : "Add New Product"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-5">
-            {/* Basic Info */}
-            <div>
-              <h3 className="font-semibold mb-3 text-base">Basic Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div className="space-y-6 pt-4">
+            {/* Essential Information */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <FileText className="h-4 w-4 text-[#C8B6FF]" />
+                Essential Information
+              </div>
+
+              <div className="grid gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Product Name *</Label>
+                  <Label htmlFor="name" className="text-sm font-medium">
+                    Product Name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     id="name"
-                    placeholder="e.g., Cappuccino, Facial Treatment, Yoga Class"
+                    placeholder="e.g., Facial Treatment, Hair Spa, Manicure"
                     value={treatmentForm.name}
                     onChange={(e) => setTreatmentForm((prev) => ({ ...prev, name: e.target.value }))}
+                    className="h-11"
                   />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="category" className="text-sm font-medium">
+                      Category <span className="text-red-500">*</span>
+                    </Label>
+                    {loadingCategories ? (
+                      <div className="h-11 flex items-center justify-center border rounded-md bg-gray-50">
+                        <span className="text-sm text-gray-500">Loading categories...</span>
+                      </div>
+                    ) : categoryTemplates.length > 0 ? (
+                      <Select
+                        value={treatmentForm.category}
+                        onValueChange={(value) => setTreatmentForm((prev) => ({ ...prev, category: value }))}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categoryTemplates.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="category"
+                        placeholder="e.g., facial, hair_care, nails"
+                        value={treatmentForm.category}
+                        onChange={(e) => setTreatmentForm((prev) => ({ ...prev, category: e.target.value }))}
+                        className="h-11"
+                      />
+                    )}
+                    <p className="text-xs text-gray-500">
+                      {categoryTemplates.length > 0 ? "Select from your tenant's category templates" : "Enter category in lowercase with underscores"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="duration" className="text-sm font-medium">
+                      Duration (minutes) <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="duration"
+                        type="number"
+                        min="1"
+                        max="480"
+                        placeholder="60"
+                        value={treatmentForm.durationMin}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 60
+                          setTreatmentForm((prev) => ({ ...prev, durationMin: Math.min(480, Math.max(1, value)) }))
+                        }}
+                        className="h-11 pl-10"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Input
-                    id="category"
-                    placeholder="e.g., Beverage, Beauty, Fitness, Food"
-                    value={treatmentForm.category}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, category: e.target.value }))}
-                  />
-                  <p className="text-xs text-muted-foreground">Enter any category for your business</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="slug">Slug (URL-friendly)</Label>
-                  <Input
-                    id="slug"
-                    placeholder="auto-generated if empty"
-                    value={treatmentForm.slug}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, slug: e.target.value }))}
-                  />
-                  <p className="text-xs text-muted-foreground">Leave empty to auto-generate</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={treatmentForm.status}
-                    onValueChange={(value: any) => setTreatmentForm((prev) => ({ ...prev, status: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Duration & Time Settings */}
-            <div className="border-t pt-4">
-              <h3 className="font-semibold mb-3 text-base">Time Settings</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (min) *</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    min="1"
-                    max="480"
-                    value={treatmentForm.durationMin}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 60
-                      setTreatmentForm((prev) => ({ ...prev, durationMin: Math.min(480, Math.max(1, value)) }))
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="preparation">Preparation (min)</Label>
-                  <Input
-                    id="preparation"
-                    type="number"
-                    min="0"
-                    max="120"
-                    value={treatmentForm.preparationMinutes}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, preparationMinutes: parseInt(e.target.value) || 0 }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cleanup">Cleanup (min)</Label>
-                  <Input
-                    id="cleanup"
-                    type="number"
-                    min="0"
-                    max="120"
-                    value={treatmentForm.cleanupMinutes}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, cleanupMinutes: parseInt(e.target.value) || 0 }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="minBookingHours">Min Advance (hours)</Label>
-                  <Input
-                    id="minBookingHours"
-                    type="number"
-                    min="0"
-                    value={treatmentForm.minAdvanceBookingHours}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, minAdvanceBookingHours: parseInt(e.target.value) || 0 }))}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing */}
-            <div className="border-t pt-4">
-              <h3 className="font-semibold mb-3 text-base">Pricing</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={treatmentForm.price}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="currency">Currency</Label>
-                  <Select
-                    value={treatmentForm.currency}
-                    onValueChange={(value) => setTreatmentForm((prev) => ({ ...prev, currency: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="IDR">IDR</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                      <SelectItem value="SGD">SGD</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Booking Settings */}
-            <div className="border-t pt-4">
-              <h3 className="font-semibold mb-3 text-base">Booking Settings</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxAdvanceDays">Max Advance Booking (days)</Label>
-                  <Input
-                    id="maxAdvanceDays"
-                    type="number"
-                    min="1"
-                    value={treatmentForm.maxAdvanceBookingDays}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, maxAdvanceBookingDays: parseInt(e.target.value) || 30 }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="requiredStaffCount">Required Staff Count</Label>
-                  <Input
-                    id="requiredStaffCount"
-                    type="number"
-                    min="0"
-                    value={treatmentForm.requiredStaffCount}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, requiredStaffCount: parseInt(e.target.value) || 1 }))}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="maxParallelBookings">Max Parallel Bookings</Label>
-                  <Input
-                    id="maxParallelBookings"
-                    type="number"
-                    min="1"
-                    value={treatmentForm.maxParallelBookings}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, maxParallelBookings: parseInt(e.target.value) || 1 }))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-6 mt-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="requiresStaff"
-                    checked={treatmentForm.requiresStaff}
-                    onCheckedChange={(checked) => setTreatmentForm((prev) => ({ ...prev, requiresStaff: !!checked }))}
-                  />
-                  <Label htmlFor="requiresStaff" className="cursor-pointer text-sm">Requires Staff</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="allowParallel"
-                    checked={treatmentForm.allowParallelBookings}
-                    onCheckedChange={(checked) => setTreatmentForm((prev) => ({ ...prev, allowParallelBookings: !!checked }))}
-                  />
-                  <Label htmlFor="allowParallel" className="cursor-pointer text-sm">Allow Parallel Bookings</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="isActive"
-                    checked={treatmentForm.isActive}
-                    onCheckedChange={(checked) => setTreatmentForm((prev) => ({ ...prev, isActive: !!checked }))}
-                  />
-                  <Label htmlFor="isActive" className="cursor-pointer text-sm">Is Active</Label>
+                  <Label htmlFor="price" className="text-sm font-medium">
+                    Price (IDR) <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
+                    <Input
+                      id="price"
+                      type="number"
+                      min="0"
+                      step="1000"
+                      placeholder="100000"
+                      value={treatmentForm.price}
+                      onChange={(e) => setTreatmentForm((prev) => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+                      className="h-11 pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">Enter the base price for this service</p>
                 </div>
               </div>
             </div>
 
             {/* Description & Image */}
-            <div className="border-t pt-4">
-              <h3 className="font-semibold mb-3 text-base">Description & Media</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <Image className="h-4 w-4 text-[#C8B6FF]" />
+                Description & Image
+              </div>
+
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description" className="text-sm font-medium">Description</Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe your product/service..."
+                    placeholder="Describe what this service includes, its benefits, and what customers can expect..."
                     value={treatmentForm.description}
                     onChange={(e) => setTreatmentForm((prev) => ({ ...prev, description: e.target.value }))}
-                    rows={4}
+                    rows={3}
+                    className="resize-none"
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="photo">Image URL</Label>
-                    <Input
-                      id="photo"
-                      placeholder="https://example.com/image.jpg"
-                      value={treatmentForm.photo}
-                      onChange={(e) => setTreatmentForm((prev) => ({ ...prev, photo: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tags">Tags (comma-separated)</Label>
-                    <Input
-                      id="tags"
-                      placeholder="luxury, popular, new"
-                      value={treatmentForm.tags.join(", ")}
-                      onChange={(e) => setTreatmentForm((prev) => ({ ...prev, tags: e.target.value.split(",").map(t => t.trim()).filter(t => t) }))}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="photo" className="text-sm font-medium">Image URL</Label>
+                  <Input
+                    id="photo"
+                    placeholder="https://example.com/image.jpg"
+                    value={treatmentForm.photo}
+                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, photo: e.target.value }))}
+                    className="h-11"
+                  />
+                  <p className="text-xs text-gray-500">Add an image to make your product more attractive</p>
                 </div>
               </div>
             </div>
 
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-base">Assign Staff Members (Optional)</h3>
-                <Badge variant="secondary" className="text-xs">
-                  {treatmentForm.assignedStaff.length} selected
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">Select staff members who can provide this service (leave empty if not applicable)</p>
-
-              <div className="relative mb-3">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search staff by name or role..."
-                  value={staffAssignSearchQuery}
-                  onChange={(e) => setStaffAssignSearchQuery(e.target.value)}
-                  className="pl-10 border-pink-200 focus:border-pink-400"
+            {/* Status & Active Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="isActive"
+                  checked={treatmentForm.isActive}
+                  onCheckedChange={(checked) => setTreatmentForm((prev) => ({ ...prev, isActive: !!checked }))}
+                  className="h-5 w-5"
                 />
+                <div>
+                  <Label htmlFor="isActive" className="cursor-pointer font-medium text-sm">
+                    Active Product
+                  </Label>
+                  <p className="text-xs text-gray-500">Make this product available for booking</p>
+                </div>
               </div>
 
-              <div className="max-h-60 overflow-y-auto border border-border rounded-lg p-4 space-y-3 bg-muted/30">
-                {staff
-                  .filter(
-                    (s) =>
-                      s.name.toLowerCase().includes(staffAssignSearchQuery.toLowerCase()) ||
-                      s.role.toLowerCase().includes(staffAssignSearchQuery.toLowerCase()),
-                  )
-                  .map((staffMember) => (
-                    <div key={staffMember.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-background/80 transition-colors border border-transparent hover:border-primary/20">
-                      <Checkbox
-                        id={`staff-${staffMember.id}`}
-                        checked={treatmentForm.assignedStaff.includes(staffMember.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setTreatmentForm((prev) => ({
-                              ...prev,
-                              assignedStaff: [...prev.assignedStaff, staffMember.id],
-                            }))
-                          } else {
-                            setTreatmentForm((prev) => ({
-                              ...prev,
-                              assignedStaff: prev.assignedStaff.filter((id) => id !== staffMember.id),
-                            }))
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`staff-${staffMember.id}`} className="flex-1 cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium">{staffMember.name}</div>
-                            <div className="text-xs text-muted-foreground">{staffMember.role}</div>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {staffMember.role}
-                          </Badge>
-                        </div>
-                      </Label>
-                    </div>
-                  ))}
-                {staff.filter(
-                  (s) =>
-                    s.name.toLowerCase().includes(staffAssignSearchQuery.toLowerCase()) ||
-                    s.role.toLowerCase().includes(staffAssignSearchQuery.toLowerCase()),
-                ).length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No staff found matching your search</p>
-                  </div>
+              <Select
+                value={treatmentForm.status}
+                onValueChange={(value: any) => setTreatmentForm((prev) => ({ ...prev, status: value }))}
+              >
+                <SelectTrigger className="w-32 h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Advanced Settings - Collapsible */}
+            <div className="pt-4 border-t">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 uppercase tracking-wide hover:text-[#C8B6FF] transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-[#C8B6FF]" />
+                  Advanced Settings
+                </div>
+                {showAdvancedSettings ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
                 )}
-              </div>
+              </button>
 
-              {treatmentForm.assignedStaff.length === 0 && treatmentForm.requiresStaff && (
-                <p className="text-sm text-yellow-600 flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  No staff assigned. This product requires staff but none selected.
-                </p>
+              {showAdvancedSettings && (
+                <div className="mt-4 space-y-6 animate-in slide-in-from-top-2">
+                  {/* Time Settings */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-600">Time Settings</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="preparation" className="text-xs">Preparation (min)</Label>
+                        <Input
+                          id="preparation"
+                          type="number"
+                          min="0"
+                          max="120"
+                          value={treatmentForm.preparationMinutes}
+                          onChange={(e) => setTreatmentForm((prev) => ({ ...prev, preparationMinutes: parseInt(e.target.value) || 0 }))}
+                          className="h-9"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="cleanup" className="text-xs">Cleanup (min)</Label>
+                        <Input
+                          id="cleanup"
+                          type="number"
+                          min="0"
+                          max="120"
+                          value={treatmentForm.cleanupMinutes}
+                          onChange={(e) => setTreatmentForm((prev) => ({ ...prev, cleanupMinutes: parseInt(e.target.value) || 0 }))}
+                          className="h-9"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="minBookingHours" className="text-xs">Min Advance (hrs)</Label>
+                        <Input
+                          id="minBookingHours"
+                          type="number"
+                          min="0"
+                          value={treatmentForm.minAdvanceBookingHours}
+                          onChange={(e) => setTreatmentForm((prev) => ({ ...prev, minAdvanceBookingHours: parseInt(e.target.value) || 0 }))}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Booking Settings */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-600">Booking Settings</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="maxAdvanceDays" className="text-xs">Max Advance (days)</Label>
+                        <Input
+                          id="maxAdvanceDays"
+                          type="number"
+                          min="1"
+                          value={treatmentForm.maxAdvanceBookingDays}
+                          onChange={(e) => setTreatmentForm((prev) => ({ ...prev, maxAdvanceBookingDays: parseInt(e.target.value) || 30 }))}
+                          className="h-9"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="requiredStaffCount" className="text-xs">Staff Required</Label>
+                        <Input
+                          id="requiredStaffCount"
+                          type="number"
+                          min="0"
+                          value={treatmentForm.requiredStaffCount}
+                          onChange={(e) => setTreatmentForm((prev) => ({ ...prev, requiredStaffCount: parseInt(e.target.value) || 1 }))}
+                          className="h-9"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label htmlFor="maxParallelBookings" className="text-xs">Max Parallel</Label>
+                        <Input
+                          id="maxParallelBookings"
+                          type="number"
+                          min="1"
+                          value={treatmentForm.maxParallelBookings}
+                          onChange={(e) => setTreatmentForm((prev) => ({ ...prev, maxParallelBookings: parseInt(e.target.value) || 1 }))}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4 pt-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="requiresStaff"
+                          checked={treatmentForm.requiresStaff}
+                          onCheckedChange={(checked) => setTreatmentForm((prev) => ({ ...prev, requiresStaff: !!checked }))}
+                        />
+                        <Label htmlFor="requiresStaff" className="cursor-pointer text-xs">Requires Staff</Label>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="allowParallel"
+                          checked={treatmentForm.allowParallelBookings}
+                          onCheckedChange={(checked) => setTreatmentForm((prev) => ({ ...prev, allowParallelBookings: !!checked }))}
+                        />
+                        <Label htmlFor="allowParallel" className="cursor-pointer text-xs">Allow Parallel Bookings</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tags */}
+                  <div className="space-y-2">
+                    <Label htmlFor="tags" className="text-sm font-medium text-gray-600">Tags</Label>
+                    <Input
+                      id="tags"
+                      placeholder="luxury, popular, new (comma-separated)"
+                      value={treatmentForm.tags.join(", ")}
+                      onChange={(e) => setTreatmentForm((prev) => ({ ...prev, tags: e.target.value.split(",").map(t => t.trim()).filter(t => t) }))}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
               )}
             </div>
 
-            <div className="flex gap-3 pt-6 border-t mt-6">
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-6 border-t">
               <Button
                 onClick={editingTreatment ? handleEditTreatment : handleAddTreatment}
                 size="lg"
-                className="flex-1 bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-gray-800 hover:from-[#E7C6FF] hover:to-[#C8B6FF] border-0"
+                className="flex-1 h-11 bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-gray-800 hover:from-[#E7C6FF] hover:to-[#C8B6FF] border-0 font-semibold"
               >
                 {editingTreatment ? "Update Product" : "Add Product"}
               </Button>
               <Button
                 variant="outline"
                 size="lg"
+                className="h-11 px-8"
                 onClick={() => {
                   setShowAddDialog(false)
                   setEditingTreatment(null)
+                  setShowAdvancedSettings(false)
                   resetForm()
                 }}
               >

@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building, Shield, Save, Briefcase, Crown, Calendar, AlertCircle, Link2, FileText, Mail, Phone, Globe } from "lucide-react"
+import { Building, Shield, Save, Briefcase, Crown, Calendar, AlertCircle, Link2, FileText, Mail, Phone, Globe, Palette, Clock, Users, Tag, X, Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
 import LiquidLoading from "@/components/ui/liquid-loader"
@@ -37,6 +37,11 @@ interface TenantInfo {
     currency: string
     language: string
     business_type: string
+    booking_advance_days?: number
+    cancellation_hours?: number
+    theme_color?: string
+    staff_position_templates?: string[]
+    service_category_templates?: string[]
   }
   client_partner_id?: string
   created_at: string
@@ -63,6 +68,8 @@ export default function SettingsPage() {
   const { user, isAdmin } = useAuth()
   const [loading, setLoading] = useState(true)
   const [savingTenant, setSavingTenant] = useState(false)
+  const [newStaffPosition, setNewStaffPosition] = useState("")
+  const [newServiceCategory, setNewServiceCategory] = useState("")
 
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null)
   const [tenantForm, setTenantForm] = useState<{
@@ -76,6 +83,11 @@ export default function SettingsPage() {
       currency: string
       language: string
       business_type: string
+      booking_advance_days: number
+      cancellation_hours: number
+      theme_color: string
+      staff_position_templates: string[]
+      service_category_templates: string[]
     }
   }>({
     name: "",
@@ -87,7 +99,12 @@ export default function SettingsPage() {
       timezone: "Asia/Manila",
       currency: "PHP",
       language: "en",
-      business_type: "spa"
+      business_type: "spa",
+      booking_advance_days: 30,
+      cancellation_hours: 24,
+      theme_color: "#3B82F6",
+      staff_position_templates: [],
+      service_category_templates: []
     }
   })
 
@@ -121,11 +138,16 @@ export default function SettingsPage() {
               phone: tenantData.phone || "",
               description: tenantData.description || "",
               website: tenantData.website || "",
-              settings: tenantData.settings || {
-                timezone: "Asia/Manila",
-                currency: "PHP",
-                language: "en",
-                business_type: "spa"
+              settings: {
+                timezone: tenantData.settings?.timezone || "Asia/Manila",
+                currency: tenantData.settings?.currency || "PHP",
+                language: tenantData.settings?.language || "en",
+                business_type: tenantData.settings?.business_type || "spa",
+                booking_advance_days: tenantData.settings?.booking_advance_days || 30,
+                cancellation_hours: tenantData.settings?.cancellation_hours || 24,
+                theme_color: tenantData.settings?.theme_color || "#3B82F6",
+                staff_position_templates: tenantData.settings?.staff_position_templates || [],
+                service_category_templates: tenantData.settings?.service_category_templates || []
               }
             })
           }
@@ -472,10 +494,244 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
+                  {/* Booking & Cancellation Settings */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      Booking & Cancellation
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="bookingAdvanceDays">Max Advance Booking (days)</Label>
+                        <Input
+                          id="bookingAdvanceDays"
+                          type="number"
+                          min="1"
+                          max="365"
+                          value={tenantForm.settings.booking_advance_days}
+                          onChange={(e) => setTenantForm(prev => ({
+                            ...prev,
+                            settings: { ...prev.settings, booking_advance_days: parseInt(e.target.value) || 30 }
+                          }))}
+                        />
+                        <p className="text-xs text-muted-foreground">How far in advance customers can book</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cancellationHours">Cancellation Notice (hours)</Label>
+                        <Input
+                          id="cancellationHours"
+                          type="number"
+                          min="0"
+                          max="168"
+                          value={tenantForm.settings.cancellation_hours}
+                          onChange={(e) => setTenantForm(prev => ({
+                            ...prev,
+                            settings: { ...prev.settings, cancellation_hours: parseInt(e.target.value) || 24 }
+                          }))}
+                        />
+                        <p className="text-xs text-muted-foreground">Minimum hours before appointment for cancellation</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Branding */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                      <Palette className="h-4 w-4 text-blue-600" />
+                      Branding
+                    </h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="themeColor">Theme Color</Label>
+                      <div className="flex items-center gap-3">
+                        <Input
+                          id="themeColor"
+                          type="color"
+                          value={tenantForm.settings.theme_color}
+                          onChange={(e) => setTenantForm(prev => ({
+                            ...prev,
+                            settings: { ...prev.settings, theme_color: e.target.value }
+                          }))}
+                          className="w-20 h-11 cursor-pointer"
+                        />
+                        <Input
+                          type="text"
+                          value={tenantForm.settings.theme_color}
+                          onChange={(e) => setTenantForm(prev => ({
+                            ...prev,
+                            settings: { ...prev.settings, theme_color: e.target.value }
+                          }))}
+                          placeholder="#3B82F6"
+                          className="flex-1 font-mono"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Primary color for your brand (used in booking pages, emails, etc.)</p>
+                    </div>
+                  </div>
+
+                  {/* Staff Position Templates */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      Staff Position Templates
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Define position templates that will appear as suggestions when creating/updating staff members
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="e.g., Massage Therapist, Receptionist"
+                          value={newStaffPosition}
+                          onChange={(e) => setNewStaffPosition(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              if (newStaffPosition.trim() && !tenantForm.settings.staff_position_templates.includes(newStaffPosition.trim())) {
+                                setTenantForm(prev => ({
+                                  ...prev,
+                                  settings: {
+                                    ...prev.settings,
+                                    staff_position_templates: [...prev.settings.staff_position_templates, newStaffPosition.trim()]
+                                  }
+                                }))
+                                setNewStaffPosition("")
+                              }
+                            }
+                          }}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            if (newStaffPosition.trim() && !tenantForm.settings.staff_position_templates.includes(newStaffPosition.trim())) {
+                              setTenantForm(prev => ({
+                                ...prev,
+                                settings: {
+                                  ...prev.settings,
+                                  staff_position_templates: [...prev.settings.staff_position_templates, newStaffPosition.trim()]
+                                }
+                              }))
+                              setNewStaffPosition("")
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {tenantForm.settings.staff_position_templates.map((position, index) => (
+                          <Badge key={index} variant="secondary" className="text-sm py-1 px-3">
+                            {position}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTenantForm(prev => ({
+                                  ...prev,
+                                  settings: {
+                                    ...prev.settings,
+                                    staff_position_templates: prev.settings.staff_position_templates.filter((_, i) => i !== index)
+                                  }
+                                }))
+                              }}
+                              className="ml-2 hover:text-red-600"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                        {tenantForm.settings.staff_position_templates.length === 0 && (
+                          <p className="text-sm text-muted-foreground italic">No position templates defined yet</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Service Category Templates */}
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-blue-600" />
+                      Service Category Templates
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Define service categories that will appear as options when creating products/services
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="e.g., massage, facial, hair_cut (lowercase with underscores)"
+                          value={newServiceCategory}
+                          onChange={(e) => setNewServiceCategory(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              const formatted = newServiceCategory.trim().toLowerCase().replace(/\s+/g, '_')
+                              if (formatted && !tenantForm.settings.service_category_templates.includes(formatted)) {
+                                setTenantForm(prev => ({
+                                  ...prev,
+                                  settings: {
+                                    ...prev.settings,
+                                    service_category_templates: [...prev.settings.service_category_templates, formatted]
+                                  }
+                                }))
+                                setNewServiceCategory("")
+                              }
+                            }
+                          }}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const formatted = newServiceCategory.trim().toLowerCase().replace(/\s+/g, '_')
+                            if (formatted && !tenantForm.settings.service_category_templates.includes(formatted)) {
+                              setTenantForm(prev => ({
+                                ...prev,
+                                settings: {
+                                  ...prev.settings,
+                                  service_category_templates: [...prev.settings.service_category_templates, formatted]
+                                }
+                              }))
+                              setNewServiceCategory("")
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {tenantForm.settings.service_category_templates.map((category, index) => (
+                          <Badge key={index} variant="secondary" className="text-sm py-1 px-3">
+                            {category}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTenantForm(prev => ({
+                                  ...prev,
+                                  settings: {
+                                    ...prev.settings,
+                                    service_category_templates: prev.settings.service_category_templates.filter((_, i) => i !== index)
+                                  }
+                                }))
+                              }}
+                              className="ml-2 hover:text-red-600"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                        {tenantForm.settings.service_category_templates.length === 0 && (
+                          <p className="text-sm text-muted-foreground italic">No category templates defined yet</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-3 pt-2">
-                    <Button onClick={handleSaveTenant} disabled={savingTenant}>
+                    <Button onClick={handleSaveTenant} disabled={savingTenant} size="lg" className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700">
                       <Save className="h-4 w-4 mr-2" />
-                      {savingTenant ? 'Saving...' : 'Save Organization Info'}
+                      {savingTenant ? 'Saving...' : 'Save Organization Settings'}
                     </Button>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Status:</span>

@@ -33,6 +33,8 @@ export default function StaffPage() {
   const { toast } = useToast()
   const router = useRouter()
   const [outlets, setOutlets] = useState<any[]>([])
+  const [positionTemplates, setPositionTemplates] = useState<string[]>([])
+  const [loadingPositions, setLoadingPositions] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
@@ -136,7 +138,7 @@ export default function StaffPage() {
     }
   })
 
-  // Fetch outlets on mount
+  // Fetch outlets and position templates on mount
   useEffect(() => {
     const fetchOutlets = async () => {
       try {
@@ -151,7 +153,27 @@ export default function StaffPage() {
         console.error('Failed to fetch outlets:', error)
       }
     }
+
+    const fetchPositionTemplates = async () => {
+      setLoadingPositions(true)
+      try {
+        const response = await fetch('/api/staff/positions/templates')
+        if (response.ok) {
+          const data = await response.json()
+          // API returns array of position strings
+          if (Array.isArray(data)) {
+            setPositionTemplates(data)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch position templates:', error)
+      } finally {
+        setLoadingPositions(false)
+      }
+    }
+
     fetchOutlets()
+    fetchPositionTemplates()
   }, [])
 
   const filteredStaff = staff.filter((staffMember) => {
@@ -1700,20 +1722,46 @@ export default function StaffPage() {
                         <Label htmlFor="edit-role" className="text-sm font-medium">
                           Role / Posisi *
                         </Label>
-                        <Input
-                          id="edit-role"
-                          value={editStaffForm.role}
-                          onChange={(e) => setEditStaffForm((prev) => ({
-                            ...prev,
-                            role: e.target.value,
-                            position: e.target.value
-                          }))}
-                          placeholder="e.g., Beauty Therapist, Massage Therapist"
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
-                          required
-                        />
+                        {loadingPositions ? (
+                          <div className="h-11 flex items-center justify-center border rounded-md bg-gray-50 mt-1">
+                            <span className="text-sm text-gray-500">Loading positions...</span>
+                          </div>
+                        ) : positionTemplates.length > 0 ? (
+                          <Select
+                            value={editStaffForm.role}
+                            onValueChange={(value) => setEditStaffForm((prev) => ({
+                              ...prev,
+                              role: value,
+                              position: value
+                            }))}
+                          >
+                            <SelectTrigger className="mt-1 h-11 border-[#E7C6FF] focus:border-[#C8B6FF]">
+                              <SelectValue placeholder="Select a position" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {positionTemplates.map((position) => (
+                                <SelectItem key={position} value={position}>
+                                  {position}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            id="edit-role"
+                            value={editStaffForm.role}
+                            onChange={(e) => setEditStaffForm((prev) => ({
+                              ...prev,
+                              role: e.target.value,
+                              position: e.target.value
+                            }))}
+                            placeholder="e.g., Beauty Therapist, Massage Therapist"
+                            className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                            required
+                          />
+                        )}
                         <p className="text-xs text-muted-foreground mt-1">
-                          Masukkan posisi atau role staff (bebas)
+                          {positionTemplates.length > 0 ? "Select from your tenant's position templates" : "Enter staff position (customize in Settings)"}
                         </p>
                       </div>
                     </div>
@@ -2526,16 +2574,38 @@ export default function StaffPage() {
                   <Label htmlFor="role" className="text-sm font-medium">
                     Role / Posisi *
                   </Label>
-                  <Input
-                    id="role"
-                    value={newStaffForm.role}
-                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, role: e.target.value }))}
-                    placeholder="e.g., Beauty Therapist, Massage Therapist, Receptionist"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
-                    required
-                  />
+                  {loadingPositions ? (
+                    <div className="h-11 flex items-center justify-center border rounded-md bg-gray-50 mt-1">
+                      <span className="text-sm text-gray-500">Loading positions...</span>
+                    </div>
+                  ) : positionTemplates.length > 0 ? (
+                    <Select
+                      value={newStaffForm.role}
+                      onValueChange={(value) => setNewStaffForm((prev) => ({ ...prev, role: value }))}
+                    >
+                      <SelectTrigger className="mt-1 h-11 border-[#E7C6FF] focus:border-[#C8B6FF]">
+                        <SelectValue placeholder="Select a position" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {positionTemplates.map((position) => (
+                          <SelectItem key={position} value={position}>
+                            {position}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="role"
+                      value={newStaffForm.role}
+                      onChange={(e) => setNewStaffForm((prev) => ({ ...prev, role: e.target.value }))}
+                      placeholder="e.g., Beauty Therapist, Massage Therapist, Receptionist"
+                      className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                      required
+                    />
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    Masukkan posisi atau role staff (bebas)
+                    {positionTemplates.length > 0 ? "Select from your tenant's position templates" : "Enter staff position (customize in Settings)"}
                   </p>
                 </div>
               </div>
