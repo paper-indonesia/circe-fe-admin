@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -16,7 +17,7 @@ import { useStaff, useBookings, useTreatments } from "@/lib/context"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
-import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus } from "lucide-react"
+import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2 } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -44,6 +45,8 @@ export default function StaffPage() {
   const [showStaffDialog, setShowStaffDialog] = useState(false)
   const [showScheduleDialog, setShowScheduleDialog] = useState(false)
   const [showAddStaffDialog, setShowAddStaffDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [staffToDelete, setStaffToDelete] = useState<any>(null)
   const [isEditMode, setIsEditMode] = useState(false)
   const [editStaffForm, setEditStaffForm] = useState({
     name: "",
@@ -612,6 +615,44 @@ export default function StaffPage() {
 
       let errorMessage = "Gagal mengupdate staff"
       if (error.message) {
+        errorMessage = error.message
+      }
+
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteClick = (staffMember: any) => {
+    setStaffToDelete(staffMember)
+    setShowDeleteDialog(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!staffToDelete) return
+
+    try {
+      await deleteStaff(staffToDelete.id)
+
+      toast({
+        title: "Berhasil",
+        description: `Staff ${staffToDelete.name || staffToDelete.display_name} berhasil dihapus`,
+      })
+
+      setShowDeleteDialog(false)
+      setStaffToDelete(null)
+    } catch (error: any) {
+      console.error("Error deleting staff:", error)
+
+      let errorMessage = "Gagal menghapus staff"
+
+      // Check if error is related to upcoming appointments
+      if (error.message?.includes("appointment") || error.message?.includes("booking")) {
+        errorMessage = "Tidak dapat menghapus staff yang memiliki janji temu (appointment) yang akan datang"
+      } else if (error.message) {
         errorMessage = error.message
       }
 
@@ -1260,6 +1301,14 @@ export default function StaffPage() {
                           onClick={() => openStaffProfile(staffMember)}
                         >
                           <Edit className="h-4 w-4 text-purple-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 hover:bg-red-50"
+                          onClick={() => handleDeleteClick(staffMember)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>
                     </TableCell>
@@ -2948,6 +2997,33 @@ export default function StaffPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Hapus Staff</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus staff <strong>{staffToDelete?.name || staffToDelete?.display_name}</strong>?
+                <br /><br />
+                Tindakan ini akan melakukan soft delete (data tidak akan hilang permanen) dan status staff akan berubah menjadi TERMINATED. Staff ini tidak dapat ditugaskan ke appointment baru.
+                <br /><br />
+                <strong>Catatan:</strong> Staff tidak dapat dihapus jika memiliki appointment yang akan datang (confirmed atau pending).
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="border-[#E7C6FF] hover:bg-[#FFD6FF]">
+                Batal
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Hapus Staff
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
     </MainLayout>
   )
 }

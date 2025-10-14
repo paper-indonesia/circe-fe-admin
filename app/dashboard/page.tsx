@@ -289,11 +289,12 @@ export default function DashboardPage() {
 
                 {subscription.plan === "free" && (
                   <Button
-                    className="bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] hover:from-[#B8B0EF] hover:to-[#A8A0DF] text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                    size="lg"
+                    className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-pulse"
                     onClick={() => router.push('/subscription/upgrade')}
                   >
-                    <Zap className="h-4 w-4 mr-2" />
-                    Upgrade Plan
+                    <Zap className="h-5 w-5 mr-2" />
+                    Upgrade Plan Now
                   </Button>
                 )}
 

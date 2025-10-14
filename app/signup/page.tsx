@@ -110,6 +110,8 @@ export default function SignUpPage() {
   const [mounted, setMounted] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [termsError, setTermsError] = useState(false)
+  const [privacyError, setPrivacyError] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -139,12 +141,22 @@ export default function SignUpPage() {
       [field]: checked,
     })
     setError("")
+    // Clear specific error when checkbox is checked
+    if (field === 'terms_accepted' && checked) {
+      setTermsError(false)
+    }
+    if (field === 'privacy_accepted' && checked) {
+      setPrivacyError(false)
+    }
   }
 
   const validateStep = (step: number): boolean => {
     setError("")
 
     if (step === 1) {
+      // Clear TnC errors when leaving step 3
+      setTermsError(false)
+      setPrivacyError(false)
       // Validate Business Information
       if (!formData.business_name.trim()) {
         setError("Business name is required")
@@ -166,6 +178,9 @@ export default function SignUpPage() {
     }
 
     if (step === 2) {
+      // Clear TnC errors when leaving step 3
+      setTermsError(false)
+      setPrivacyError(false)
       // Validate Admin Account
       if (!formData.admin_first_name.trim()) {
         setError("First name is required")
@@ -201,8 +216,17 @@ export default function SignUpPage() {
 
     if (step === 3) {
       // Validate Terms & Privacy
-      if (!formData.terms_accepted || !formData.privacy_accepted) {
-        setError("You must accept the Terms of Service and Privacy Policy")
+      let hasError = false
+      if (!formData.terms_accepted) {
+        setTermsError(true)
+        hasError = true
+      }
+      if (!formData.privacy_accepted) {
+        setPrivacyError(true)
+        hasError = true
+      }
+      if (hasError) {
+        setError("You must accept the Terms of Service and Privacy Policy to continue")
         return false
       }
       return true
@@ -221,6 +245,8 @@ export default function SignUpPage() {
   const handleBack = () => {
     setCurrentStep(currentStep - 1)
     setError("")
+    setTermsError(false)
+    setPrivacyError(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -911,83 +937,119 @@ export default function SignUpPage() {
                       <div className="space-y-3">
                         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Legal Agreements</h4>
 
-                        <motion.div
-                          whileHover={{ x: 2 }}
-                          className={`relative flex items-start gap-4 p-5 rounded-xl border-2 transition-all duration-200 ${
-                            formData.terms_accepted
-                              ? 'border-purple-200 bg-purple-50/50'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex-shrink-0 pt-0.5">
-                            <Checkbox
-                              id="terms_accepted"
-                              checked={formData.terms_accepted}
-                              onCheckedChange={(checked) => handleCheckboxChange('terms_accepted', checked as boolean)}
-                              disabled={isLoading}
-                              className="w-5 h-5 border-2 border-gray-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                            />
-                          </div>
-                          <Label htmlFor="terms_accepted" className="text-sm text-gray-700 cursor-pointer leading-relaxed flex-1">
-                            I have read and agree to the{" "}
-                            <Link
-                              href="/terms"
-                              target="_blank"
-                              className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
-                              onClick={(e) => e.stopPropagation()}
+                        <div>
+                          <motion.div
+                            whileHover={{ x: 2 }}
+                            className={`relative flex items-start gap-4 p-5 rounded-xl border-2 transition-all duration-200 ${
+                              termsError
+                                ? 'border-red-300 bg-red-50/50 shadow-sm shadow-red-100'
+                                : formData.terms_accepted
+                                ? 'border-purple-200 bg-purple-50/50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex-shrink-0 pt-0.5">
+                              <Checkbox
+                                id="terms_accepted"
+                                checked={formData.terms_accepted}
+                                onCheckedChange={(checked) => handleCheckboxChange('terms_accepted', checked as boolean)}
+                                disabled={isLoading}
+                                className={`w-5 h-5 border-2 ${
+                                  termsError
+                                    ? 'border-red-500 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600'
+                                    : 'border-gray-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600'
+                                }`}
+                              />
+                            </div>
+                            <Label htmlFor="terms_accepted" className="text-sm text-gray-700 cursor-pointer leading-relaxed flex-1">
+                              I have read and agree to the{" "}
+                              <Link
+                                href="/terms"
+                                target="_blank"
+                                className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Terms of Service
+                              </Link>
+                            </Label>
+                            {formData.terms_accepted && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg"
+                              >
+                                <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                              </motion.div>
+                            )}
+                          </motion.div>
+                          {termsError && (
+                            <motion.p
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="text-sm text-red-600 font-medium mt-2 ml-1 flex items-center gap-1"
                             >
-                              Terms of Service
-                            </Link>
-                          </Label>
-                          {formData.terms_accepted && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg"
-                            >
-                              <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
-                            </motion.div>
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              Please accept the Terms of Service to continue
+                            </motion.p>
                           )}
-                        </motion.div>
+                        </div>
 
-                        <motion.div
-                          whileHover={{ x: 2 }}
-                          className={`relative flex items-start gap-4 p-5 rounded-xl border-2 transition-all duration-200 ${
-                            formData.privacy_accepted
-                              ? 'border-purple-200 bg-purple-50/50'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="flex-shrink-0 pt-0.5">
-                            <Checkbox
-                              id="privacy_accepted"
-                              checked={formData.privacy_accepted}
-                              onCheckedChange={(checked) => handleCheckboxChange('privacy_accepted', checked as boolean)}
-                              disabled={isLoading}
-                              className="w-5 h-5 border-2 border-gray-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                            />
-                          </div>
-                          <Label htmlFor="privacy_accepted" className="text-sm text-gray-700 cursor-pointer leading-relaxed flex-1">
-                            I have read and agree to the{" "}
-                            <Link
-                              href="/privacy"
-                              target="_blank"
-                              className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
-                              onClick={(e) => e.stopPropagation()}
+                        <div>
+                          <motion.div
+                            whileHover={{ x: 2 }}
+                            className={`relative flex items-start gap-4 p-5 rounded-xl border-2 transition-all duration-200 ${
+                              privacyError
+                                ? 'border-red-300 bg-red-50/50 shadow-sm shadow-red-100'
+                                : formData.privacy_accepted
+                                ? 'border-purple-200 bg-purple-50/50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex-shrink-0 pt-0.5">
+                              <Checkbox
+                                id="privacy_accepted"
+                                checked={formData.privacy_accepted}
+                                onCheckedChange={(checked) => handleCheckboxChange('privacy_accepted', checked as boolean)}
+                                disabled={isLoading}
+                                className={`w-5 h-5 border-2 ${
+                                  privacyError
+                                    ? 'border-red-500 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600'
+                                    : 'border-gray-300 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600'
+                                }`}
+                              />
+                            </div>
+                            <Label htmlFor="privacy_accepted" className="text-sm text-gray-700 cursor-pointer leading-relaxed flex-1">
+                              I have read and agree to the{" "}
+                              <Link
+                                href="/privacy"
+                                target="_blank"
+                                className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Privacy Policy
+                              </Link>
+                            </Label>
+                            {formData.privacy_accepted && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg"
+                              >
+                                <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                              </motion.div>
+                            )}
+                          </motion.div>
+                          {privacyError && (
+                            <motion.p
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="text-sm text-red-600 font-medium mt-2 ml-1 flex items-center gap-1"
                             >
-                              Privacy Policy
-                            </Link>
-                          </Label>
-                          {formData.privacy_accepted && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg"
-                            >
-                              <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
-                            </motion.div>
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              Please accept the Privacy Policy to continue
+                            </motion.p>
                           )}
-                        </motion.div>
+                        </div>
                       </div>
                     </motion.div>
                   )}

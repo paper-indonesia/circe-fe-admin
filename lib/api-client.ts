@@ -27,6 +27,11 @@ class ApiClient {
       throw new Error(errorData.error || `API Error: ${response.statusText}`)
     }
 
+    // Handle 204 No Content responses (e.g., successful DELETE operations)
+    if (response.status === 204) {
+      return {} as T
+    }
+
     return response.json()
   }
 
@@ -55,7 +60,7 @@ class ApiClient {
   }
 
   async deleteStaff(id: string) {
-    return this.request<any>(`/staff?id=${id}`, {
+    return this.request<any>(`/staff/${id}`, {
       method: 'DELETE',
     })
   }

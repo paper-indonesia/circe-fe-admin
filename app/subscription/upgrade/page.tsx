@@ -47,6 +47,7 @@ export default function UpgradePage() {
   const [currentPlan, setCurrentPlan] = useState<string | null>(null)
   const [currentSubscription, setCurrentSubscription] = useState<any>(null)
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly")
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -197,7 +198,7 @@ export default function UpgradePage() {
               Choose Your Plan
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Upgrade your account to unlock more features and grow your business
+              Click on a plan card to select it, then upgrade your account to unlock more features
             </p>
 
             {currentPlan && (
@@ -246,7 +247,7 @@ export default function UpgradePage() {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto items-stretch">
           {plans.map((plan) => {
             const Icon = planIcons[plan.plan] || Star
             const gradient = planGradients[plan.plan] || "from-blue-500 to-cyan-500"
@@ -266,22 +267,42 @@ export default function UpgradePage() {
 
             const features = formatFeatures(plan.features)
 
+            const isSelected = selectedPlan === plan.plan
+            const isFreeAndCurrent = plan.plan === "free" && isCurrentPlan
+            const canSelect = !isCurrentPlan && !isFreeAndCurrent
+
             return (
               <Card
                 key={plan.plan}
+                onClick={() => canSelect && setSelectedPlan(plan.plan)}
                 className={cn(
-                  "relative overflow-hidden transition-all duration-300 hover:shadow-xl",
-                  isPro && "ring-2 ring-[#C8B6FF] scale-105",
-                  isCurrentPlan && "border-green-500 border-2"
+                  "relative overflow-hidden transition-all duration-300 h-full flex flex-col",
+                  canSelect && "cursor-pointer hover:shadow-xl",
+                  isFreeAndCurrent && "opacity-60 cursor-not-allowed",
+                  isPro && !isSelected && !isCurrentPlan && "ring-2 ring-[#C8B6FF]",
+                  isCurrentPlan && !isFreeAndCurrent && "border-green-500 border-2",
+                  isSelected && canSelect && "ring-4 ring-purple-500 ring-offset-2 shadow-2xl",
+                  canSelect && !isSelected && "hover:scale-[1.02]"
                 )}
               >
-                {isPro && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                {isSelected && canSelect && (
+                  <div className="absolute top-0 left-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-3 py-1 rounded-br-lg flex items-center gap-1 z-10">
+                    <Check className="h-3 w-3" />
+                    SELECTED
+                  </div>
+                )}
+                {isPro && !isSelected && !isCurrentPlan && (
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10">
                     RECOMMENDED
                   </div>
                 )}
-                {isCurrentPlan && (
-                  <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                {isFreeAndCurrent && (
+                  <div className="absolute top-0 right-0 bg-gray-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10">
+                    CURRENT PLAN
+                  </div>
+                )}
+                {isCurrentPlan && !isFreeAndCurrent && (
+                  <div className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10">
                     CURRENT PLAN
                   </div>
                 )}
@@ -299,8 +320,8 @@ export default function UpgradePage() {
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
-                  <div className="text-center">
+                <CardContent className="space-y-6 flex-1 flex flex-col">
+                  <div className="text-center min-h-[100px] flex flex-col items-center justify-center">
                     <div className="text-3xl font-bold text-gray-900">
                       {displayPrice}
                     </div>
@@ -316,32 +337,58 @@ export default function UpgradePage() {
                     )}
                   </div>
 
-                  <ul className="space-y-3 max-h-80 overflow-y-auto">
-                    {features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="flex-1">
+                    <ul className="space-y-3 max-h-80 overflow-y-auto">
+                      {features.map((feature, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm">
+                          <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
 
-                  <Button
-                    className={cn(
-                      "w-full",
-                      isPro
-                        ? "bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] hover:from-[#B8B0EF] hover:to-[#A8A0DF] text-white"
-                        : "bg-gray-900 hover:bg-gray-800 text-white",
-                      isCurrentPlan && "opacity-50 cursor-not-allowed"
-                    )}
-                    onClick={() => handleUpgrade(plan.plan)}
-                    disabled={isCurrentPlan || loading}
-                  >
-                    {isCurrentPlan
-                      ? "Current Plan"
-                      : plan.plan === "enterprise"
-                      ? "Contact Sales"
-                      : "Upgrade Now"}
-                  </Button>
+                  {isFreeAndCurrent ? (
+                    <div className="text-center py-3 px-4 bg-gray-100 rounded-lg">
+                      <p className="text-sm font-medium text-gray-600">
+                        You're currently on this plan
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Upgrade to unlock more features
+                      </p>
+                    </div>
+                  ) : (
+                    <Button
+                      size="lg"
+                      className={cn(
+                        "w-full font-semibold",
+                        isSelected && canSelect
+                          ? "bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300"
+                          : isPro && canSelect
+                          ? "bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                          : canSelect
+                          ? "bg-gray-900 hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed",
+                        !canSelect && "opacity-50"
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (canSelect) {
+                          setSelectedPlan(plan.plan)
+                          handleUpgrade(plan.plan)
+                        }
+                      }}
+                      disabled={!canSelect || loading}
+                    >
+                      {isCurrentPlan
+                        ? "Current Plan"
+                        : isSelected
+                        ? "✓ Selected - Click to Upgrade"
+                        : plan.plan === "enterprise"
+                        ? "Contact Sales"
+                        : "Select This Plan"}
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )
