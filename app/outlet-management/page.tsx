@@ -437,7 +437,13 @@ export default function OutletManagementPage() {
                 <p className="text-sm text-amber-700 mt-1">Please upgrade your subscription plan to add more outlets.</p>
               </div>
               <Button
-                onClick={() => router.push('/subscription/upgrade')}
+                onClick={() => {
+                  setSubscriptionLimitError(false)
+                  setError("")
+                  setTimeout(() => {
+                    router.push('/subscription/upgrade')
+                  }, 100)
+                }}
                 className="ml-4 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white"
               >
                 <Crown className="h-4 w-4 mr-2" />

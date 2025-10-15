@@ -33,7 +33,17 @@ export default function ManageSubscriptionPage() {
         const response = await fetch('/api/subscription')
         if (response.ok) {
           const data = await response.json()
-          setSubscription(data)
+          // Transform API response to match component expectations
+          setSubscription({
+            plan: data.plan_type?.toLowerCase() || 'free',
+            status: data.status,
+            start_date: data.current_period_start,
+            end_date: data.current_period_end,
+            auto_renew: true, // Default to true for active subscriptions
+            plan_details: data.plan_details,
+            usage: data.usage,
+            scheduled_changes: data.scheduled_changes
+          })
         } else {
           toast({
             title: "Error",

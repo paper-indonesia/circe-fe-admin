@@ -3052,7 +3052,9 @@ export default function StaffPage() {
                 <Button
                   onClick={() => {
                     setShowErrorDialog(false)
-                    router.push('/subscription/upgrade')
+                    setTimeout(() => {
+                      router.push('/subscription/upgrade')
+                    }, 100)
                   }}
                   className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white"
                 >

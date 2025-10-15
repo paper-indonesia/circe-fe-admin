@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Calendar, Users, Star, Settings, UserPlus, Menu, X, Sparkles, LogOut, BarChart3, Clock, Power, Shield, Building } from "lucide-react"
+import { Home, Calendar, Users, Star, Settings, UserPlus, Menu, X, Sparkles, LogOut, BarChart3, Clock, Power, Shield, Building, Crown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useLayout } from "./main-layout"
@@ -18,6 +18,7 @@ export function Sidebar() {
   const [user, setUser] = useState<any>(null)
   const [tenant, setTenant] = useState<any>(null)
   const [sessionTime, setSessionTime] = useState({ minutes: 30, seconds: 0 })
+  const [subscription, setSubscription] = useState<any>(null)
 
   // Load user and tenant from localStorage
   useEffect(() => {
@@ -40,6 +41,30 @@ export function Sidebar() {
       }
     }
   }, [])
+
+  // Fetch subscription data for tenant_admin
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      if (!isAdmin()) return
+
+      try {
+        const response = await fetch('/api/subscription')
+        if (response.ok) {
+          const data = await response.json()
+          setSubscription({
+            plan: data.plan_type?.toLowerCase() || 'free',
+            status: data.status
+          })
+        }
+      } catch (error) {
+        console.error("Failed to fetch subscription:", error)
+      }
+    }
+
+    if (user) {
+      fetchSubscription()
+    }
+  }, [user, isAdmin])
 
   // Session timer countdown
   useEffect(() => {
@@ -289,9 +314,38 @@ export function Sidebar() {
                       </>
                     )}
                   </div>
+                  {/* Subscription Plan Badge - Only for tenant_admin */}
+                  {isAdmin() && subscription && (
+                    <div className="mt-1.5">
+                      <div className={cn(
+                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                        subscription.plan === 'free' && "bg-gray-100 text-gray-700",
+                        subscription.plan === 'pro' && "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700",
+                        subscription.plan === 'enterprise' && "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700"
+                      )}>
+                        <Crown className="h-3 w-3" />
+                        <span className="capitalize">{subscription.plan} Plan</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* Upgrade Button - Only for tenant admins */}
+            {isAdmin() && (
+              <button
+                onClick={() => router.push('/subscription/upgrade')}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 shadow-md hover:shadow-lg mb-2",
+                  isCollapsed && "justify-center"
+                )}
+                title="Upgrade Plan"
+              >
+                <Crown className="h-4 w-4" />
+                {!isCollapsed && <span className="text-sm font-medium">Upgrade Plan</span>}
+              </button>
+            )}
 
             {/* Logout Button */}
             <button

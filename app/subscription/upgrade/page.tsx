@@ -5,6 +5,16 @@ import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -39,6 +49,31 @@ const planGradients: Record<string, string> = {
   enterprise: "from-amber-500 to-orange-500",
 }
 
+// Feature name mapping for display
+const featureLabels: Record<string, string> = {
+  max_outlets: "outlets",
+  max_staff_per_outlet: "staff per outlet",
+  max_customers: "customers",
+  max_services: "services",
+  max_appointments_per_month: "appointments/month",
+  custom_branding: "Custom branding",
+  api_access: "API access",
+  priority_support: "Priority support",
+  whatsapp_notifications: "WhatsApp notifications",
+  email_notifications: "Email notifications",
+  sms_notifications: "SMS notifications",
+  payment_processing: "Payment processing",
+  analytics_dashboard: "Advanced analytics dashboard",
+  staff_app_access: "Staff app access",
+  customer_portal: "Customer portal",
+  online_booking: "Online booking",
+  recurring_appointments: "Recurring appointments",
+  loyalty_program: "Loyalty program",
+  custom_domain: "Custom domain",
+  webhook_integrations: "Webhook integrations",
+  platform_fee_rate: "Platform fee",
+}
+
 export default function UpgradePage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -48,6 +83,8 @@ export default function UpgradePage() {
   const [currentSubscription, setCurrentSubscription] = useState<any>(null)
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly")
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [pendingUpgradePlan, setPendingUpgradePlan] = useState<any>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,7 +103,13 @@ export default function UpgradePage() {
 
         if (currentSubRes.ok) {
           const subData = await currentSubRes.json()
-          setCurrentSubscription(subData)
+          // Transform API response to match component expectations
+          setCurrentSubscription({
+            plan: subData.plan_type?.toLowerCase(),
+            status: subData.status,
+            ...subData
+          })
+          setCurrentPlan(subData.plan_type?.toLowerCase() || null)
         }
       } catch (error) {
         console.error("Failed to fetch subscription data:", error)
@@ -83,7 +126,9 @@ export default function UpgradePage() {
     fetchData()
   }, [toast])
 
-  const handleUpgrade = async (planId: string) => {
+  const initiateUpgrade = (plan: any) => {
+    const planId = plan.plan
+
     if (planId === "enterprise") {
       toast({
         title: "Contact Sales",
@@ -100,68 +145,111 @@ export default function UpgradePage() {
       return
     }
 
+    // Show confirmation dialog
+    setPendingUpgradePlan(plan)
+    setShowConfirmDialog(true)
+  }
+
+  const handleUpgrade = async () => {
+    if (!pendingUpgradePlan) return
+
+    const planId = pendingUpgradePlan.plan
+    setShowConfirmDialog(false)
+
     setLoading(true)
     try {
-      // TODO: Implement actual upgrade logic
-      toast({
-        title: "Redirecting to payment...",
-        description: "You'll be redirected to complete your subscription.",
+      // Call upgrade API
+      const response = await fetch('/api/subscription/upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          target_plan: planId,
+          billing_period: billingPeriod,
+          prorate_charges: true
+        })
       })
 
-      // Here you would integrate with payment gateway
-      // For now, just show a message
-      setTimeout(() => {
-        setLoading(false)
-      }, 2000)
-    } catch (error) {
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to upgrade subscription')
+      }
+
+      // Check if payment is required
+      if (data.status === 'payment_pending' && data.invoice?.paper_payment_url) {
+        toast({
+          title: "Payment Required",
+          description: "Redirecting to payment page...",
+        })
+
+        // Store invoice details in localStorage for later reference
+        localStorage.setItem('pending_invoice', JSON.stringify(data.invoice))
+        localStorage.setItem('upgrade_details', JSON.stringify(data.upgrade_details))
+
+        // Ensure payment URL has proper protocol
+        let paymentUrl = data.invoice.paper_payment_url
+        if (!paymentUrl.startsWith('http://') && !paymentUrl.startsWith('https://')) {
+          paymentUrl = 'https://' + paymentUrl
+        }
+
+        // Redirect to payment URL
+        setTimeout(() => {
+          window.location.href = paymentUrl
+        }, 1500)
+      } else if (data.status === 'active') {
+        // Upgrade successful without payment (e.g., downgrade to free)
+        toast({
+          title: "Success!",
+          description: "Your subscription has been updated.",
+        })
+
+        // Refresh page to show updated plan
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+      }
+    } catch (error: any) {
+      console.error('Upgrade error:', error)
       toast({
         title: "Error",
-        description: "Failed to process upgrade. Please try again.",
+        description: error.message || "Failed to process upgrade. Please try again.",
         variant: "destructive"
       })
       setLoading(false)
     }
   }
 
-  const formatFeatures = (features: any) => {
+  const formatFeatures = (plan: any) => {
     const featureList: string[] = []
 
-    if (features.max_outlets) {
-      featureList.push(features.max_outlets === 999999 ? "Unlimited outlets" : `Up to ${features.max_outlets} outlet${features.max_outlets > 1 ? 's' : ''}`)
-    }
+    if (!plan.features) return featureList
 
-    if (features.max_staff_per_outlet) {
-      featureList.push(features.max_staff_per_outlet === 999999 ? "Unlimited staff" : `Up to ${features.max_staff_per_outlet} staff per outlet`)
-    }
+    // Process all features dynamically
+    Object.entries(plan.features).forEach(([key, value]) => {
+      const label = featureLabels[key] || key.replace(/_/g, ' ')
 
-    if (features.max_customers) {
-      featureList.push(features.max_customers === 999999 ? "Unlimited customers" : `Up to ${features.max_customers} customers`)
-    }
-
-    if (features.max_services) {
-      featureList.push(features.max_services === 999999 ? "Unlimited services" : `Up to ${features.max_services} services`)
-    }
-
-    if (features.max_appointments_per_month) {
-      featureList.push(features.max_appointments_per_month === 999999 ? "Unlimited appointments" : `${features.max_appointments_per_month} appointments/month`)
-    }
-
-    if (features.custom_branding) featureList.push("Custom branding")
-    if (features.priority_support) featureList.push("Priority support")
-    if (features.analytics_dashboard) featureList.push("Advanced analytics")
-    if (features.whatsapp_notifications) featureList.push("WhatsApp notifications")
-    if (features.sms_notifications) featureList.push("SMS notifications")
-    if (features.payment_processing) featureList.push("Payment processing")
-    if (features.recurring_appointments) featureList.push("Recurring appointments")
-    if (features.loyalty_program) featureList.push("Loyalty program")
-    if (features.api_access) featureList.push("API access")
-    if (features.custom_domain) featureList.push("Custom domain")
-    if (features.webhook_integrations) featureList.push("Webhook integrations")
-
-    if (features.platform_fee_enabled && features.platform_fee_rate) {
-      const feePercent = (parseFloat(features.platform_fee_rate) * 100).toFixed(0)
-      featureList.push(`${feePercent}% platform fee`)
-    }
+      // Handle numeric limits (max_* fields)
+      if (key.startsWith('max_') && typeof value === 'number') {
+        if (value >= 999999) {
+          featureList.push(`Unlimited ${label}`)
+        } else if (value > 0) {
+          featureList.push(`Up to ${value} ${label}`)
+        }
+      }
+      // Handle boolean features
+      else if (typeof value === 'boolean') {
+        if (value === true && !key.includes('enabled')) {
+          featureList.push(label)
+        }
+      }
+      // Handle platform fee rate
+      else if (key === 'platform_fee_rate' && value) {
+        const feePercent = (parseFloat(value as string) * 100).toFixed(0)
+        featureList.push(`${feePercent}% ${label}`)
+      }
+    })
 
     return featureList
   }
@@ -240,7 +328,7 @@ export default function UpgradePage() {
             Yearly
             {plans.some(p => p.pricing?.yearly_discount_percent > 0) && (
               <Badge variant="outline" className="ml-2 text-green-600 border-green-600">
-                Save up to 17%
+                Save up to {Math.max(...plans.map(p => p.pricing?.yearly_discount_percent || 0)).toFixed(0)}%
               </Badge>
             )}
           </span>
@@ -249,15 +337,18 @@ export default function UpgradePage() {
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto items-stretch">
           {plans.map((plan) => {
-            const Icon = planIcons[plan.plan] || Star
-            const gradient = planGradients[plan.plan] || "from-blue-500 to-cyan-500"
-            const isCurrentPlan = currentPlan === plan.plan
-            const isPro = plan.plan === "pro"
+            const planType = plan.plan
+            const Icon = planIcons[planType] || Star
+            const gradient = planGradients[planType] || "from-blue-500 to-cyan-500"
+            const isCurrentPlan = currentPlan === planType
+            const isPro = planType === "pro"
 
             const monthlyPrice = parseFloat(plan.pricing?.monthly_price || "0")
             const yearlyPrice = parseFloat(plan.pricing?.yearly_price || "0")
+            const currency = plan.pricing?.currency || "IDR"
+            const yearlyDiscount = plan.pricing?.yearly_discount_percent || 0
 
-            const displayPrice = plan.plan === "enterprise"
+            const displayPrice = planType === "enterprise"
               ? "Custom"
               : billingPeriod === "yearly" && yearlyPrice > 0
               ? `Rp ${yearlyPrice.toLocaleString("id-ID")}`
@@ -265,16 +356,16 @@ export default function UpgradePage() {
               ? "Free"
               : `Rp ${monthlyPrice.toLocaleString("id-ID")}`
 
-            const features = formatFeatures(plan.features)
+            const features = formatFeatures(plan)
 
-            const isSelected = selectedPlan === plan.plan
-            const isFreeAndCurrent = plan.plan === "free" && isCurrentPlan
+            const isSelected = selectedPlan === planType
+            const isFreeAndCurrent = planType === "free" && isCurrentPlan
             const canSelect = !isCurrentPlan && !isFreeAndCurrent
 
             return (
               <Card
-                key={plan.plan}
-                onClick={() => canSelect && setSelectedPlan(plan.plan)}
+                key={planType}
+                onClick={() => canSelect && setSelectedPlan(planType)}
                 className={cn(
                   "relative overflow-hidden transition-all duration-300 h-full flex flex-col",
                   canSelect && "cursor-pointer hover:shadow-xl",
@@ -325,14 +416,14 @@ export default function UpgradePage() {
                     <div className="text-3xl font-bold text-gray-900">
                       {displayPrice}
                     </div>
-                    {monthlyPrice > 0 && plan.plan !== "enterprise" && (
+                    {monthlyPrice > 0 && planType !== "enterprise" && (
                       <div className="text-sm text-gray-500 mt-1">
                         per {billingPeriod === "yearly" ? "year" : "month"}
                       </div>
                     )}
-                    {billingPeriod === "yearly" && plan.pricing?.yearly_discount_percent > 0 && (
+                    {billingPeriod === "yearly" && yearlyDiscount > 0 && (
                       <div className="text-xs text-green-600 mt-1">
-                        Save {plan.pricing.yearly_discount_percent.toFixed(0)}%
+                        Save {yearlyDiscount}%
                       </div>
                     )}
                   </div>
@@ -374,8 +465,8 @@ export default function UpgradePage() {
                       onClick={(e) => {
                         e.stopPropagation()
                         if (canSelect) {
-                          setSelectedPlan(plan.plan)
-                          handleUpgrade(plan.plan)
+                          setSelectedPlan(planType)
+                          initiateUpgrade(plan)
                         }
                       }}
                       disabled={!canSelect || loading}
@@ -384,7 +475,7 @@ export default function UpgradePage() {
                         ? "Current Plan"
                         : isSelected
                         ? "✓ Selected - Click to Upgrade"
-                        : plan.plan === "enterprise"
+                        : planType === "enterprise"
                         ? "Contact Sales"
                         : "Select This Plan"}
                     </Button>
@@ -412,6 +503,62 @@ export default function UpgradePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-amber-500" />
+              Confirm Subscription Upgrade
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4 pt-4">
+              {pendingUpgradePlan && (
+                <>
+                  <div className="text-left">
+                    <p className="text-sm text-gray-600 mb-2">You are about to upgrade to:</p>
+                    <div className="bg-gradient-to-br from-[#FFD6FF]/20 to-[#C8B6FF]/20 border border-[#C8B6FF]/30 rounded-lg p-4">
+                      <h3 className="text-lg font-bold text-gray-900 capitalize">{pendingUpgradePlan.name} Plan</h3>
+                      <p className="text-sm text-gray-600 mt-1">{pendingUpgradePlan.description}</p>
+                      <div className="mt-3 pt-3 border-t border-[#C8B6FF]/20">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm text-gray-600">Price:</span>
+                          <span className="text-2xl font-bold text-gray-900">
+                            {billingPeriod === "yearly" && parseFloat(pendingUpgradePlan.pricing?.yearly_price || "0") > 0
+                              ? `Rp ${parseFloat(pendingUpgradePlan.pricing.yearly_price).toLocaleString("id-ID")}`
+                              : parseFloat(pendingUpgradePlan.pricing?.monthly_price || "0") === 0
+                              ? "Free"
+                              : `Rp ${parseFloat(pendingUpgradePlan.pricing.monthly_price).toLocaleString("id-ID")}`}
+                            <span className="text-sm font-normal text-gray-500 ml-1">
+                              / {billingPeriod}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs text-blue-800">
+                      <strong>Note:</strong> You will be charged a prorated amount for the remaining period.
+                      Your subscription will be upgraded immediately upon payment confirmation.
+                    </p>
+                  </div>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleUpgrade}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              Proceed to Payment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   )
 }

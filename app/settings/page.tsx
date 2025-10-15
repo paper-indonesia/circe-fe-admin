@@ -851,13 +851,25 @@ export default function SettingsPage() {
                         </div>
                       </div>
 
-                      {/* Action Alert */}
-                      <Alert className="bg-blue-50 border-blue-200">
-                        <AlertCircle className="h-4 w-4 text-blue-600" />
-                        <AlertDescription className="text-sm text-blue-800">
-                          To upgrade your plan or modify subscription settings, please contact support or use the subscription management endpoints.
-                        </AlertDescription>
-                      </Alert>
+                      {/* Upgrade Action */}
+                      <div className="flex items-center gap-3 pt-4 border-t">
+                        {tenantInfo.subscription.plan === 'free' && (
+                          <Button
+                            size="lg"
+                            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg"
+                            onClick={() => window.location.href = '/subscription/upgrade'}
+                          >
+                            <Crown className="h-5 w-5 mr-2" />
+                            Upgrade to Premium
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          onClick={() => window.location.href = '/subscription/manage'}
+                        >
+                          Manage Subscription
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

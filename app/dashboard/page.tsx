@@ -94,7 +94,15 @@ export default function DashboardPage() {
         const response = await fetch('/api/subscription')
         if (response.ok) {
           const data = await response.json()
-          setSubscription(data)
+          // Transform API response to match component expectations
+          setSubscription({
+            plan: data.plan_type?.toLowerCase() || 'free',
+            status: data.status,
+            end_date: data.current_period_end,
+            plan_details: data.plan_details,
+            usage: data.usage,
+            scheduled_changes: data.scheduled_changes
+          })
         }
       } catch (error) {
         console.error("Failed to fetch subscription:", error)
