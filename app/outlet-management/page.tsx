@@ -139,6 +139,8 @@ export default function OutletManagementPage() {
   const [tenant, setTenant] = useState<any>(null)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [usage, setUsage] = useState<any>(null)
+  const [usageLoading, setUsageLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -185,8 +187,24 @@ export default function OutletManagementPage() {
   useEffect(() => {
     if (!authLoading && user && isAdmin()) {
       fetchOutlets()
+      fetchUsage()
     }
   }, [authLoading, user, isAdmin, page, searchTerm])
+
+  const fetchUsage = async () => {
+    try {
+      setUsageLoading(true)
+      const response = await fetch('/api/subscription/usage')
+      if (response.ok) {
+        const data = await response.json()
+        setUsage(data)
+      }
+    } catch (error) {
+      console.error('Error fetching usage:', error)
+    } finally {
+      setUsageLoading(false)
+    }
+  }
 
   const fetchOutlets = async () => {
     try {
@@ -246,6 +264,7 @@ export default function OutletManagementPage() {
         setIsAddDialogOpen(false)
         resetForm()
         fetchOutlets()
+        fetchUsage() // Refresh usage after adding outlet
         setTimeout(() => setSuccess(""), 3000)
       } else {
         const data = await response.json()
@@ -410,7 +429,23 @@ export default function OutletManagementPage() {
               <Building className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Outlet Management</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-gray-900">Outlet Management</h1>
+                {usage?.usage?.outlets && (
+                  <Badge
+                    variant={
+                      usage.usage.outlets.status === 'exceeded' || usage.usage.outlets.status === 'at_limit'
+                        ? "destructive"
+                        : usage.usage.outlets.status === 'approaching_limit'
+                        ? "warning"
+                        : "default"
+                    }
+                    className="text-sm"
+                  >
+                    {usage.usage.outlets.current || 0}/{usage.usage.outlets.limit === -1 ? '∞' : usage.usage.outlets.limit} Outlets
+                  </Badge>
+                )}
+              </div>
               <p className="text-gray-600 mt-1">Manage your business locations and outlets</p>
             </div>
           </div>
@@ -419,12 +454,36 @@ export default function OutletManagementPage() {
               resetForm()
               setIsAddDialogOpen(true)
             }}
-            className="gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg"
+            disabled={usage?.usage?.outlets && (usage.usage.outlets.status === 'exceeded' || usage.usage.outlets.status === 'at_limit')}
+            className="gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="h-4 w-4" />
             Add Outlet
           </Button>
         </div>
+
+        {/* Approaching Limit Warning */}
+        {usage?.usage?.outlets && usage.usage.outlets.status === 'approaching_limit' && (
+          <Alert className="bg-orange-50 border-orange-200">
+            <AlertCircle className="h-5 w-5 text-orange-600" />
+            <AlertDescription className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="font-semibold text-orange-900 mb-1">Outlet Limit Warning</p>
+                <p className="text-orange-800">
+                  You're using {usage.usage.outlets.current} of {usage.usage.outlets.limit} outlets ({usage.usage.outlets.percentage}%).
+                  Consider upgrading your plan to add more outlets.
+                </p>
+              </div>
+              <Button
+                onClick={() => router.push('/subscription/upgrade')}
+                variant="outline"
+                className="ml-4 border-orange-300 text-orange-700 hover:bg-orange-100"
+              >
+                View Plans
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Alerts */}
         {subscriptionLimitError && (

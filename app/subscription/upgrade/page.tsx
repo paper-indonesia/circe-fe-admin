@@ -85,6 +85,8 @@ export default function UpgradePage() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [pendingUpgradePlan, setPendingUpgradePlan] = useState<any>(null)
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [paymentUrl, setPaymentUrl] = useState<string>("")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -179,25 +181,26 @@ export default function UpgradePage() {
 
       // Check if payment is required
       if (data.status === 'payment_pending' && data.invoice?.paper_payment_url) {
-        toast({
-          title: "Payment Required",
-          description: "Redirecting to payment page...",
-        })
+        console.log('Payment pending, processing invoice:', data.invoice)
 
         // Store invoice details in localStorage for later reference
         localStorage.setItem('pending_invoice', JSON.stringify(data.invoice))
         localStorage.setItem('upgrade_details', JSON.stringify(data.upgrade_details))
 
         // Ensure payment URL has proper protocol
-        let paymentUrl = data.invoice.paper_payment_url
-        if (!paymentUrl.startsWith('http://') && !paymentUrl.startsWith('https://')) {
-          paymentUrl = 'https://' + paymentUrl
+        let finalPaymentUrl = data.invoice.paper_payment_url
+        console.log('Original payment URL:', finalPaymentUrl)
+
+        if (!finalPaymentUrl.startsWith('http://') && !finalPaymentUrl.startsWith('https://')) {
+          finalPaymentUrl = 'https://' + finalPaymentUrl
         }
 
-        // Redirect to payment URL
-        setTimeout(() => {
-          window.location.href = paymentUrl
-        }, 1500)
+        console.log('Final payment URL:', finalPaymentUrl)
+
+        // Show payment dialog for user to click and open payment page
+        setPaymentUrl(finalPaymentUrl)
+        setShowPaymentDialog(true)
+        setLoading(false)
       } else if (data.status === 'active') {
         // Upgrade successful without payment (e.g., downgrade to free)
         toast({
@@ -503,6 +506,43 @@ export default function UpgradePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Payment Link Dialog */}
+      <AlertDialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-amber-500" />
+              Complete Your Payment
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4 pt-4">
+              <div className="bg-gradient-to-br from-[#FFD6FF]/20 to-[#C8B6FF]/20 border border-[#C8B6FF]/30 rounded-lg p-4">
+                <p className="text-sm text-gray-700 mb-3">
+                  Your upgrade request has been processed. Click the button below to complete your payment.
+                </p>
+                <Button
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                  onClick={() => {
+                    window.open(paymentUrl, '_blank', 'noopener,noreferrer')
+                    setShowPaymentDialog(false)
+                  }}
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Open Payment Page
+                </Button>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-800">
+                  <strong>Note:</strong> Your subscription will be activated automatically once payment is confirmed.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>I'll Pay Later</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Confirmation Dialog */}
       <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>

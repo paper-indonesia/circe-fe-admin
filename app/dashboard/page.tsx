@@ -5,6 +5,7 @@ import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { format, isToday } from "date-fns"
@@ -27,11 +28,40 @@ import {
   Crown,
   Zap,
   Shield,
+  AlertTriangle,
+  BarChart3,
 } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
 
 // Color palette from palete.pdf
 const COLORS = ['#FFD6FF', '#E7C6FF', '#C8B6FF', '#B8C0FF', '#BBD0FF']
+
+// Helper function to get usage color based on status
+const getUsageColor = (status: string) => {
+  switch (status) {
+    case 'exceeded':
+    case 'at_limit':
+      return { bg: 'bg-red-100', text: 'text-red-700', progress: 'bg-red-500' }
+    case 'approaching_limit':
+      return { bg: 'bg-orange-100', text: 'text-orange-700', progress: 'bg-orange-500' }
+    case 'unlimited':
+      return { bg: 'bg-blue-100', text: 'text-blue-700', progress: 'bg-blue-500' }
+    default:
+      return { bg: 'bg-green-100', text: 'text-green-700', progress: 'bg-green-500' }
+  }
+}
+
+// Helper function to format resource name
+const formatResourceName = (key: string) => {
+  const labels: Record<string, string> = {
+    outlets: 'Outlets',
+    staff: 'Staff',
+    appointments_this_month: 'Appointments',
+    services: 'Services',
+    products: 'Products'
+  }
+  return labels[key] || key.replace(/_/g, ' ')
+}
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -51,6 +81,8 @@ export default function DashboardPage() {
   const transactionsPerPage = 5
   const [subscription, setSubscription] = useState<any>(null)
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [usage, setUsage] = useState<any>(null)
+  const [usageLoading, setUsageLoading] = useState(false)
 
   // Load user, tenant and set greeting
   useEffect(() => {
@@ -113,6 +145,43 @@ export default function DashboardPage() {
 
     fetchSubscription()
   }, [user])
+
+  // Fetch usage data - only for tenant_admin
+  useEffect(() => {
+    const fetchUsage = async () => {
+      // Only fetch if user is tenant_admin
+      if (user?.role !== 'tenant_admin') {
+        setUsageLoading(false)
+        return
+      }
+
+      setUsageLoading(true)
+      try {
+        const response = await fetch('/api/subscription/usage')
+        if (response.ok) {
+          const data = await response.json()
+          setUsage(data)
+
+          // Show warnings if any
+          if (data.warnings && data.warnings.length > 0) {
+            data.warnings.forEach((warning: string) => {
+              toast({
+                title: "Usage Warning",
+                description: warning,
+                variant: "destructive"
+              })
+            })
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch usage:", error)
+      } finally {
+        setUsageLoading(false)
+      }
+    }
+
+    fetchUsage()
+  }, [user, toast])
 
   // Get display name
   const getDisplayName = () => {
@@ -326,6 +395,87 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Usage Overview - Only for tenant_admin with usage data */}
+        {usage && user?.role === 'tenant_admin' && (
+          <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Plan Usage</CardTitle>
+                    <p className="text-sm text-gray-600 mt-0.5">
+                      {usage.billing_period?.start && usage.billing_period?.end && (
+                        <>
+                          {format(new Date(usage.billing_period.start), "MMM dd")} - {format(new Date(usage.billing_period.end), "MMM dd, yyyy")}
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {usage.upgrade_recommended && (
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                    onClick={() => router.push('/subscription/upgrade')}
+                  >
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    Upgrade
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Object.entries(usage.usage || {}).map(([key, value]: [string, any]) => {
+                  const colors = getUsageColor(value.status)
+                  const isUnlimited = value.status === 'unlimited' || value.limit === -1
+
+                  return (
+                    <div key={key} className={cn("p-4 rounded-lg", colors.bg)}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          {formatResourceName(key)}
+                        </span>
+                        {(value.status === 'approaching_limit' || value.status === 'at_limit' || value.status === 'exceeded') && (
+                          <AlertTriangle className="h-4 w-4 text-orange-600" />
+                        )}
+                      </div>
+
+                      {isUnlimited ? (
+                        <div className="space-y-1">
+                          <p className={cn("text-2xl font-bold", colors.text)}>∞</p>
+                          <p className="text-xs text-gray-600">Unlimited</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-baseline gap-1">
+                            <span className={cn("text-2xl font-bold", colors.text)}>
+                              {value.current?.toLocaleString() || 0}
+                            </span>
+                            <span className="text-sm text-gray-600">
+                              / {value.limit?.toLocaleString() || 0}
+                            </span>
+                          </div>
+                          <Progress
+                            value={Math.min(value.percentage || 0, 100)}
+                            className="h-2"
+                          />
+                          <p className="text-xs text-gray-600">
+                            {value.percentage?.toFixed(0)}% used
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </CardContent>
           </Card>
         )}
