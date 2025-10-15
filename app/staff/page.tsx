@@ -35,6 +35,8 @@ export default function StaffPage() {
   const [outlets, setOutlets] = useState<any[]>([])
   const [positionTemplates, setPositionTemplates] = useState<string[]>([])
   const [loadingPositions, setLoadingPositions] = useState(false)
+  const [statistics, setStatistics] = useState<any>(null)
+  const [loadingStatistics, setLoadingStatistics] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
@@ -91,28 +93,31 @@ export default function StaffPage() {
     assignedTreatments: [] as string[],
   })
   const [newStaffForm, setNewStaffForm] = useState(() => ({
-    name: "",
-    role: "",
+    first_name: "",
+    last_name: "",
+    display_name: "",
     email: "",
     phone: "",
-    photo: "",
-    skills: [] as string[],
-    workingSchedule: {} as Record<string, string[]>, // Changed from workingHours to workingSchedule
-    workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-    notes: "",
-    assignedTreatments: [] as string[],
-    hireDate: new Date().toISOString().split('T')[0], // Default to today
-    birthDate: "",
-    outletId: "",
-    commissionRate: 0.15, // Default 15%
-    yearsExperience: 0,
-    employmentType: "full_time" as "full_time" | "part_time" | "contract" | "freelance" | "intern",
-    employeeId: "",
+    position: "",
+    employment_type: "full_time" as "full_time" | "part_time" | "contract" | "freelance" | "intern",
+    outlet_id: "",
+    employee_id: "",
+    hire_date: new Date().toISOString().split('T')[0],
+    birth_date: "",
+    hourly_rate: null as number | null,
+    salary: null as number | null,
+    is_bookable: true,
+    accepts_online_booking: true,
+    max_advance_booking_days: 30,
     bio: "",
-    instagramHandle: "",
-    isBookable: true,
-    acceptsOnlineBooking: true,
-    maxAdvanceBookingDays: 30,
+    profile_image_url: "",
+    instagram_handle: "",
+    skills: {
+      service_ids: [] as string[],
+      specialties: [] as string[],
+      certifications: [] as string[],
+      years_experience: 0,
+    },
   }))
   const [skillInput, setSkillInput] = useState("")
   const [editSkillInput, setEditSkillInput] = useState("")
@@ -178,8 +183,24 @@ export default function StaffPage() {
       }
     }
 
+    const fetchStatistics = async () => {
+      setLoadingStatistics(true)
+      try {
+        const response = await fetch('/api/staff/statistics')
+        if (response.ok) {
+          const data = await response.json()
+          setStatistics(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch staff statistics:', error)
+      } finally {
+        setLoadingStatistics(false)
+      }
+    }
+
     fetchOutlets()
     fetchPositionTemplates()
+    fetchStatistics()
   }, [])
 
   const filteredStaff = staff.filter((staffMember) => {
@@ -850,10 +871,19 @@ export default function StaffPage() {
 
   const handleAddStaff = async () => {
     // Validation
-    if (!newStaffForm.name || !newStaffForm.name.trim()) {
+    if (!newStaffForm.first_name || !newStaffForm.first_name.trim()) {
       toast({
         title: "Error",
-        description: "Nama lengkap wajib diisi",
+        description: "Nama depan wajib diisi",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!newStaffForm.last_name || !newStaffForm.last_name.trim()) {
+      toast({
+        title: "Error",
+        description: "Nama belakang wajib diisi",
         variant: "destructive",
       })
       return
@@ -888,72 +918,78 @@ export default function StaffPage() {
       return
     }
 
-    if (!newStaffForm.role) {
+    if (!newStaffForm.position) {
       toast({
         title: "Error",
-        description: "Posisi/Role wajib dipilih",
+        description: "Posisi wajib dipilih",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!newStaffForm.outlet_id) {
+      toast({
+        title: "Error",
+        description: "Outlet wajib dipilih",
         variant: "destructive",
       })
       return
     }
 
     try {
-      const newStaff = {
-        id: Date.now().toString(),
-        name: newStaffForm.name.trim(),
-        role: newStaffForm.role,
+      // Map form data to API structure
+      const staffPayload = {
+        first_name: newStaffForm.first_name.trim(),
+        last_name: newStaffForm.last_name.trim(),
+        display_name: newStaffForm.display_name?.trim() || `${newStaffForm.first_name.trim()} ${newStaffForm.last_name.trim()}`,
         email: newStaffForm.email.trim(),
         phone: newStaffForm.phone.trim(),
-        photo: newStaffForm.photo,
+        position: newStaffForm.position,
+        employment_type: newStaffForm.employment_type,
+        outlet_id: newStaffForm.outlet_id,
+        employee_id: newStaffForm.employee_id || null,
+        hire_date: newStaffForm.hire_date,
+        birth_date: newStaffForm.birth_date || null,
+        hourly_rate: newStaffForm.hourly_rate,
+        salary: newStaffForm.salary,
+        is_bookable: newStaffForm.is_bookable,
+        accepts_online_booking: newStaffForm.accepts_online_booking,
+        max_advance_booking_days: newStaffForm.max_advance_booking_days,
+        bio: newStaffForm.bio || null,
+        profile_image_url: newStaffForm.profile_image_url || null,
+        instagram_handle: newStaffForm.instagram_handle || null,
         skills: newStaffForm.skills,
-        workingSchedule: newStaffForm.workingSchedule,
-        workingDays: newStaffForm.workingDays,
-        notes: newStaffForm.notes,
-        rating: 5.0,
-        completedAppointments: 0,
-        totalRevenue: 0,
-        assignedTreatments: newStaffForm.assignedTreatments,
-        hireDate: newStaffForm.hireDate,
-        birthDate: newStaffForm.birthDate,
-        outletId: newStaffForm.outletId,
-        commissionRate: newStaffForm.commissionRate,
-        yearsExperience: newStaffForm.yearsExperience,
-        employmentType: newStaffForm.employmentType,
-        employeeId: newStaffForm.employeeId,
-        bio: newStaffForm.bio,
-        instagramHandle: newStaffForm.instagramHandle,
-        isBookable: newStaffForm.isBookable,
-        acceptsOnlineBooking: newStaffForm.acceptsOnlineBooking,
-        maxAdvanceBookingDays: newStaffForm.maxAdvanceBookingDays,
-        serviceIds: newStaffForm.assignedTreatments, // Map treatments to service_ids
       }
 
-      await addStaff(newStaff)
+      await addStaff(staffPayload)
 
       // Reset form
       setNewStaffForm({
-        name: "",
-        role: "",
+        first_name: "",
+        last_name: "",
+        display_name: "",
         email: "",
         phone: "",
-        photo: "",
-        skills: [],
-        workingSchedule: {},
-        workingDays: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-        notes: "",
-        assignedTreatments: [],
-        hireDate: new Date().toISOString().split('T')[0],
-        birthDate: "",
-        outletId: "",
-        commissionRate: 0.15,
-        yearsExperience: 0,
-        employmentType: "full_time",
-        employeeId: "",
+        position: "",
+        employment_type: "full_time",
+        outlet_id: "",
+        employee_id: "",
+        hire_date: new Date().toISOString().split('T')[0],
+        birth_date: "",
+        hourly_rate: null,
+        salary: null,
+        is_bookable: true,
+        accepts_online_booking: true,
+        max_advance_booking_days: 30,
         bio: "",
-        instagramHandle: "",
-        isBookable: true,
-        acceptsOnlineBooking: true,
-        maxAdvanceBookingDays: 30,
+        profile_image_url: "",
+        instagram_handle: "",
+        skills: {
+          service_ids: [],
+          specialties: [],
+          certifications: [],
+          years_experience: 0,
+        },
       })
       setShowAddStaffDialog(false)
 
@@ -989,10 +1025,13 @@ export default function StaffPage() {
   }
 
   const handleAddSkill = () => {
-    if (skillInput.trim() && !newStaffForm.skills.includes(skillInput.trim())) {
+    if (skillInput.trim() && !newStaffForm.skills.specialties.includes(skillInput.trim())) {
       setNewStaffForm((prev) => ({
         ...prev,
-        skills: [...prev.skills, skillInput.trim()],
+        skills: {
+          ...prev.skills,
+          specialties: [...prev.skills.specialties, skillInput.trim()],
+        },
       }))
       setSkillInput("")
     }
@@ -1001,7 +1040,10 @@ export default function StaffPage() {
   const handleRemoveSkill = (skillToRemove: string) => {
     setNewStaffForm((prev) => ({
       ...prev,
-      skills: prev.skills.filter((skill) => skill !== skillToRemove),
+      skills: {
+        ...prev.skills,
+        specialties: prev.skills.specialties.filter((skill) => skill !== skillToRemove),
+      },
     }))
   }
 
@@ -1203,14 +1245,13 @@ export default function StaffPage() {
                 <TableHead>Specialties</TableHead>
                 <TableHead className="text-center">Today</TableHead>
                 <TableHead className="text-center">Success Rate</TableHead>
-                <TableHead>Schedule</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedStaff.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No staff members found
                   </TableCell>
                 </TableRow>
@@ -1233,10 +1274,14 @@ export default function StaffPage() {
                       <div className="space-y-1">
                         <div className="font-medium text-gray-900">{staffMember.name}</div>
                         <div className="text-sm text-muted-foreground">{staffMember.role}</div>
-                        <div className="flex items-center gap-1">
-                          <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                          <span className="text-xs text-muted-foreground">{staffMember.rating || 4.8}</span>
-                        </div>
+                        {staffMember.rating && staffMember.rating > 0 ? (
+                          <div className="flex items-center gap-1">
+                            <Star className="h-3 w-3 text-yellow-500 fill-current" />
+                            <span className="text-xs text-muted-foreground">{staffMember.rating.toFixed(1)}</span>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground">No rating yet</div>
+                        )}
                       </div>
                     </TableCell>
                     {/* Products Column */}
@@ -1338,18 +1383,6 @@ export default function StaffPage() {
                         <span className="text-sm font-semibold text-purple-800">
                           {Math.round(performance.completionRate)}%
                         </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{staffMember.workingHours?.[0] || "09:00-17:00"}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{(staffMember.workingDays || ["Mon-Fri"]).slice(0, 3).join(", ")}</span>
-                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -1464,33 +1497,57 @@ export default function StaffPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-4">
-              <div className="text-center p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg">
-                <div className="text-2xl font-bold text-primary">{staff.length}</div>
-                <div className="text-sm text-muted-foreground">Total Staff</div>
+            {loadingStatistics ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-muted-foreground">Loading statistics...</div>
               </div>
-              <div className="text-center p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {staff.reduce((sum, s) => sum + getStaffPerformance(s.id).todayBookings, 0)}
+            ) : statistics ? (
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="text-center p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg">
+                  <div className="text-2xl font-bold text-primary">{statistics.total_staff || 0}</div>
+                  <div className="text-sm text-muted-foreground">Total Staff</div>
                 </div>
-                <div className="text-sm text-muted-foreground">Today's Appointments</div>
-              </div>
-              <div className="text-center p-4 bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {(staff.reduce((sum, s) => sum + (s.rating || 4.8), 0) / staff.length).toFixed(1)}
+                <div className="text-center p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">{statistics.active_staff || 0}</div>
+                  <div className="text-sm text-muted-foreground">Active Staff</div>
                 </div>
-                <div className="text-sm text-muted-foreground">Average Rating</div>
-              </div>
-              <div className="text-center p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">
-                  {Math.round(
-                    staff.reduce((sum, s) => sum + getStaffPerformance(s.id).completionRate, 0) / staff.length,
-                  )}
-                  %
+                <div className="text-center p-4 bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {statistics.average_rating && statistics.average_rating > 0
+                      ? statistics.average_rating.toFixed(1)
+                      : 'N/A'}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Average Rating</div>
                 </div>
-                <div className="text-sm text-muted-foreground">Completion Rate</div>
+                <div className="text-center p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">{statistics.bookable_staff || 0}</div>
+                  <div className="text-sm text-muted-foreground">Bookable Staff</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="text-center p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg">
+                  <div className="text-2xl font-bold text-primary">{staff.length}</div>
+                  <div className="text-sm text-muted-foreground">Total Staff</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    {staff.filter(s => s.is_active).length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Active Staff</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 rounded-lg">
+                  <div className="text-2xl font-bold text-yellow-600">N/A</div>
+                  <div className="text-sm text-muted-foreground">Average Rating</div>
+                </div>
+                <div className="text-center p-4 bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-lg">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {staff.filter(s => s.is_bookable).length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Bookable Staff</div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -1519,11 +1576,15 @@ export default function StaffPage() {
                       </div>
                       <h3 className="text-xl font-semibold">{selectedStaff.name}</h3>
                       <p className="text-muted-foreground">{selectedStaff.role}</p>
-                      <div className="flex items-center justify-center gap-1 mt-2">
-                        <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                        <span className="font-medium">{selectedStaff.rating || 4.8}</span>
-                        <span className="text-muted-foreground">({Math.floor(Math.random() * 50) + 20} reviews)</span>
-                      </div>
+                      {selectedStaff.rating && selectedStaff.rating > 0 ? (
+                        <div className="flex items-center justify-center gap-1 mt-2">
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                          <span className="font-medium">{selectedStaff.rating.toFixed(1)}</span>
+                          <span className="text-muted-foreground">({selectedStaff.rating_count || 0} reviews)</span>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground mt-2">No rating yet</div>
+                      )}
                     </div>
 
                     <div className="space-y-3">
@@ -1540,35 +1601,6 @@ export default function StaffPage() {
                               {selectedStaff.email ||
                                 `${selectedStaff.name.toLowerCase().replace(" ", ".")}@beautyclinic.com`}
                             </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label className="text-sm text-muted-foreground">Working Schedule</Label>
-                        <div className="space-y-2">
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Days:</div>
-                            <div className="flex flex-wrap gap-1">
-                              {(
-                                selectedStaff.workingDays || ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-                              ).map((day: string) => (
-                                <Badge key={day} variant="outline" className="text-xs border-[#E7C6FF] text-purple-600">
-                                  {day.slice(0, 3)}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted-foreground mb-1">Hours:</div>
-                            <div className="space-y-1">
-                              {(selectedStaff.workingHours || ["09:00-17:00"]).map((range: string, index: number) => (
-                                <div key={index} className="flex items-center gap-2 text-sm">
-                                  <Clock className="h-4 w-4 text-muted-foreground" />
-                                  <span>{range}</span>
-                                </div>
-                              ))}
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -2597,7 +2629,7 @@ export default function StaffPage() {
 
         {/* Add Staff Member Dialog */}
         <Dialog open={showAddStaffDialog} onOpenChange={setShowAddStaffDialog}>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Users className="h-5 w-5 text-[#C8B6FF]" />
@@ -2607,55 +2639,86 @@ export default function StaffPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="name" className="text-sm font-medium">
-                    Name *
+                  <Label htmlFor="first_name" className="text-sm font-medium">
+                    First Name *
                   </Label>
                   <Input
-                    id="name"
-                    value={newStaffForm.name}
-                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter full name"
+                    id="first_name"
+                    value={newStaffForm.first_name}
+                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, first_name: e.target.value }))}
+                    placeholder="Enter first name"
                     className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="role" className="text-sm font-medium">
-                    Role / Posisi *
+                  <Label htmlFor="last_name" className="text-sm font-medium">
+                    Last Name *
                   </Label>
-                  {loadingPositions ? (
-                    <div className="h-11 flex items-center justify-center border rounded-md bg-gray-50 mt-1">
-                      <span className="text-sm text-gray-500">Loading positions...</span>
-                    </div>
-                  ) : positionTemplates.length > 0 ? (
-                    <Select
-                      value={newStaffForm.role}
-                      onValueChange={(value) => setNewStaffForm((prev) => ({ ...prev, role: value }))}
-                    >
-                      <SelectTrigger className="mt-1 h-11 border-[#E7C6FF] focus:border-[#C8B6FF]">
-                        <SelectValue placeholder="Select a position" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {positionTemplates.map((position) => (
-                          <SelectItem key={position} value={position}>
-                            {position}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      id="role"
-                      value={newStaffForm.role}
-                      onChange={(e) => setNewStaffForm((prev) => ({ ...prev, role: e.target.value }))}
-                      placeholder="e.g., Beauty Therapist, Massage Therapist, Receptionist"
-                      className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
-                      required
-                    />
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {positionTemplates.length > 0 ? "Select from your tenant's position templates" : "Enter staff position (customize in Settings)"}
-                  </p>
+                  <Input
+                    id="last_name"
+                    value={newStaffForm.last_name}
+                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, last_name: e.target.value }))}
+                    placeholder="Enter last name"
+                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    required
+                  />
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor="display_name" className="text-sm font-medium">
+                  Display Name
+                </Label>
+                <Input
+                  id="display_name"
+                  value={newStaffForm.display_name}
+                  onChange={(e) => setNewStaffForm((prev) => ({ ...prev, display_name: e.target.value }))}
+                  placeholder="Leave empty to auto-generate from first + last name"
+                  className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Leave empty to auto-generate from first + last name
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="position" className="text-sm font-medium">
+                  Position *
+                </Label>
+                {loadingPositions ? (
+                  <div className="h-11 flex items-center justify-center border rounded-md bg-gray-50 mt-1">
+                    <span className="text-sm text-gray-500">Loading positions...</span>
+                  </div>
+                ) : positionTemplates.length > 0 ? (
+                  <Select
+                    value={newStaffForm.position}
+                    onValueChange={(value) => setNewStaffForm((prev) => ({ ...prev, position: value }))}
+                  >
+                    <SelectTrigger className="mt-1 h-11 border-[#E7C6FF] focus:border-[#C8B6FF]">
+                      <SelectValue placeholder="Select a position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positionTemplates.map((position) => (
+                        <SelectItem key={position} value={position}>
+                          {position}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="position"
+                    value={newStaffForm.position}
+                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, position: e.target.value }))}
+                    placeholder="e.g., Beauty Therapist, Massage Therapist, Receptionist"
+                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    required
+                  />
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {positionTemplates.length > 0 ? "Select from your tenant's position templates" : "Enter staff position (customize in Settings)"}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -2698,13 +2761,13 @@ export default function StaffPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="employmentType" className="text-sm font-medium">
+                  <Label htmlFor="employment_type" className="text-sm font-medium">
                     Jenis Pekerjaan *
                   </Label>
                   <Select
-                    value={newStaffForm.employmentType}
+                    value={newStaffForm.employment_type}
                     onValueChange={(value: "full_time" | "part_time" | "contract" | "freelance" | "intern") =>
-                      setNewStaffForm((prev) => ({ ...prev, employmentType: value }))
+                      setNewStaffForm((prev) => ({ ...prev, employment_type: value }))
                     }
                   >
                     <SelectTrigger className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]">
@@ -2720,13 +2783,13 @@ export default function StaffPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="employeeId" className="text-sm font-medium">
+                  <Label htmlFor="employee_id" className="text-sm font-medium">
                     ID Karyawan
                   </Label>
                   <Input
-                    id="employeeId"
-                    value={newStaffForm.employeeId}
-                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, employeeId: e.target.value }))}
+                    id="employee_id"
+                    value={newStaffForm.employee_id}
+                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, employee_id: e.target.value }))}
                     placeholder="Contoh: EMP001"
                     className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
                   />
@@ -2735,26 +2798,26 @@ export default function StaffPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="hireDate" className="text-sm font-medium">
+                  <Label htmlFor="hire_date" className="text-sm font-medium">
                     Tanggal Mulai Kerja
                   </Label>
                   <Input
-                    id="hireDate"
+                    id="hire_date"
                     type="date"
-                    value={newStaffForm.hireDate}
-                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, hireDate: e.target.value }))}
+                    value={newStaffForm.hire_date}
+                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, hire_date: e.target.value }))}
                     className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="birthDate" className="text-sm font-medium">
+                  <Label htmlFor="birth_date" className="text-sm font-medium">
                     Tanggal Lahir
                   </Label>
                   <Input
-                    id="birthDate"
+                    id="birth_date"
                     type="date"
-                    value={newStaffForm.birthDate}
-                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, birthDate: e.target.value }))}
+                    value={newStaffForm.birth_date}
+                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, birth_date: e.target.value }))}
                     className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
                   />
                 </div>
@@ -2762,64 +2825,78 @@ export default function StaffPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="yearsExperience" className="text-sm font-medium">
-                    Pengalaman (Tahun)
+                  <Label htmlFor="hourly_rate" className="text-sm font-medium">
+                    Tarif Per Jam (Rp)
                   </Label>
                   <Input
-                    id="yearsExperience"
+                    id="hourly_rate"
                     type="number"
                     min="0"
-                    value={newStaffForm.yearsExperience}
-                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, yearsExperience: parseInt(e.target.value) || 0 }))}
-                    placeholder="0"
+                    value={newStaffForm.hourly_rate || ""}
+                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, hourly_rate: e.target.value ? parseFloat(e.target.value) : null }))}
+                    placeholder="Opsional"
                     className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="instagramHandle" className="text-sm font-medium">
+                  <Label htmlFor="salary" className="text-sm font-medium">
+                    Gaji (Rp)
+                  </Label>
+                  <Input
+                    id="salary"
+                    type="number"
+                    min="0"
+                    value={newStaffForm.salary || ""}
+                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, salary: e.target.value ? parseFloat(e.target.value) : null }))}
+                    placeholder="Opsional"
+                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="instagram_handle" className="text-sm font-medium">
                     Instagram Handle
                   </Label>
                   <Input
-                    id="instagramHandle"
-                    value={newStaffForm.instagramHandle}
-                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, instagramHandle: e.target.value }))}
+                    id="instagram_handle"
+                    value={newStaffForm.instagram_handle}
+                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, instagram_handle: e.target.value }))}
                     placeholder="@username"
                     className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
                   />
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="commissionRate" className="text-sm font-medium">
-                  Komisi (%)
-                </Label>
-                <Input
-                  id="commissionRate"
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={newStaffForm.commissionRate}
-                  onChange={(e) => setNewStaffForm((prev) => ({ ...prev, commissionRate: parseFloat(e.target.value) || 0 }))}
-                  placeholder="0.15"
-                  className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Contoh: 0.15 untuk 15%, 0.20 untuk 20%
-                </p>
+                <div>
+                  <Label htmlFor="years_experience" className="text-sm font-medium">
+                    Pengalaman (Tahun)
+                  </Label>
+                  <Input
+                    id="years_experience"
+                    type="number"
+                    min="0"
+                    value={newStaffForm.skills.years_experience}
+                    onChange={(e) => setNewStaffForm((prev) => ({
+                      ...prev,
+                      skills: { ...prev.skills, years_experience: parseInt(e.target.value) || 0 }
+                    }))}
+                    placeholder="0"
+                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                  />
+                </div>
               </div>
 
               {outlets.length > 0 && (
                 <div>
-                  <Label htmlFor="outletId" className="text-sm font-medium">
-                    Outlet (Opsional)
+                  <Label htmlFor="outlet_id" className="text-sm font-medium">
+                    Outlet *
                   </Label>
                   <Select
-                    value={newStaffForm.outletId}
-                    onValueChange={(value) => setNewStaffForm((prev) => ({ ...prev, outletId: value }))}
+                    value={newStaffForm.outlet_id}
+                    onValueChange={(value) => setNewStaffForm((prev) => ({ ...prev, outlet_id: value }))}
                   >
                     <SelectTrigger className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]">
-                      <SelectValue placeholder="Pilih outlet (opsional)" />
+                      <SelectValue placeholder="Pilih outlet" />
                     </SelectTrigger>
                     <SelectContent>
                       {outlets.map((outlet) => (
@@ -2830,24 +2907,24 @@ export default function StaffPage() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Pilih outlet tempat staff akan ditempatkan
+                    Pilih outlet tempat staff akan ditempatkan (wajib diisi)
                   </p>
                 </div>
               )}
 
               <div>
-                <Label htmlFor="photo" className="text-sm font-medium">
-                  Photo URL
+                <Label htmlFor="profile_image_url" className="text-sm font-medium">
+                  Profile Image URL
                 </Label>
                 <Input
-                  id="photo"
-                  value={newStaffForm.photo}
-                  onChange={(e) => setNewStaffForm((prev) => ({ ...prev, photo: e.target.value }))}
+                  id="profile_image_url"
+                  value={newStaffForm.profile_image_url}
+                  onChange={(e) => setNewStaffForm((prev) => ({ ...prev, profile_image_url: e.target.value }))}
                   placeholder="https://example.com/photo.jpg"
                   className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Enter a URL to the staff member's photo
+                  Enter a URL to the staff member's profile image
                 </p>
               </div>
 
@@ -2869,44 +2946,44 @@ export default function StaffPage() {
                 <Label className="text-sm font-medium">Pengaturan Booking</Label>
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="isBookable"
-                    checked={newStaffForm.isBookable}
+                    id="is_bookable"
+                    checked={newStaffForm.is_bookable}
                     onCheckedChange={(checked) =>
-                      setNewStaffForm((prev) => ({ ...prev, isBookable: checked as boolean }))
+                      setNewStaffForm((prev) => ({ ...prev, is_bookable: checked as boolean }))
                     }
                     className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
                   />
-                  <Label htmlFor="isBookable" className="text-sm cursor-pointer">
+                  <Label htmlFor="is_bookable" className="text-sm cursor-pointer">
                     Staff dapat dibooking
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="acceptsOnlineBooking"
-                    checked={newStaffForm.acceptsOnlineBooking}
+                    id="accepts_online_booking"
+                    checked={newStaffForm.accepts_online_booking}
                     onCheckedChange={(checked) =>
-                      setNewStaffForm((prev) => ({ ...prev, acceptsOnlineBooking: checked as boolean }))
+                      setNewStaffForm((prev) => ({ ...prev, accepts_online_booking: checked as boolean }))
                     }
                     className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
                   />
-                  <Label htmlFor="acceptsOnlineBooking" className="text-sm cursor-pointer">
+                  <Label htmlFor="accepts_online_booking" className="text-sm cursor-pointer">
                     Terima booking online
                   </Label>
                 </div>
                 <div>
-                  <Label htmlFor="maxAdvanceBookingDays" className="text-sm font-medium">
+                  <Label htmlFor="max_advance_booking_days" className="text-sm font-medium">
                     Maksimal hari booking di muka
                   </Label>
                   <Input
-                    id="maxAdvanceBookingDays"
+                    id="max_advance_booking_days"
                     type="number"
                     min="1"
                     max="365"
-                    value={newStaffForm.maxAdvanceBookingDays}
+                    value={newStaffForm.max_advance_booking_days}
                     onChange={(e) =>
                       setNewStaffForm((prev) => ({
                         ...prev,
-                        maxAdvanceBookingDays: parseInt(e.target.value) || 30,
+                        max_advance_booking_days: parseInt(e.target.value) || 30,
                       }))
                     }
                     placeholder="30"
@@ -2919,94 +2996,6 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Working Days & Hours</Label>
-                <div className="space-y-4 mt-2">
-                  {daysOfWeek.map((day) => (
-                    <div key={day} className="border border-[#E7C6FF] rounded-lg p-3">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Checkbox
-                          id={`new-day-${day}`}
-                          checked={newStaffForm.workingDays.includes(day)}
-                          onCheckedChange={() => handleWorkingDayToggle(day, false)}
-                          className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
-                        />
-                        <Label htmlFor={`new-day-${day}`} className="text-sm font-medium">
-                          {day}
-                        </Label>
-                      </div>
-
-                      {newStaffForm.workingDays.includes(day) && (
-                        <div className="space-y-2 ml-6">
-                          {(newStaffForm.workingSchedule[day] || []).map((range, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 bg-[#FFD6FF]/20 rounded-lg">
-                              <Clock className="h-4 w-4 text-[#C8B6FF]" />
-                              <span className="flex-1 text-sm">{range}</span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRemoveTimeRangeForDay(day, range, false)}
-                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                          <div className="flex gap-2">
-                            <Select
-                              value={newTimeRange.start}
-                              onValueChange={(value) => setNewTimeRange((prev) => ({ ...prev, start: value }))}
-                            >
-                              <SelectTrigger className="flex-1 border-[#E7C6FF]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 24 }, (_, i) => {
-                                  const hour = i.toString().padStart(2, "0")
-                                  return (
-                                    <SelectItem key={hour} value={`${hour}:00`}>
-                                      {hour}:00
-                                    </SelectItem>
-                                  )
-                                })}
-                              </SelectContent>
-                            </Select>
-                            <span className="self-center text-sm text-muted-foreground">to</span>
-                            <Select
-                              value={newTimeRange.end}
-                              onValueChange={(value) => setNewTimeRange((prev) => ({ ...prev, end: value }))}
-                            >
-                              <SelectTrigger className="flex-1 border-[#E7C6FF]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 24 }, (_, i) => {
-                                  const hour = i.toString().padStart(2, "0")
-                                  return (
-                                    <SelectItem key={hour} value={`${hour}:00`}>
-                                      {hour}:00
-                                    </SelectItem>
-                                  )
-                                })}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              type="button"
-                              onClick={() => handleAddTimeRangeForDay(day, false)}
-                              size="sm"
-                              className="bg-[#E7C6FF] hover:bg-[#C8B6FF] text-purple-800"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
                 <Label htmlFor="skills" className="text-sm font-medium">
                   Skills & Specialties
                 </Label>
@@ -3014,7 +3003,7 @@ export default function StaffPage() {
                   <Input
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
-                    placeholder="Add a skill"
+                    placeholder="Add a specialty (e.g., Facial Treatment, Body Massage)"
                     className="border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
                     onKeyPress={(e) => e.key === "Enter" && handleAddSkill()}
                   />
@@ -3027,9 +3016,9 @@ export default function StaffPage() {
                     Add
                   </Button>
                 </div>
-                {newStaffForm.skills.length > 0 && (
+                {newStaffForm.skills.specialties.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {newStaffForm.skills.map((skill) => (
+                    {newStaffForm.skills.specialties.map((skill) => (
                       <Badge
                         key={skill}
                         variant="secondary"
@@ -3046,25 +3035,108 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Assign Products</Label>
+                <Label htmlFor="certifications" className="text-sm font-medium">
+                  Certifications
+                </Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    placeholder="Add a certification"
+                    className="border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault()
+                        const value = skillInput.trim()
+                        if (value && !newStaffForm.skills.certifications.includes(value)) {
+                          setNewStaffForm((prev) => ({
+                            ...prev,
+                            skills: {
+                              ...prev.skills,
+                              certifications: [...prev.skills.certifications, value],
+                            },
+                          }))
+                          setSkillInput("")
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const value = skillInput.trim()
+                      if (value && !newStaffForm.skills.certifications.includes(value)) {
+                        setNewStaffForm((prev) => ({
+                          ...prev,
+                          skills: {
+                            ...prev.skills,
+                            certifications: [...prev.skills.certifications, value],
+                          },
+                        }))
+                        setSkillInput("")
+                      }
+                    }}
+                    size="sm"
+                    className="bg-[#E7C6FF] hover:bg-[#C8B6FF] text-purple-800"
+                  >
+                    Add
+                  </Button>
+                </div>
+                {newStaffForm.skills.certifications.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {newStaffForm.skills.certifications.map((cert) => (
+                      <Badge
+                        key={cert}
+                        variant="secondary"
+                        className="text-xs bg-[#E7FFE7] text-green-800 hover:bg-[#D4FFD4]"
+                      >
+                        {cert}
+                        <button
+                          onClick={() =>
+                            setNewStaffForm((prev) => ({
+                              ...prev,
+                              skills: {
+                                ...prev.skills,
+                                certifications: prev.skills.certifications.filter((c) => c !== cert),
+                              },
+                            }))
+                          }
+                          className="ml-1 hover:text-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium">Assign Products / Services</Label>
                 <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border border-[#E7C6FF] rounded-lg p-3">
                   {treatments.map((treatment) => (
                     <div key={treatment.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={`new-treatment-${treatment.id}`}
-                        checked={newStaffForm.assignedTreatments?.includes(treatment.id) || false}
+                        checked={newStaffForm.skills.service_ids.includes(treatment.id)}
                         onCheckedChange={(checked) => {
                           setNewStaffForm((prev) => {
-                            const currentTreatments = prev.assignedTreatments || []
+                            const currentServiceIds = prev.skills.service_ids
                             if (checked) {
                               return {
                                 ...prev,
-                                assignedTreatments: [...currentTreatments, treatment.id],
+                                skills: {
+                                  ...prev.skills,
+                                  service_ids: [...currentServiceIds, treatment.id],
+                                },
                               }
                             } else {
                               return {
                                 ...prev,
-                                assignedTreatments: currentTreatments.filter((id) => id !== treatment.id),
+                                skills: {
+                                  ...prev.skills,
+                                  service_ids: currentServiceIds.filter((id) => id !== treatment.id),
+                                },
                               }
                             }
                           })
@@ -3083,20 +3155,6 @@ export default function StaffPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes" className="text-sm font-medium">
-                  Notes
-                </Label>
-                <Textarea
-                  id="notes"
-                  value={newStaffForm.notes}
-                  onChange={(e) => setNewStaffForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Additional notes about the staff member..."
-                  className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
-                  rows={3}
-                />
               </div>
 
               <div className="flex gap-3 pt-4">

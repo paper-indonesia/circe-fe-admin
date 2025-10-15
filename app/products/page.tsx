@@ -40,6 +40,7 @@ export default function TreatmentsPage() {
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   const [categoryTemplates, setCategoryTemplates] = useState<string[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const pageSize = 10
 
   const [treatmentForm, setTreatmentForm] = useState({
@@ -137,6 +138,9 @@ export default function TreatmentsPage() {
   const handleAddTreatment = async () => {
     console.log("[v0] handleAddTreatment called with form:", treatmentForm)
 
+    // Prevent double submission
+    if (isSubmitting) return
+
     if (!treatmentForm.name || !treatmentForm.category || treatmentForm.price <= 0) {
       console.log("[v0] Validation failed:", {
         name: treatmentForm.name,
@@ -149,6 +153,7 @@ export default function TreatmentsPage() {
 
     console.log("[v0] Validation passed, calling API...")
 
+    setIsSubmitting(true)
     try {
       // Call API directly using POST /api/v1/services
       const response = await fetch('/api/services', {
@@ -189,31 +194,38 @@ export default function TreatmentsPage() {
       const data = await response.json()
       console.log("[v0] Product added successfully:", data)
 
-      // Refresh treatments list
-      await addTreatment(data)
-
       toast({ title: "Success", description: "Product added successfully" })
       setShowAddDialog(false)
       resetForm()
+
+      // Reload page to fetch updated product list
+      window.location.reload()
     } catch (error: any) {
       console.log("[v0] Error adding treatment:", error)
       toast({ title: "Error", description: error.message || "Failed to add product", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleEditTreatment = async () => {
+    // Prevent double submission
+    if (isSubmitting) return
+
     if (!editingTreatment || !treatmentForm.name || !treatmentForm.category || treatmentForm.price <= 0) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" })
       return
     }
 
+    setIsSubmitting(true)
     try {
-      const response = await fetch(`/api/services/${editingTreatment.id}`, {
+      const response = await fetch('/api/services', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          id: editingTreatment.id,
           name: treatmentForm.name,
           slug: treatmentForm.slug || undefined,
           category: treatmentForm.category,
@@ -244,13 +256,17 @@ export default function TreatmentsPage() {
       }
 
       const data = await response.json()
-      await updateTreatment(editingTreatment.id, data)
 
       toast({ title: "Success", description: "Product updated successfully" })
       setEditingTreatment(null)
       resetForm()
+
+      // Reload page to fetch updated product list
+      window.location.reload()
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to update product", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -948,14 +964,18 @@ export default function TreatmentsPage() {
               <Button
                 onClick={editingTreatment ? handleEditTreatment : handleAddTreatment}
                 size="lg"
-                className="flex-1 h-11 bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-gray-800 hover:from-[#E7C6FF] hover:to-[#C8B6FF] border-0 font-semibold"
+                disabled={isSubmitting}
+                className="flex-1 h-11 bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-gray-800 hover:from-[#E7C6FF] hover:to-[#C8B6FF] border-0 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {editingTreatment ? "Update Product" : "Add Product"}
+                {isSubmitting
+                  ? "Saving..."
+                  : editingTreatment ? "Update Product" : "Add Product"}
               </Button>
               <Button
                 variant="outline"
                 size="lg"
                 className="h-11 px-8"
+                disabled={isSubmitting}
                 onClick={() => {
                   setShowAddDialog(false)
                   setEditingTreatment(null)

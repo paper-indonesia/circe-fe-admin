@@ -1,12 +1,8 @@
-"use client"
-
 import type React from "react"
+import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
-import { AppProvider } from "@/lib/context"
-import { AuthProvider } from "@/lib/auth-context"
-import { Toaster } from "@/components/ui/toaster"
-import { ThemeProvider } from "@/lib/theme-context"
+import { Providers } from "@/components/providers"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -20,30 +16,27 @@ const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
 })
 
+export const metadata: Metadata = {
+  title: "Reserva - Business Management Platform",
+  description: "Complete booking and appointment management system for service-based businesses",
+  icons: {
+    icon: "/reserva_logo.webp",
+    shortcut: "/reserva_logo.webp",
+    apple: "/reserva_logo.webp",
+  },
+}
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}>
-      <head>
-        <title>Reserva - Business Management Platform</title>
-        <meta name="description" content="Complete booking and appointment management system for service-based businesses" />
-        <meta name="generator" content="v0.app" />
-        <link rel="icon" href="/reserva_logo.webp" />
-        <link rel="shortcut icon" href="/reserva_logo.webp" />
-        <link rel="apple-touch-icon" href="/reserva_logo.webp" />
-      </head>
-      <body>
-        <AuthProvider>
-          <AppProvider>
-            <ThemeProvider>
-              {children}
-              <Toaster />
-            </ThemeProvider>
-          </AppProvider>
-        </AuthProvider>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} antialiased`} suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   )

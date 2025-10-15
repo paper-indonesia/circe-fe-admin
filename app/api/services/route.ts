@@ -281,15 +281,54 @@ export async function PUT(req: NextRequest) {
       backendPayload.duration_minutes = duration
     }
 
-    if (updateData.photo !== undefined) backendPayload.image_url = updateData.photo
+    if (updateData.preparation_minutes !== undefined) {
+      backendPayload.preparation_minutes = parseInt(String(updateData.preparation_minutes)) || 0
+    }
+    if (updateData.cleanup_minutes !== undefined) {
+      backendPayload.cleanup_minutes = parseInt(String(updateData.cleanup_minutes)) || 0
+    }
+    if (updateData.max_advance_booking_days !== undefined) {
+      backendPayload.max_advance_booking_days = parseInt(String(updateData.max_advance_booking_days)) || 30
+    }
+    if (updateData.min_advance_booking_hours !== undefined) {
+      backendPayload.min_advance_booking_hours = parseInt(String(updateData.min_advance_booking_hours)) || 2
+    }
+    if (updateData.requires_staff !== undefined) {
+      backendPayload.requires_staff = updateData.requires_staff
+    }
+    if (updateData.required_staff_count !== undefined) {
+      backendPayload.required_staff_count = parseInt(String(updateData.required_staff_count)) || 1
+    }
+    if (updateData.allow_parallel_bookings !== undefined) {
+      backendPayload.allow_parallel_bookings = updateData.allow_parallel_bookings
+    }
+    if (updateData.max_parallel_bookings !== undefined) {
+      backendPayload.max_parallel_bookings = parseInt(String(updateData.max_parallel_bookings)) || 1
+    }
+    if (updateData.tags !== undefined) {
+      backendPayload.tags = updateData.tags
+    }
+    if (updateData.status !== undefined) {
+      backendPayload.status = updateData.status
+    }
+
+    if (updateData.photo !== undefined || updateData.image_url !== undefined) {
+      backendPayload.image_url = updateData.photo || updateData.image_url
+    }
     if (updateData.assignedStaff !== undefined) backendPayload.assigned_staff = updateData.assignedStaff
-    if (updateData.isActive !== undefined) backendPayload.is_active = updateData.isActive
+    if (updateData.isActive !== undefined || updateData.is_active !== undefined) {
+      backendPayload.is_active = updateData.isActive !== undefined ? updateData.isActive : updateData.is_active
+    }
 
     // Handle pricing
-    if (updateData.price !== undefined || updateData.currency !== undefined) {
+    if (updateData.price !== undefined || updateData.currency !== undefined || updateData.pricing !== undefined) {
       backendPayload.pricing = {
-        base_price: updateData.price !== undefined ? parseFloat(String(updateData.price)) || 0 : 0,
-        currency: updateData.currency || 'USD',
+        base_price: updateData.price !== undefined
+          ? parseFloat(String(updateData.price)) || 0
+          : updateData.pricing?.base_price !== undefined
+            ? parseFloat(String(updateData.pricing.base_price)) || 0
+            : 0,
+        currency: updateData.currency || updateData.pricing?.currency || 'IDR',
       }
     }
 
