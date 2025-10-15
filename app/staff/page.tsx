@@ -458,12 +458,12 @@ export default function StaffPage() {
     setShowAddAvailability(true)
   }
 
-  // Watch for tab changes to refresh data
+  // Watch for dialog open, tab changes, and date range changes to refresh data
   useEffect(() => {
     if (selectedStaff && showScheduleDialog) {
       fetchAvailabilityEntries(selectedStaff.id)
     }
-  }, [availabilityTab, dateRange])
+  }, [selectedStaff, showScheduleDialog, availabilityTab, dateRange])
 
   const handleViewProfile = (staffMember: any) => {
     // Convert skills to array format for form
