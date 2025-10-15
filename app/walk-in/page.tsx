@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -28,22 +28,32 @@ import LiquidLoading from "@/components/ui/liquid-loader"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useRouter } from "next/navigation"
 import { BookingDateTime } from "@/components/booking-date-time"
+import { debounce } from 'lodash'
 
-const timeSlots = [
-  { time: "09:00", available: true },
-  { time: "09:30", available: true },
-  { time: "10:00", available: false },
-  { time: "10:30", available: true },
-  { time: "11:00", available: true },
-  { time: "11:30", available: false },
-  { time: "14:00", available: true },
-  { time: "14:30", available: true },
-  { time: "15:00", available: true },
-  { time: "15:30", available: false },
-  { time: "16:00", available: true },
-  { time: "16:30", available: true },
-  { time: "17:00", available: true },
-]
+// Import API functions
+import { searchCustomers, createCustomer, type Customer, completeWalkInBooking } from '@/lib/api/walk-in'
+
+interface AvailabilitySlot {
+  start_time: string
+  end_time: string
+  is_available: boolean
+}
+
+interface AvailabilityGrid {
+  start_date: string
+  end_date: string
+  num_days: number
+  slot_interval_minutes: number
+  availability_grid: Record<string, AvailabilitySlot[]>
+  metadata: {
+    service_id: string
+    service_name: string
+    outlet_id: string
+    outlet_name: string
+    total_available_slots: number
+    service_duration_minutes: number
+  }
+}
 
 interface Booking {
   id: string
@@ -70,7 +80,7 @@ export default function WalkInPage() {
   const { bookings = [], loading: bookingsLoading, addBooking } = useBookings()
 
   const loading = patientsLoading || staffLoading || treatmentsLoading || bookingsLoading
-  
+
   const [currentQueue, setCurrentQueue] = useState(1)
   const [todayBookings, setTodayBookings] = useState<Booking[]>([])
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
@@ -89,6 +99,17 @@ export default function WalkInPage() {
   const [calendarMonth, setCalendarMonth] = useState(new Date())
   const [showCalendar, setShowCalendar] = useState(true)
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [availabilityGrid, setAvailabilityGrid] = useState<AvailabilityGrid | null>(null)
+  const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [outletId, setOutletId] = useState<string | null>(null)
+
+  // API Integration - Customer state
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loadingCustomers, setLoadingCustomers] = useState(false)
+  const [customersError, setCustomersError] = useState<string | null>(null)
+
+  // Ref for auto-scroll to staff section
+  const staffSectionRef = useRef<HTMLDivElement>(null)
 
   // Walk-in is enabled by default
   const isWalkInEnabled = true
@@ -108,6 +129,7 @@ export default function WalkInPage() {
     paymentPercentage: 50,
     paymentFixedAmount: 0,
     existingClient: false,
+    existingClientId: "", // Store customer_id from API
     // Card details
     cardNumber: "",
     cardExpiry: "",
@@ -143,25 +165,85 @@ export default function WalkInPage() {
     "Exfoliation": { gradient: "from-indigo-500 to-purple-500", color: "bg-indigo-50 border-indigo-200 text-indigo-700 hover:border-indigo-400" },
   }
 
+  // Fetch availability grid from API
+  const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string) => {
+    if (!serviceId || !staffId || !outletId) return
+
+    setLoadingAvailability(true)
+    try {
+      const response = await fetch(
+        `/api/availability/grid?` +
+        `service_id=${serviceId}&` +
+        `outlet_id=${outletId}&` +
+        `start_date=${startDate}&` +
+        `num_days=7&` +
+        `slot_interval_minutes=30`
+      )
+
+      if (response.ok) {
+        const data: AvailabilityGrid = await response.json()
+        setAvailabilityGrid(data)
+      } else {
+        console.error('Failed to fetch availability grid')
+        setAvailabilityGrid(null)
+      }
+    } catch (error) {
+      console.error('Error fetching availability grid:', error)
+      setAvailabilityGrid(null)
+    } finally {
+      setLoadingAvailability(false)
+    }
+  }
+
+  // Get outlet ID from current user/tenant
+  useEffect(() => {
+    // TODO: Get outlet ID from authenticated user context
+    // For now, we'll fetch it when staff is available
+    if (staff && staff.length > 0 && staff[0].outlet_id) {
+      setOutletId(staff[0].outlet_id)
+    }
+  }, [staff])
+
   // Load today's bookings
   useEffect(() => {
     // Use local storage for walk-in bookings
     const storageKey = `walkInBookings`
     const savedBookings = localStorage.getItem(storageKey)
-    
+
     if (savedBookings) {
       const bookings = JSON.parse(savedBookings)
       const today = new Date().toDateString()
-      const todayBookingsList = bookings.filter((b: Booking) => 
+      const todayBookingsList = bookings.filter((b: Booking) =>
         new Date(b.createdAt).toDateString() === today
       )
       setTodayBookings(todayBookingsList)
-      
+
       // Set queue number
       if (todayBookingsList.length > 0) {
         const maxQueue = Math.max(...todayBookingsList.map((b: Booking) => b.queueNumber))
         setCurrentQueue(maxQueue + 1)
       }
+    }
+  }, [])
+
+  // API Integration - Load customers when search dialog is opened
+  useEffect(() => {
+    if (showClientSearch && customers.length === 0) {
+      loadInitialCustomers()
+    }
+  }, [showClientSearch])
+
+  // Fetch availability when service, staff, or date changes
+  useEffect(() => {
+    if (formData.treatmentId && formData.staffId && formData.bookingDate && outletId) {
+      fetchAvailabilityGrid(formData.treatmentId, formData.staffId, formData.bookingDate)
+    }
+  }, [formData.treatmentId, formData.staffId, formData.bookingDate, outletId])
+
+  // API Integration - Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSearchCustomers.cancel()
     }
   }, [])
 
@@ -189,40 +271,24 @@ export default function WalkInPage() {
     return days
   }, [weekStart])
 
-  // Filter available time slots based on selected date, staff, and current time
+  // Filter available time slots based on availability grid from API
   const availableTimeSlots = useMemo(() => {
-    if (!formData.bookingDate || !formData.staffId) return []
+    if (!formData.bookingDate || !formData.staffId || !availabilityGrid) {
+      return []
+    }
 
-    const now = new Date()
-    const selectedDate = formData.bookingDate
-    const isToday = selectedDate === format(now, 'yyyy-MM-dd')
-    const currentHour = now.getHours()
-    const currentMinute = now.getMinutes()
+    // Get slots for the selected date from the availability grid
+    const dateSlots = availabilityGrid.availability_grid[formData.bookingDate] || []
 
-    // Filter bookings for selected date and staff
-    const staffBookings = todayBookings.filter(
-      b => b.bookingDate === formData.bookingDate && b.staffId === formData.staffId
-    )
-
-    return timeSlots.map(slot => {
-      const [slotHour, slotMinute] = slot.time.split(':').map(Number)
-      const isBooked = staffBookings.some(b => b.timeSlot === slot.time)
-
-      if (isToday) {
-        // If today, disable past time slots
-        const isPast = slotHour < currentHour || (slotHour === currentHour && slotMinute <= currentMinute)
-        return {
-          ...slot,
-          available: !isBooked && !isPast
-        }
-      }
-
-      return {
-        ...slot,
-        available: !isBooked
-      }
-    })
-  }, [formData.bookingDate, formData.staffId, todayBookings])
+    // Transform API slots to match our format
+    return dateSlots
+      .filter(slot => slot.is_available)
+      .map(slot => ({
+        time: slot.start_time,
+        available: true,
+        end_time: slot.end_time
+      }))
+  }, [formData.bookingDate, formData.staffId, availabilityGrid])
 
   // Check if booking is still possible today
   const canBookToday = useMemo(() => {
@@ -231,7 +297,7 @@ export default function WalkInPage() {
     // Assume operational hours are 09:00 - 17:00
     return currentHour < 17
   }, [])
-  
+
   // Get available staff for selected treatment
   const availableStaff = useMemo(() => {
     if (!selectedTreatment) return staff
@@ -240,22 +306,77 @@ export default function WalkInPage() {
     }
     return staff
   }, [selectedTreatment, staff])
-  
-  // Filter existing clients from patients data
+
+  // API Integration - Replace existingClients with customers from API
   const existingClients = useMemo(() => {
-    return patients.map(p => ({
-      id: p.id,
-      name: p.name,
-      phone: p.phone,
-      email: p.email || '',
-      lastVisit: p.lastVisitAt || 'New client',
-      totalVisits: p.totalVisits
+    return customers.map(c => ({
+      id: c._id || c.id || c.customer_id,
+      name: `${c.first_name} ${c.last_name}`.trim(),
+      phone: c.phone,
+      email: c.email || '',
+      gender: c.gender,
+      lastVisit: c.last_appointment_date ? format(new Date(c.last_appointment_date), 'MMM d, yyyy') : 'New client',
+      totalVisits: c.total_appointments,
+      totalSpent: c.total_spent,
+      loyaltyPoints: c.loyalty_points || 0,
+      tags: c.tags || [],
+      source: c.source,
+      memberSince: c.created_at ? format(new Date(c.created_at), 'MMM yyyy') : ''
     }))
-  }, [patients])
+  }, [customers])
+
+  // API Integration - Load initial customers
+  const loadInitialCustomers = async () => {
+    setLoadingCustomers(true)
+    setCustomersError(null)
+    try {
+      // Load first 50 customers
+      const results = await searchCustomers('')
+      setCustomers(results)
+    } catch (error: any) {
+      console.error('Error loading customers:', error)
+      setCustomersError(error.message)
+
+      // Don't show toast for authentication errors (user will be redirected)
+      if (!error.message.includes('Authentication')) {
+        toast({
+          title: "Error",
+          description: "Failed to load customers list",
+          variant: "destructive"
+        })
+      }
+    } finally {
+      setLoadingCustomers(false)
+    }
+  }
+
+  // API Integration - Debounced search function
+  const debouncedSearchCustomers = useMemo(
+    () => debounce(async (query: string) => {
+      if (query.length < 2) {
+        // Load initial customers if query is empty
+        loadInitialCustomers()
+        return
+      }
+
+      setLoadingCustomers(true)
+      setCustomersError(null)
+      try {
+        const results = await searchCustomers(query)
+        setCustomers(results)
+      } catch (error: any) {
+        console.error('Error searching customers:', error)
+        setCustomersError(error.message)
+      } finally {
+        setLoadingCustomers(false)
+      }
+    }, 300),
+    []
+  )
 
   const validateForm = () => {
     const newErrors: any = {}
-    
+
     if (!formData.name.trim()) newErrors.name = "Name is required"
     if (!formData.phone.trim()) newErrors.phone = "Phone number is required"
     if (!formData.phone.match(/^(\+62|0)[0-9]{9,13}$/)) {
@@ -268,14 +389,14 @@ export default function WalkInPage() {
     if (!formData.staffId) newErrors.staff = "Please select a staff member"
     if (!formData.timeSlot) newErrors.timeSlot = "Please select a time slot"
     if (!formData.paymentMethod) newErrors.paymentMethod = "Please select a payment method"
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       toast({
         title: "Validation Error",
@@ -288,78 +409,86 @@ export default function WalkInPage() {
     setShowConfirmDialog(true)
   }
 
+  // Check availability before confirming booking
+  const checkAvailability = async () => {
+    if (!formData.staffId || !formData.bookingDate || !formData.timeSlot || !selectedTreatment) {
+      return { available: false, reason: 'Missing required booking information' }
+    }
+
+    try {
+      // Calculate end time based on treatment duration
+      const [startHour, startMinute] = formData.timeSlot.split(':').map(Number)
+      const startDate = new Date()
+      startDate.setHours(startHour, startMinute, 0, 0)
+      const endDate = new Date(startDate.getTime() + selectedTreatment.duration * 60000)
+      const endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`
+
+      const response = await fetch(
+        `/api/availability/check?` +
+        `staff_id=${formData.staffId}&` +
+        `date=${formData.bookingDate}&` +
+        `start_time=${formData.timeSlot}&` +
+        `end_time=${endTime}&` +
+        `service_id=${formData.treatmentId}`
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        return data
+      } else {
+        const error = await response.json()
+        return { available: false, reason: error.error || 'Failed to check availability' }
+      }
+    } catch (error) {
+      console.error('Error checking availability:', error)
+      return { available: false, reason: 'Failed to verify availability' }
+    }
+  }
+
+  // API Integration - Complete booking flow using API
   const confirmBooking = async () => {
     setIsValidating(true)
-    
+
     try {
-      
-      // Find or create patient
-      let patientId = formData.existingClientId
-      if (!patientId) {
-        // Create new patient in MongoDB
-        const newPatient = await apiClient.createPatient({
+      if (!outletId) {
+        throw new Error('Outlet information is missing')
+      }
+
+      // Use completeWalkInBooking API function
+      const result = await completeWalkInBooking({
+        // Customer info
+        customer: formData.existingClient && formData.existingClientId ? {
+          customer_id: formData.existingClientId,
           name: formData.name,
           phone: formData.phone,
           email: formData.email,
-          notes: formData.notes
-        })
-        patientId = newPatient._id
-      }
-      
-      // Calculate time slots
-      const bookingDate = new Date(formData.bookingDate)
-      const [hours, minutes] = formData.timeSlot.split(':').map(Number)
-      const startAt = new Date(bookingDate.setHours(hours, minutes, 0, 0))
-      const endAt = new Date(startAt.getTime() + (selectedTreatment?.duration || 60) * 60000)
-      
-      // Create booking in MongoDB
-      const mongoBooking = await apiClient.createBooking({
-        patientId,
-        patientName: formData.name,
-        staffId: formData.staffId,
-        treatmentId: formData.treatmentId,
-        startAt: startAt.toISOString(),
-        endAt: endAt.toISOString(),
-        status: 'pending',
-        source: 'walk-in',
-        paymentStatus: formData.paymentType === 'deposit' ? 'deposit' : 'unpaid',
+        } : undefined,
+        newCustomer: !formData.existingClient ? {
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          notes: formData.notes,
+        } : undefined,
+        // Booking info
+        service_id: formData.treatmentId,
+        staff_id: formData.staffId,
+        outlet_id: outletId,
+        appointment_date: formData.bookingDate,
+        start_time: formData.timeSlot,
         notes: formData.notes,
-        queueNumber: currentQueue,
-        paymentMethod: formData.paymentMethod,
-        paymentAmount: formData.paymentType === "deposit" ? depositAmount : totalAmount
+        // Payment info
+        payment_method: formData.paymentMethod as any,
+        payment_type: formData.paymentType as 'deposit' | 'full',
+        payment_amount: formData.paymentType === 'deposit' ? depositAmount : totalAmount,
       })
-      
-      const booking: Booking = {
-        id: mongoBooking._id || `WI${Date.now()}`,
-        name: formData.name,
-        phone: formData.phone,
-        email: formData.email,
-        treatment: selectedTreatment?.name || "",
-        staff: selectedStaff?.name || "",
-        timeSlot: formData.timeSlot,
-        status: "waiting",
-        createdAt: new Date(),
-        queueNumber: currentQueue,
-        paymentAmount: formData.paymentType === "deposit" ? depositAmount : totalAmount,
-        paymentMethod: formData.paymentMethod,
-        paymentType: formData.paymentType
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create booking')
       }
-      
-      // Also save to localStorage as backup
-      const storageKey = `walkInBookings`
-      const existingBookings = JSON.parse(localStorage.getItem(storageKey) || "[]")
-      existingBookings.push(booking)
-      localStorage.setItem(storageKey, JSON.stringify(existingBookings))
-      
-      setLastBooking(booking)
-      setTodayBookings([...todayBookings, booking])
-      
-    } catch (error) {
-      console.log("MongoDB save failed, using localStorage:", error)
-      
-      // Fallback to localStorage only
+
+      // Success! Create local booking object
       const booking: Booking = {
-        id: `WI${Date.now()}`,
+        id: result.appointment.appointment_id,
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
@@ -369,29 +498,45 @@ export default function WalkInPage() {
         status: "waiting",
         createdAt: new Date(),
         queueNumber: currentQueue,
-        paymentAmount: formData.paymentType === "deposit" ? depositAmount : totalAmount,
+        paymentAmount: result.payment?.amount || (formData.paymentType === "deposit" ? depositAmount : totalAmount),
         paymentMethod: formData.paymentMethod,
         paymentType: formData.paymentType
       }
 
-      // Save booking PER TENANT
+      setLastBooking(booking)
+      setTodayBookings([...todayBookings, booking])
+      setCurrentQueue(currentQueue + 1)
+
+      // Save to localStorage as backup
       const storageKey = `walkInBookings`
       const existingBookings = JSON.parse(localStorage.getItem(storageKey) || "[]")
       existingBookings.push(booking)
       localStorage.setItem(storageKey, JSON.stringify(existingBookings))
-      
-      setLastBooking(booking)
-      setTodayBookings([...todayBookings, booking])
+
+      toast({
+        title: "Success!",
+        description: "Walk-in booking created successfully",
+      })
+
+      setShowConfirmDialog(false)
+      setShowSuccessDialog(true)
+
+      // Refresh availability
+      await fetchAvailabilityGrid(formData.treatmentId, formData.staffId, formData.bookingDate)
+
+      // Reset form
+      resetForm()
+
+    } catch (error: any) {
+      console.error('Booking error:', error)
+      toast({
+        title: "Booking Failed",
+        description: error.message || "Failed to create booking. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsValidating(false)
     }
-
-    setCurrentQueue(currentQueue + 1)
-    
-    setIsValidating(false)
-    setShowConfirmDialog(false)
-    setShowSuccessDialog(true)
-
-    // Reset form
-    resetForm()
   }
 
   const resetForm = () => {
@@ -410,6 +555,7 @@ export default function WalkInPage() {
       paymentPercentage: 50,
       paymentFixedAmount: 0,
       existingClient: false,
+      existingClientId: "",
       cardNumber: "",
       cardExpiry: "",
       cardCvv: "",
@@ -425,13 +571,15 @@ export default function WalkInPage() {
     })
   }
 
+  // API Integration - Update handleClientSelect to save customer_id
   const handleClientSelect = (client: any) => {
     setFormData({
       ...formData,
       name: client.name,
       phone: client.phone,
       email: client.email,
-      existingClient: true
+      existingClient: true,
+      existingClientId: client.id // Save customer_id
     })
     setShowClientSearch(false)
     setSearchQuery("")
@@ -442,9 +590,9 @@ export default function WalkInPage() {
   }
 
   const filteredClients = existingClients.filter(client =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.phone.includes(searchQuery) ||
-    client.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (client.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (client.phone || '').includes(searchQuery) ||
+    (client.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   // Group clients by alphabet
@@ -452,7 +600,7 @@ export default function WalkInPage() {
     const groups: Record<string, typeof filteredClients> = {}
 
     filteredClients.forEach(client => {
-      const firstLetter = client.name.charAt(0).toUpperCase()
+      const firstLetter = (client.name || '').charAt(0).toUpperCase() || '#'
       if (!groups[firstLetter]) {
         groups[firstLetter] = []
       }
@@ -461,7 +609,7 @@ export default function WalkInPage() {
 
     // Sort each group by name
     Object.keys(groups).forEach(letter => {
-      groups[letter].sort((a, b) => a.name.localeCompare(b.name))
+      groups[letter].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
     })
 
     return groups
@@ -493,7 +641,7 @@ export default function WalkInPage() {
     const waiting = todayBookings.filter(b => b.status === "waiting").length
     const inProgress = todayBookings.filter(b => b.status === "in-progress").length
     const completed = todayBookings.filter(b => b.status === "completed").length
-    
+
     return { waiting, inProgress, completed }
   }
 
@@ -552,7 +700,7 @@ export default function WalkInPage() {
             <h1 className="text-3xl font-bold text-foreground">Walk-in Booking</h1>
             <p className="text-muted-foreground">Create a new booking for walk-in clients</p>
           </div>
-          
+
           <div className="flex gap-4">
             <Card>
               <CardContent className="p-4">
@@ -565,7 +713,7 @@ export default function WalkInPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -606,10 +754,10 @@ export default function WalkInPage() {
                     />
                     <Label htmlFor="existing">Existing Client</Label>
                     {formData.existingClient && (
-                      <Button 
-                        type="button" 
-                        size="sm" 
-                        variant="outline" 
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
                         className="ml-auto"
                         onClick={() => setShowClientSearch(true)}
                       >
@@ -617,7 +765,7 @@ export default function WalkInPage() {
                       </Button>
                     )}
                   </div>
-                  
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name *</Label>
@@ -770,10 +918,17 @@ export default function WalkInPage() {
                             {paginatedTreatments.map((treatment) => (
                         <div
                           key={treatment.id}
-                          onClick={() => setFormData({ ...formData, treatmentId: treatment.id })}
+                          onClick={() => {
+                            // Reset staff and time slot when treatment changes
+                            setFormData({ ...formData, treatmentId: treatment.id, staffId: "", timeSlot: "" })
+                            // Auto-scroll to staff section after short delay
+                            setTimeout(() => {
+                              staffSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                            }, 300)
+                          }}
                           className={`border rounded-lg p-4 cursor-pointer transition-all hover:shadow-md ${
                             formData.treatmentId === treatment.id || formData.treatmentId === treatment.id.toString()
-                              ? "border-primary bg-primary/5 shadow-md" 
+                              ? "border-primary bg-primary/5 shadow-md"
                               : "border-border hover:border-primary/50"
                           }`}
                         >
@@ -840,9 +995,16 @@ export default function WalkInPage() {
               </Card>
 
               {/* Staff Selection */}
-              <Card>
+              <Card ref={staffSectionRef}>
                 <CardHeader>
-                  <CardTitle>Select Staff Member</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Select Staff Member</CardTitle>
+                    {selectedTreatment && availableStaff.length < staff.length && (
+                      <Badge variant="default" className="text-xs">
+                        Filtered: {availableStaff.length} of {staff.length} staff available for this product
+                      </Badge>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
@@ -889,8 +1051,8 @@ export default function WalkInPage() {
                           }
                         }}
                         className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                          member.isActive === false 
-                            ? "opacity-60 cursor-not-allowed bg-muted/30" 
+                          member.isActive === false
+                            ? "opacity-60 cursor-not-allowed bg-muted/30"
                             : formData.staffId === member.id
                             ? "border-primary bg-primary/5 shadow-md"
                             : "border-border hover:border-primary/50 hover:shadow-md"
@@ -909,13 +1071,13 @@ export default function WalkInPage() {
                               <div className="flex items-center gap-2 mt-1">
                                 <div className="flex items-center gap-1">
                                   {[...Array(5)].map((_, i) => (
-                                    <Star 
-                                      key={i} 
+                                    <Star
+                                      key={i}
                                       className={`h-3 w-3 ${
-                                        i < Math.floor(member.rating) 
-                                          ? "fill-yellow-400 text-yellow-400" 
+                                        i < Math.floor(member.rating)
+                                          ? "fill-yellow-400 text-yellow-400"
                                           : "fill-gray-200 text-gray-200"
-                                      }`} 
+                                      }`}
                                     />
                                   ))}
                                   <span className="text-xs ml-1">{member.rating}</span>
@@ -924,7 +1086,7 @@ export default function WalkInPage() {
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-2">
-                            <Badge 
+                            <Badge
                               variant={member.isActive !== false ? "outline" : "secondary"}
                               className="text-xs"
                             >
@@ -980,24 +1142,48 @@ export default function WalkInPage() {
                   </div>
 
                   {/* Booking Date & Time - New Component */}
-                  <BookingDateTime
-                    provider={{
-                      name: selectedStaff?.name || "Select Staff First",
-                      address: "Beauty Clinic - Jakarta",
-                      avatarUrl: selectedStaff?.photoUrl
-                    }}
-                    selectedStaffId={formData.staffId}
-                    existingBookings={todayBookings.map(b => ({
-                      bookingDate: b.bookingDate,
-                      timeSlot: b.timeSlot,
-                      staffId: b.staffId || b.staff
-                    }))}
-                    onSelectDateTime={(date, time) => {
-                      setFormData({ ...formData, bookingDate: date, timeSlot: time })
-                      setErrors({ ...errors, timeSlot: "" })
-                    }}
-                    isLoading={loading}
-                  />
+                  {loadingAvailability && formData.treatmentId && formData.staffId ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <p className="text-sm text-muted-foreground">Loading available time slots...</p>
+                      </div>
+                    </div>
+                  ) : formData.treatmentId && formData.staffId ? (
+                    <>
+                      <BookingDateTime
+                        provider={{
+                          name: selectedStaff?.name || "Select Staff First",
+                          address: "Beauty Clinic - Jakarta",
+                          avatarUrl: selectedStaff?.photoUrl
+                        }}
+                        selectedStaffId={formData.staffId}
+                        existingBookings={todayBookings.map(b => ({
+                          bookingDate: b.bookingDate,
+                          timeSlot: b.timeSlot,
+                          staffId: b.staffId || b.staff
+                        }))}
+                        onSelectDateTime={(date, time) => {
+                          setFormData({ ...formData, bookingDate: date, timeSlot: time })
+                          setErrors({ ...errors, timeSlot: "" })
+                        }}
+                        isLoading={loading}
+                      />
+                      {availableTimeSlots.length === 0 && formData.bookingDate && (
+                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <p className="text-sm text-yellow-800">
+                            No available time slots for the selected date. Please choose a different date or staff member.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
+                      <p className="text-sm text-muted-foreground text-center">
+                        Please select a treatment and staff member to view available time slots
+                      </p>
+                    </div>
+                  )}
                   {errors.timeSlot && <p className="text-sm text-red-500 mt-2">{errors.timeSlot}</p>}
                 </CardContent>
               </Card>
@@ -1524,7 +1710,7 @@ export default function WalkInPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Client Search Dialog */}
+        {/* Client Search Dialog - API Integration with Loading States */}
         <Dialog open={showClientSearch} onOpenChange={setShowClientSearch}>
           <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
             <DialogHeader className="pb-4">
@@ -1538,13 +1724,18 @@ export default function WalkInPage() {
             </DialogHeader>
 
             <div className="flex-1 flex flex-col space-y-4 min-h-0">
-              {/* Search Input */}
+              {/* Search Input with API integration */}
               <div className="relative flex-shrink-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, phone, or email..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setSearchQuery(value)
+                    // Trigger debounced search
+                    debouncedSearchCustomers(value)
+                  }}
                   className="pl-10 pr-10 h-11"
                 />
                 {searchQuery && (
@@ -1553,21 +1744,55 @@ export default function WalkInPage() {
                     variant="ghost"
                     size="sm"
                     className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
-                    onClick={() => setSearchQuery("")}
+                    onClick={() => {
+                      setSearchQuery("")
+                      loadInitialCustomers() // Reload initial list
+                    }}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 )}
               </div>
 
-              {/* Results List - Grouped by Alphabet */}
+              {/* Results List with Loading and Error States */}
               <div className="flex-1 overflow-y-auto pr-2 min-h-0">
-                {filteredClients.length === 0 ? (
+                {loadingCustomers ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
+                    <p className="text-sm text-muted-foreground">Searching customers...</p>
+                  </div>
+                ) : customersError ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <AlertCircle className="h-12 w-12 mb-3 text-red-500 opacity-50" />
+                    <p className="text-sm font-medium text-red-600">{customersError}</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={loadInitialCustomers}
+                      className="mt-3"
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : filteredClients.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <Users className="h-12 w-12 mb-3 opacity-30" />
                     <p className="text-sm font-medium">
-                      {searchQuery ? "No clients found matching your search" : "Start typing to search clients"}
+                      {searchQuery ? "No clients found matching your search" : "No clients found"}
                     </p>
+                    {searchQuery && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSearchQuery("")
+                          loadInitialCustomers()
+                        }}
+                        className="mt-3"
+                      >
+                        Clear Search
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -1609,27 +1834,78 @@ export default function WalkInPage() {
                                     onClick={() => handleClientSelect(client)}
                                     className="group p-4 border border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.01]"
                                   >
-                                    <div className="flex items-start justify-between gap-4">
-                                      <div className="flex-1 min-w-0">
-                                        <h4 className="font-semibold text-base text-foreground mb-2 truncate group-hover:text-primary transition-colors">
+                                    {/* Header: Name + Gender */}
+                                    <div className="flex items-start justify-between gap-3 mb-3">
+                                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <h4 className="font-semibold text-base text-foreground truncate group-hover:text-primary transition-colors">
                                           {client.name}
                                         </h4>
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                            <span className="font-mono">{client.phone}</span>
-                                          </div>
-                                          {client.email && (
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
-                                              <span className="truncate">{client.email}</span>
-                                            </div>
-                                          )}
-                                        </div>
+                                        {client.gender && (
+                                          <Badge variant="secondary" className="text-xs flex-shrink-0">
+                                            {client.gender === 'male' ? '👨 Male' : client.gender === 'female' ? '👩 Female' : client.gender}
+                                          </Badge>
+                                        )}
                                       </div>
-                                      <div className="flex-shrink-0">
-                                        <Badge variant="outline" className="text-xs whitespace-nowrap">
-                                          {client.lastVisit === 'New client' ? '🆕 New' : `Last: ${client.lastVisit}`}
+                                      {client.source && (
+                                        <Badge variant="outline" className="text-xs flex-shrink-0">
+                                          {client.source === 'staff' ? '🏪 Staff Created' : client.source}
                                         </Badge>
+                                      )}
+                                    </div>
+
+                                    {/* Contact Info */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3">
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <span className="font-mono">{client.phone}</span>
                                       </div>
+                                      {client.email && (
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
+                                          <span className="truncate">{client.email}</span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Stats Row */}
+                                    <div className="grid grid-cols-3 gap-3 mb-3 py-3 border-y">
+                                      <div className="text-center">
+                                        <p className="text-xs text-muted-foreground mb-1">Visits</p>
+                                        <p className="font-semibold text-sm">{client.totalVisits || 0}</p>
+                                      </div>
+                                      <div className="text-center border-x">
+                                        <p className="text-xs text-muted-foreground mb-1">Total Spent</p>
+                                        <p className="font-semibold text-sm">Rp {(client.totalSpent || 0).toLocaleString("id-ID")}</p>
+                                      </div>
+                                      <div className="text-center">
+                                        <p className="text-xs text-muted-foreground mb-1">Points</p>
+                                        <p className="font-semibold text-sm text-amber-600">⭐ {client.loyaltyPoints || 0}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Tags */}
+                                    {client.tags && client.tags.length > 0 && (
+                                      <div className="flex flex-wrap gap-1.5 mb-3">
+                                        {client.tags.map((tag, idx) => (
+                                          <Badge key={idx} variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                                            #{tag}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* Footer: Last Visit + Member Since */}
+                                    <div className="flex items-center justify-between gap-2 text-xs">
+                                      <span className="text-muted-foreground">
+                                        {client.lastVisit === 'New client' ? (
+                                          <Badge variant="default" className="text-xs">🆕 New Client</Badge>
+                                        ) : (
+                                          `Last visit: ${client.lastVisit}`
+                                        )}
+                                      </span>
+                                      {client.memberSince && (
+                                        <span className="text-muted-foreground">
+                                          Member since {client.memberSince}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 ))}

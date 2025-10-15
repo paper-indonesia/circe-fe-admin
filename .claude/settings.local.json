@@ -33,7 +33,9 @@
       "Bash(netstat:*)",
       "Bash(xargs -r taskkill //PID //F)",
       "Bash(git checkout:*)",
-      "Bash(npm run dev)"
+      "Bash(npm run dev)",
+      "Bash(mkdir:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []
