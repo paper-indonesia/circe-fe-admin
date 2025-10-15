@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Calendar, Users, Star, Settings, UserPlus, Menu, X, Sparkles, LogOut, Wallet, BarChart3, Clock, Power, Shield, Building, ClipboardCheck } from "lucide-react"
+import { Home, Calendar, Users, Star, Settings, UserPlus, Menu, X, Sparkles, LogOut, BarChart3, Clock, Power, Shield, Building } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useLayout } from "./main-layout"
@@ -64,7 +64,6 @@ export function Sidebar() {
         items: [
           { name: 'Dashboard', href: '/dashboard', icon: Home, tourId: 'sidebar-dashboard' },
           { name: 'Calendar', href: '/calendar', icon: Calendar, tourId: 'sidebar-calendar' },
-          { name: 'Availability', href: '/availability', icon: ClipboardCheck, tourId: 'sidebar-availability' },
           { name: 'Customers', href: '/clients', icon: Users, tourId: 'sidebar-clients' },
           { name: 'Staff', href: '/staff', icon: Users, tourId: 'sidebar-staff' },
           { name: 'Walk-in', href: '/walk-in', icon: UserPlus, tourId: 'sidebar-walkin' },
@@ -75,7 +74,6 @@ export function Sidebar() {
         items: [
           { name: 'Products', href: '/products', icon: Star, tourId: 'sidebar-products' },
           { name: 'Reports', href: '/reports', icon: BarChart3, tourId: 'sidebar-reports' },
-          { name: 'Withdrawal', href: '/withdrawal', icon: Wallet, tourId: 'sidebar-withdrawal' },
         ]
       },
       {

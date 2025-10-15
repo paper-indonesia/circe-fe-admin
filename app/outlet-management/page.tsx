@@ -42,7 +42,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Building, Plus, Edit, Trash2, Search, Loader2, MapPin, Phone, Clock, AlertCircle, Mail, Globe, Users, Briefcase, Calendar, X, Save, Sparkles, FileText, Link2, MessageSquare, Activity, Home, MapPinned, Package } from "lucide-react"
+import { Building, Plus, Edit, Trash2, Search, Loader2, MapPin, Phone, Clock, AlertCircle, Mail, Globe, Users, Briefcase, Calendar, X, Save, Sparkles, FileText, Link2, MessageSquare, Activity, Home, MapPinned, Package, Crown } from "lucide-react"
 
 interface BusinessHour {
   day: number
@@ -135,6 +135,7 @@ export default function OutletManagementPage() {
   const [selectedOutlet, setSelectedOutlet] = useState<OutletData | null>(null)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [subscriptionLimitError, setSubscriptionLimitError] = useState(false)
   const [tenant, setTenant] = useState<any>(null)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -221,6 +222,7 @@ export default function OutletManagementPage() {
   const handleAddOutlet = async () => {
     try {
       setError("")
+      setSubscriptionLimitError(false)
 
       if (!tenant?.id) {
         setError("Tenant information not found. Please sign in again.")
@@ -247,6 +249,17 @@ export default function OutletManagementPage() {
         setTimeout(() => setSuccess(""), 3000)
       } else {
         const data = await response.json()
+
+        // Check if it's a subscription limit error
+        const errorMessage = typeof data.error === 'string' ? data.error :
+                           (data.detail && typeof data.detail === 'string' ? data.detail : '')
+
+        if (errorMessage.includes('Subscription limit reached') || errorMessage.includes('Maximum outlets allowed')) {
+          setSubscriptionLimitError(true)
+          setError(errorMessage)
+          setIsAddDialogOpen(false)
+          return
+        }
 
         // Handle FastAPI validation errors (array of error objects)
         if (Array.isArray(data.error)) {
@@ -414,7 +427,27 @@ export default function OutletManagementPage() {
         </div>
 
         {/* Alerts */}
-        {error && (
+        {subscriptionLimitError && (
+          <Alert variant="destructive" className="bg-amber-50 border-amber-200">
+            <Crown className="h-5 w-5 text-amber-600" />
+            <AlertDescription className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="font-semibold text-amber-900 mb-1">Subscription Limit Reached</p>
+                <p className="text-amber-800">{error}</p>
+                <p className="text-sm text-amber-700 mt-1">Please upgrade your subscription plan to add more outlets.</p>
+              </div>
+              <Button
+                onClick={() => router.push('/subscription/upgrade')}
+                className="ml-4 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Upgrade Plan
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {error && !subscriptionLimitError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>

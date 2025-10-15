@@ -17,14 +17,12 @@ import { useStaff, useBookings, useTreatments } from "@/lib/context"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
 import { apiClient, ApiError } from "@/lib/api-client"
-import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2 } from "lucide-react"
+import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useRouter } from "next/navigation"
-
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 export default function StaffPage() {
   const { staff, loading, addStaff, updateStaff, deleteStaff } = useStaff()
@@ -740,98 +738,6 @@ export default function StaffPage() {
           variant: "destructive",
         })
       }
-    }
-  }
-
-  const handleWorkingDayToggle = (day: string, isEdit = false) => {
-    if (isEdit) {
-      setEditStaffForm((prev) => {
-        const newWorkingDays = prev.workingDays.includes(day)
-          ? prev.workingDays.filter((d) => d !== day)
-          : [...prev.workingDays, day]
-
-        const newSchedule = { ...prev.workingSchedule }
-        if (!prev.workingDays.includes(day)) {
-          // Adding new day, initialize with empty schedule
-          newSchedule[day] = []
-        } else {
-          // Removing day, delete its schedule
-          delete newSchedule[day]
-        }
-
-        return {
-          ...prev,
-          workingDays: newWorkingDays,
-          workingSchedule: newSchedule,
-        }
-      })
-    } else {
-      setNewStaffForm((prev) => {
-        const newWorkingDays = prev.workingDays.includes(day)
-          ? prev.workingDays.filter((d) => d !== day)
-          : [...prev.workingDays, day]
-
-        const newSchedule = { ...prev.workingSchedule }
-        if (!prev.workingDays.includes(day)) {
-          // Adding new day, initialize with empty schedule
-          newSchedule[day] = []
-        } else {
-          // Removing day, delete its schedule
-          delete newSchedule[day]
-        }
-
-        return {
-          ...prev,
-          workingDays: newWorkingDays,
-          workingSchedule: newSchedule,
-        }
-      })
-    }
-  }
-
-  const handleAddTimeRangeForDay = (day: string, isEdit = false) => {
-    const timeRange = `${newTimeRange.start}-${newTimeRange.end}`
-    if (isEdit) {
-      setEditStaffForm((prev) => ({
-        ...prev,
-        workingSchedule: {
-          ...prev.workingSchedule,
-          [day]: [...(prev.workingSchedule[day] || []), timeRange].filter(
-            (range, index, arr) => arr.indexOf(range) === index,
-          ),
-        },
-      }))
-    } else {
-      setNewStaffForm((prev) => ({
-        ...prev,
-        workingSchedule: {
-          ...prev.workingSchedule,
-          [day]: [...(prev.workingSchedule[day] || []), timeRange].filter(
-            (range, index, arr) => arr.indexOf(range) === index,
-          ),
-        },
-      }))
-    }
-    setNewTimeRange({ start: "09:00", end: "17:00" })
-  }
-
-  const handleRemoveTimeRangeForDay = (day: string, timeRange: string, isEdit = false) => {
-    if (isEdit) {
-      setEditStaffForm((prev) => ({
-        ...prev,
-        workingSchedule: {
-          ...prev.workingSchedule,
-          [day]: (prev.workingSchedule[day] || []).filter((range) => range !== timeRange),
-        },
-      }))
-    } else {
-      setNewStaffForm((prev) => ({
-        ...prev,
-        workingSchedule: {
-          ...prev.workingSchedule,
-          [day]: (prev.workingSchedule[day] || []).filter((range) => range !== timeRange),
-        },
-      }))
     }
   }
 
@@ -2173,94 +2079,6 @@ export default function StaffPage() {
                       )}
                     </div>
 
-                    <div>
-                      <Label className="text-sm font-medium">Working Days & Hours</Label>
-                      <div className="space-y-4 mt-2">
-                        {daysOfWeek.map((day) => (
-                          <div key={day} className="border border-[#E7C6FF] rounded-lg p-3">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Checkbox
-                                id={`edit-day-${day}`}
-                                checked={editStaffForm.workingDays.includes(day)}
-                                onCheckedChange={() => handleWorkingDayToggle(day, true)}
-                                className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
-                              />
-                              <Label htmlFor={`edit-day-${day}`} className="text-sm font-medium">
-                                {day}
-                              </Label>
-                            </div>
-
-                            {editStaffForm.workingDays.includes(day) && (
-                              <div className="space-y-2 ml-6">
-                                {(editStaffForm.workingSchedule[day] || []).map((range, index) => (
-                                  <div key={index} className="flex items-center gap-2 p-2 bg-[#FFD6FF]/20 rounded-lg">
-                                    <Clock className="h-4 w-4 text-[#C8B6FF]" />
-                                    <span className="flex-1 text-sm">{range}</span>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleRemoveTimeRangeForDay(day, range, true)}
-                                      className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                ))}
-                                <div className="flex gap-2">
-                                  <Select
-                                    value={newTimeRange.start}
-                                    onValueChange={(value) => setNewTimeRange((prev) => ({ ...prev, start: value }))}
-                                  >
-                                    <SelectTrigger className="flex-1 border-[#E7C6FF]">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 24 }, (_, i) => {
-                                        const hour = i.toString().padStart(2, "0")
-                                        return (
-                                          <SelectItem key={hour} value={`${hour}:00`}>
-                                            {hour}:00
-                                          </SelectItem>
-                                        )
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                  <span className="self-center text-sm text-muted-foreground">to</span>
-                                  <Select
-                                    value={newTimeRange.end}
-                                    onValueChange={(value) => setNewTimeRange((prev) => ({ ...prev, end: value }))}
-                                  >
-                                    <SelectTrigger className="flex-1 border-[#E7C6FF]">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 24 }, (_, i) => {
-                                        const hour = i.toString().padStart(2, "0")
-                                        return (
-                                          <SelectItem key={hour} value={`${hour}:00`}>
-                                            {hour}:00
-                                          </SelectItem>
-                                        )
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                  <Button
-                                    type="button"
-                                    onClick={() => handleAddTimeRangeForDay(day, true)}
-                                    size="sm"
-                                    className="bg-[#E7C6FF] hover:bg-[#C8B6FF] text-purple-800"
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
                     <div className="flex gap-3">
                       <Button
                         variant="outline"
@@ -3227,7 +3045,21 @@ export default function StaffPage() {
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="gap-2">
+              {(errorInfo.message.toLowerCase().includes('staff limit') ||
+                errorInfo.message.toLowerCase().includes('subscription') ||
+                errorInfo.message.toLowerCase().includes('upgrade')) && (
+                <Button
+                  onClick={() => {
+                    setShowErrorDialog(false)
+                    router.push('/subscription/upgrade')
+                  }}
+                  className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white"
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade Plan
+                </Button>
+              )}
               <AlertDialogAction
                 onClick={() => setShowErrorDialog(false)}
                 className="bg-gradient-to-r from-[#E7C6FF] to-[#C8B6FF] hover:from-[#C8B6FF] hover:to-[#B8C0FF] text-purple-800"

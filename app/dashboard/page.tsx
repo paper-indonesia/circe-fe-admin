@@ -19,8 +19,6 @@ import {
   Clock,
   CheckCircle,
   ArrowRight,
-  Copy,
-  Wallet,
   ArrowUpRight,
   ArrowDownRight,
   Star,
@@ -132,14 +130,6 @@ export default function DashboardPage() {
     }, 0)
   , [completedBookings, treatments])
 
-  const totalBalance = useMemo(() => {
-    const allCompleted = bookings?.filter((b) => b.status === "completed") || []
-    return allCompleted.reduce((total, booking) => {
-      const treatment = treatments?.find((t) => t.id === booking.treatmentId)
-      return total + (treatment?.price || 0)
-    }, 0)
-  }, [bookings, treatments])
-
   const pendingPayments = useMemo(() =>
     todaysBookings.filter((b) => b.paymentStatus === "unpaid").reduce((total, booking) => {
       const treatment = treatments?.find((t) => t.id === booking.treatmentId)
@@ -199,11 +189,6 @@ export default function DashboardPage() {
   }, [allTransactions, transactionPage])
 
   const totalTransactionPages = Math.ceil(allTransactions.length / transactionsPerPage)
-
-  const copyAccountNumber = () => {
-    navigator.clipboard.writeText("1234567890")
-    toast({ title: "Copied!", description: "Account number copied to clipboard" })
-  }
 
   if (isLoading) {
     return (
@@ -407,63 +392,6 @@ export default function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left Column - Main Content (2 columns) */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Financial Overview */}
-            <Card className="border-[#C8B6FF]/30">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-[#C8B6FF]/20 rounded-lg">
-                      <Wallet className="h-5 w-5 text-[#B8C0FF]" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">Main Business Account</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-gray-500">1234567890</span>
-                        <button onClick={copyAccountNumber} className="text-gray-400 hover:text-gray-600">
-                          <Copy className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900"
-                    onClick={() => router.push('/withdrawal')}
-                  >
-                    Withdraw
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Account Balance</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrency(totalBalance)}</p>
-                  </div>
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => router.push('/calendar')}
-                    >
-                      <Calendar className="h-4 w-4 mr-2" />
-                      New Booking
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => router.push('/reports')}
-                    >
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      View Reports
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Recent Transactions */}
             <Card>
               <CardHeader>
