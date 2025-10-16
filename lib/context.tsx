@@ -29,6 +29,7 @@ interface AppContextType {
   deleteBooking: (id: string, cancellationReason?: string) => Promise<void>
   rescheduleBooking: (id: string, data: { new_date: string; new_time: string; reason?: string }) => Promise<void>
   completeBooking: (id: string, completionNotes?: string) => Promise<void>
+  markNoShowBooking: (id: string, reason?: string) => Promise<void>
 
   addTreatment: (treatment: Omit<Treatment, "id">) => Promise<void>
   updateTreatment: (id: string, updates: Partial<Treatment>) => Promise<void>
@@ -477,6 +478,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const markNoShowBooking = async (id: string, reason?: string) => {
+    try {
+      const updatedAppointment = await apiClient.markNoShowBooking(id, reason)
+
+      // Update booking in state with no-show status
+      setBookings(prev => prev.map(b => {
+        if (b.id === id) {
+          return {
+            ...b,
+            status: 'no-show',
+            notes: updatedAppointment.notes || b.notes,
+          }
+        }
+        return b
+      }))
+    } catch (error) {
+      console.error('Failed to mark booking as no-show:', error)
+      throw error
+    }
+  }
+
   const addTreatment = async (treatment: Omit<Treatment, "id">) => {
     try {
       const newTreatment = await apiClient.createTreatment({
@@ -583,6 +605,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deleteBooking,
         rescheduleBooking,
         completeBooking,
+        markNoShowBooking,
         addTreatment,
         updateTreatment,
         deleteTreatment,
@@ -649,6 +672,7 @@ export function useBookings() {
     deleteBooking: context.deleteBooking,
     rescheduleBooking: context.rescheduleBooking,
     completeBooking: context.completeBooking,
+    markNoShowBooking: context.markNoShowBooking,
   }
 }
 

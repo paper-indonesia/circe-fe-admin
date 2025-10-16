@@ -256,6 +256,13 @@ class ApiClient {
     })
   }
 
+  async markNoShow(id: string, reason?: string) {
+    return this.request<any>(`/appointments/${id}/no-show`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: reason || undefined }),
+    })
+  }
+
   // Legacy aliases for backwards compatibility
   async getBookings(source?: 'walk-in' | 'online') {
     return this.getAppointments({
@@ -282,6 +289,10 @@ class ApiClient {
 
   async completeBooking(id: string, completionNotes?: string) {
     return this.completeAppointment(id, completionNotes)
+  }
+
+  async markNoShowBooking(id: string, reason?: string) {
+    return this.markNoShow(id, reason)
   }
 
   async getWalkInBookings() {

@@ -78,7 +78,7 @@ type DateRange = "week" | "month" | "2weeks"
 export default function CalendarPage() {
   const { toast } = useToast()
 
-  const { bookings = [], loading, updateBooking, deleteBooking, rescheduleBooking, completeBooking } = useBookings()
+  const { bookings = [], loading, updateBooking, deleteBooking, rescheduleBooking, completeBooking, markNoShowBooking } = useBookings()
   const { patients = [] } = usePatients()
   const { staff = [] } = useStaff()
   const { treatments = [] } = useTreatments()
@@ -119,6 +119,11 @@ export default function CalendarPage() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [completionNotes, setCompletionNotes] = useState("")
   const [isCompleting, setIsCompleting] = useState(false)
+
+  // No-show appointment state
+  const [noShowDialogOpen, setNoShowDialogOpen] = useState(false)
+  const [noShowReason, setNoShowReason] = useState("")
+  const [isMarkingNoShow, setIsMarkingNoShow] = useState(false)
 
   // Edit mode state
   const [isEditMode, setIsEditMode] = useState(false)
@@ -742,6 +747,47 @@ export default function CalendarPage() {
       })
     } finally {
       setIsCompleting(false)
+    }
+  }
+
+  const handleOpenNoShow = () => {
+    if (!selectedBooking) return
+    setNoShowDialogOpen(true)
+  }
+
+  const handleConfirmNoShow = async () => {
+    if (!selectedBooking) return
+
+    // Validate reason length if provided
+    if (noShowReason && noShowReason.length > 500) {
+      toast({
+        title: "Reason too long",
+        description: "Reason must be 500 characters or less",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsMarkingNoShow(true)
+    try {
+      await markNoShowBooking(selectedBooking.id, noShowReason || undefined)
+      toast({
+        title: "Appointment marked as no-show",
+        description: "The customer did not arrive for the appointment"
+      })
+      setNoShowDialogOpen(false)
+      setDetailDialogOpen(false)
+      setSelectedBooking(null)
+      setNoShowReason("")
+    } catch (error: any) {
+      console.error('Failed to mark appointment as no-show:', error)
+      toast({
+        title: "Failed to mark as no-show",
+        description: error?.message || "An error occurred while marking the appointment as no-show",
+        variant: "destructive"
+      })
+    } finally {
+      setIsMarkingNoShow(false)
     }
   }
 
@@ -1712,14 +1758,24 @@ export default function CalendarPage() {
                           variant="outline"
                           className="flex-1 h-10 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 text-sm"
                           onClick={handleOpenReschedule}
-                          disabled={['completed', 'cancelled'].includes(selectedBooking.status)}
+                          disabled={['completed', 'cancelled', 'no-show'].includes(selectedBooking.status)}
                         >
                           <Clock className="h-3.5 w-3.5 mr-2" />
                           Reschedule
                         </Button>
                         <Button
+                          variant="outline"
+                          className="flex-1 h-10 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 text-sm"
+                          onClick={handleOpenNoShow}
+                          disabled={selectedBooking.status !== 'confirmed'}
+                        >
+                          <AlertCircle className="h-3.5 w-3.5 mr-2" />
+                          No Show
+                        </Button>
+                        <Button
                           className="flex-1 h-10 bg-[#C8B6FF] hover:bg-[#B8A6EF] text-white text-sm font-medium"
                           onClick={handleFinishBooking}
+                          disabled={['completed', 'cancelled', 'no-show'].includes(selectedBooking.status)}
                         >
                           Finish
                         </Button>
@@ -2617,6 +2673,69 @@ export default function CalendarPage() {
                   disabled={isCompleting}
                 >
                   {isCompleting ? "Completing..." : "Complete Appointment"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* No-Show Dialog */}
+        <Dialog open={noShowDialogOpen} onOpenChange={setNoShowDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-orange-600">
+                <AlertCircle className="h-5 w-5" />
+                Mark as No-Show
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <p className="text-sm text-gray-600">
+                Mark this appointment as no-show when the customer doesn't arrive.
+              </p>
+
+              {/* No-Show Reason */}
+              <div className="space-y-2">
+                <Label htmlFor="no-show-reason" className="text-sm font-medium">
+                  Reason (Optional)
+                </Label>
+                <Textarea
+                  id="no-show-reason"
+                  placeholder="Add reason for no-show (optional, max 500 characters)"
+                  value={noShowReason}
+                  onChange={(e) => setNoShowReason(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  className="resize-none"
+                />
+                <p className="text-xs text-gray-500 text-right">
+                  {noShowReason.length}/500 characters
+                </p>
+              </div>
+
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-xs text-orange-800">
+                  <span className="font-medium">Note:</span> This will mark the appointment as no-show and release the time slot for new bookings. The reason will be appended to the appointment notes.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setNoShowDialogOpen(false)
+                    setNoShowReason("")
+                  }}
+                  disabled={isMarkingNoShow}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                  onClick={handleConfirmNoShow}
+                  disabled={isMarkingNoShow}
+                >
+                  {isMarkingNoShow ? "Marking..." : "Mark as No-Show"}
                 </Button>
               </div>
             </div>
