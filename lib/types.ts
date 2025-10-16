@@ -78,6 +78,8 @@ export interface Treatment {
   description?: string
   popularity?: number
   assignedStaff?: string[]
+  staffIds?: string[] // Staff IDs from include_staff=true
+  staffCount?: number // Staff count from include_staff=true
   isActive?: boolean
   status?: string
   tags?: string[]

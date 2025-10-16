@@ -20,11 +20,35 @@ interface TimeSlot {
   soon?: boolean
 }
 
+interface AvailabilitySlot {
+  start_time: string
+  end_time: string
+  is_available: boolean
+}
+
+interface AvailabilityGrid {
+  start_date: string
+  end_date: string
+  num_days: number
+  slot_interval_minutes: number
+  availability_grid: Record<string, AvailabilitySlot[]>
+  metadata: {
+    service_id: string
+    service_name: string
+    outlet_id: string
+    outlet_name: string
+    total_available_slots: number
+    service_duration_minutes: number
+  }
+}
+
 interface BookingDateTimeProps {
   provider: Provider
   selectedStaffId?: string
   existingBookings?: Array<{ bookingDate: string; timeSlot: string; staffId: string }>
+  availabilityGrid?: AvailabilityGrid | null
   onSelectDateTime: (date: string, time: string) => void
+  onWeekChange?: (weekStart: Date) => void
   isLoading?: boolean
   error?: string
   className?: string
@@ -39,7 +63,9 @@ export function BookingDateTime({
   provider,
   selectedStaffId,
   existingBookings = [],
+  availabilityGrid,
   onSelectDateTime,
+  onWeekChange,
   isLoading = false,
   error,
   className
@@ -66,7 +92,7 @@ export function BookingDateTime({
     return days
   }, [weekStart])
 
-  // Fetch time slots with debounce
+  // Fetch time slots from availability grid
   const fetchTimeSlots = useCallback(async (date: string) => {
     if (!selectedStaffId) {
       setSlots([])
@@ -75,45 +101,28 @@ export function BookingDateTime({
 
     setLoadingSlots(true)
 
-    // Simulate API call with debounce
-    const timer = setTimeout(async () => {
+    // Use setTimeout to avoid blocking UI
+    const timer = setTimeout(() => {
       try {
-        // Generate all possible time slots
-        const allSlots: TimeSlot[] = [
-          { time: "09:00", available: true },
-          { time: "09:30", available: true },
-          { time: "10:00", available: true },
-          { time: "10:30", available: true },
-          { time: "11:00", available: true },
-          { time: "11:30", available: true },
-          { time: "12:00", available: true },
-          { time: "12:30", available: true },
-          { time: "13:00", available: true },
-          { time: "13:30", available: true },
-          { time: "14:00", available: true },
-          { time: "14:30", available: true },
-          { time: "15:00", available: true },
-          { time: "15:30", available: true },
-          { time: "16:00", available: true },
-          { time: "16:30", available: true },
-          { time: "17:00", available: true },
-        ]
+        // Get slots from availability grid API data
+        let apiSlots: TimeSlot[] = []
 
-        // Check which slots are already booked for this staff and date
-        const bookedSlots = existingBookings
-          .filter(b => b.staffId === selectedStaffId && b.bookingDate === date)
-          .map(b => b.timeSlot)
+        if (availabilityGrid && availabilityGrid.availability_grid[date]) {
+          // Convert API slots to component format
+          apiSlots = availabilityGrid.availability_grid[date].map(slot => ({
+            time: slot.start_time,
+            available: slot.is_available
+          }))
+        }
 
-        // Get current time for today's slots
+        // Get current time for today's slots (filter out past times)
         const now = new Date()
         const isToday = date === format(now, 'yyyy-MM-dd')
         const currentHour = now.getHours()
         const currentMinute = now.getMinutes()
 
-        // Mark slots as unavailable if booked or past time
-        const processedSlots = allSlots.map(slot => {
-          const isBooked = bookedSlots.includes(slot.time)
-
+        // Filter out past slots for today
+        const processedSlots = apiSlots.map(slot => {
           // Check if slot is in the past (only for today)
           let isPast = false
           if (isToday) {
@@ -123,21 +132,21 @@ export function BookingDateTime({
 
           return {
             ...slot,
-            available: !isBooked && !isPast
+            available: slot.available && !isPast
           }
         })
 
         setSlots(processedSlots)
       } catch (err) {
-        console.error('Failed to fetch slots:', err)
+        console.error('Failed to process slots:', err)
         setSlots([])
       } finally {
         setLoadingSlots(false)
       }
-    }, 200) // Debounce 200ms
+    }, 100)
 
     return () => clearTimeout(timer)
-  }, [selectedStaffId, existingBookings])
+  }, [selectedStaffId, availabilityGrid])
 
   // Fetch slots when date or staff changes
   useEffect(() => {
@@ -156,13 +165,17 @@ export function BookingDateTime({
 
   // Handlers
   const handlePrevWeek = () => {
-    setWeekStart(subDays(weekStart, 7))
+    const newWeekStart = subDays(weekStart, 7)
+    setWeekStart(newWeekStart)
     setSelectedTime("")
+    onWeekChange?.(newWeekStart)
   }
 
   const handleNextWeek = () => {
-    setWeekStart(addDays(weekStart, 7))
+    const newWeekStart = addDays(weekStart, 7)
+    setWeekStart(newWeekStart)
     setSelectedTime("")
+    onWeekChange?.(newWeekStart)
   }
 
   const handleBackToToday = () => {
@@ -170,6 +183,7 @@ export function BookingDateTime({
     setWeekStart(today)
     setSelectedDate(format(new Date(), 'yyyy-MM-dd'))
     setSelectedTime("")
+    onWeekChange?.(today)
   }
 
   const handleSelectDate = (date: string) => {

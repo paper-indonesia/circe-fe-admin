@@ -164,8 +164,9 @@ class ApiClient {
   }
 
   // Service endpoints (formerly treatments/products)
-  async getTreatments() {
-    return this.request<any[]>('/services')
+  async getTreatments(includeStaff: boolean = true) {
+    const query = includeStaff ? '?include_staff=true' : ''
+    return this.request<any[]>(`/services${query}`)
   }
 
   async createTreatment(data: any) {

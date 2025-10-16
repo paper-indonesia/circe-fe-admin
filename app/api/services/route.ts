@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
     if (searchParams.get('search')) params.append('search', searchParams.get('search')!)
     if (searchParams.get('category')) params.append('category', searchParams.get('category')!)
     if (searchParams.get('is_active')) params.append('is_active', searchParams.get('is_active')!)
+    if (searchParams.get('include_staff')) params.append('include_staff', searchParams.get('include_staff')!)
 
     const queryString = params.toString()
     const url = `${FASTAPI_URL}/api/v1/services${queryString ? '?' + queryString : ''}`
@@ -65,6 +66,8 @@ export async function GET(req: NextRequest) {
       id: service._id || service.id,
       durationMin: service.duration_minutes || service.durationMin || 60,
       assignedStaff: service.assigned_staff || service.assignedStaff || [],
+      staffIds: service.staff_ids || [], // Staff IDs from include_staff=true
+      staffCount: service.staff_count || 0, // Staff count from include_staff=true
       photo: service.image_url || service.photo || '',
       price: service.pricing?.base_price || service.price || 0,
       currency: service.pricing?.currency || 'USD',

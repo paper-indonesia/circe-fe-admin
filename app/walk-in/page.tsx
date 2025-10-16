@@ -174,6 +174,7 @@ export default function WalkInPage() {
       const response = await fetch(
         `/api/availability/grid?` +
         `service_id=${serviceId}&` +
+        `staff_id=${staffId}&` +
         `outlet_id=${outletId}&` +
         `start_date=${startDate}&` +
         `num_days=7&` +
@@ -233,12 +234,18 @@ export default function WalkInPage() {
     }
   }, [showClientSearch])
 
-  // Fetch availability when service, staff, or date changes
+  // Fetch availability when service, staff, or week start changes
   useEffect(() => {
-    if (formData.treatmentId && formData.staffId && formData.bookingDate && outletId) {
-      fetchAvailabilityGrid(formData.treatmentId, formData.staffId, formData.bookingDate)
+    if (formData.treatmentId && formData.staffId && outletId) {
+      // Use today's date or week start, whichever is later (don't use past dates)
+      const today = startOfDay(new Date())
+      const weekStartDay = startOfDay(weekStart)
+      const startDate = weekStartDay < today ? today : weekStartDay
+      const startDateStr = format(startDate, 'yyyy-MM-dd')
+
+      fetchAvailabilityGrid(formData.treatmentId, formData.staffId, startDateStr)
     }
-  }, [formData.treatmentId, formData.staffId, formData.bookingDate, outletId])
+  }, [formData.treatmentId, formData.staffId, weekStart, outletId])
 
   // API Integration - Cleanup debounce on unmount
   useEffect(() => {
@@ -302,32 +309,35 @@ export default function WalkInPage() {
   const availableStaff = useMemo(() => {
     if (!selectedTreatment) return staff
 
-    const serviceId = selectedTreatment.id || selectedTreatment._id || selectedTreatment.service_id
-    console.log('[Walk-In] Filtering staff for service:', serviceId)
+    // Use staffIds from treatment (from include_staff=true API)
+    if (selectedTreatment.staffIds && Array.isArray(selectedTreatment.staffIds) && selectedTreatment.staffIds.length > 0) {
+      console.log('[Walk-In] Using staffIds from treatment:', selectedTreatment.staffIds)
 
-    // Filter staff yang punya service_id ini di skills.service_ids
+      const filtered = staff.filter(s => selectedTreatment.staffIds.includes(s.id))
+      console.log(`[Walk-In] Filtered ${filtered.length} of ${staff.length} staff using staffIds`)
+
+      return filtered
+    }
+
+    // Fallback: Old filtering logic for backwards compatibility
+    const serviceId = selectedTreatment.id || selectedTreatment._id || selectedTreatment.service_id
+    console.log('[Walk-In] Fallback: Filtering staff for service:', serviceId)
+
     const filtered = staff.filter(s => {
       // Check di skills.service_ids (API format from GET /api/v1/staff)
       if (s.skills && Array.isArray(s.skills.service_ids)) {
-        const hasService = s.skills.service_ids.includes(serviceId)
-        if (hasService) {
-          console.log(`[Walk-In] ✓ Staff ${s.name} can handle service ${serviceId}`)
-        }
-        return hasService
+        return s.skills.service_ids.includes(serviceId)
       }
 
       // Fallback: Check di assignedStaff (old local format)
       if (selectedTreatment.assignedStaff && selectedTreatment.assignedStaff.includes(s.id)) {
-        console.log(`[Walk-In] ✓ Staff ${s.name} in assignedStaff (fallback)`)
         return true
       }
 
       return false
     })
 
-    console.log(`[Walk-In] Filtered ${filtered.length} of ${staff.length} staff for service ${serviceId}`)
-
-    // Return filtered staff (empty array if no staff is qualified for this product)
+    console.log(`[Walk-In] Filtered ${filtered.length} of ${staff.length} staff (fallback method)`)
     return filtered
   }, [selectedTreatment, staff])
 
@@ -1188,11 +1198,15 @@ export default function WalkInPage() {
                           timeSlot: b.timeSlot,
                           staffId: b.staffId || b.staff
                         }))}
+                        availabilityGrid={availabilityGrid}
                         onSelectDateTime={(date, time) => {
                           setFormData({ ...formData, bookingDate: date, timeSlot: time })
                           setErrors({ ...errors, timeSlot: "" })
                         }}
-                        isLoading={loading}
+                        onWeekChange={(newWeekStart) => {
+                          setWeekStart(newWeekStart)
+                        }}
+                        isLoading={loadingAvailability}
                       />
                       {availableTimeSlots.length === 0 && formData.bookingDate && (
                         <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">

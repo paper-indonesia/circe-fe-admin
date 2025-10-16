@@ -140,6 +140,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           description: t.description || '',
           popularity: t.popularity || 0,
           assignedStaff: t.assignedStaff || t.assigned_staff || [],
+          staffIds: t.staffIds || t.staff_ids || [], // Staff IDs from include_staff=true
+          staffCount: t.staffCount || t.staff_count || 0,
           photo: t.photo || t.image_url || '',
           isActive: t.isActive !== false && t.is_active !== false,
           status: t.status || 'active',

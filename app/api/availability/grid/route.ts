@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     // Get query parameters
     const { searchParams } = new URL(req.url)
     const service_id = searchParams.get('service_id')
+    const staff_id = searchParams.get('staff_id') // Optional
     const outlet_id = searchParams.get('outlet_id')
     const start_date = searchParams.get('start_date')
     const num_days = searchParams.get('num_days') || '7'
@@ -30,16 +31,20 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const url = new URL(`${FASTAPI_URL}/api/v1/public/availability/grid`)
+    const url = new URL(`${FASTAPI_URL}/api/v1/availability/availability-grid`)
     url.searchParams.set('service_id', service_id)
     url.searchParams.set('outlet_id', outlet_id)
     url.searchParams.set('start_date', start_date)
     url.searchParams.set('num_days', num_days)
     url.searchParams.set('slot_interval_minutes', slot_interval_minutes)
+    if (staff_id) {
+      url.searchParams.set('staff_id', staff_id)
+    }
 
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
+        'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
     })
