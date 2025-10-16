@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { formatCurrency, cn } from "@/lib/utils"
@@ -46,6 +47,7 @@ import {
   Edit,
   Trash2,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   AlertCircle,
   MoreHorizontal,
@@ -76,7 +78,7 @@ type DateRange = "week" | "month" | "2weeks"
 export default function CalendarPage() {
   const { toast } = useToast()
 
-  const { bookings = [], loading, updateBooking, deleteBooking } = useBookings()
+  const { bookings = [], loading, updateBooking, deleteBooking, rescheduleBooking, completeBooking } = useBookings()
   const { patients = [] } = usePatients()
   const { staff = [] } = useStaff()
   const { treatments = [] } = useTreatments()
@@ -95,6 +97,38 @@ export default function CalendarPage() {
   const itemsPerPage = 10
   const [expandedTimeSlots, setExpandedTimeSlots] = useState<Set<string>>(new Set())
   const [tempStatus, setTempStatus] = useState<string>("")
+
+  // Cancel appointment state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [cancellationReason, setCancellationReason] = useState("")
+  const [isCancelling, setIsCancelling] = useState(false)
+
+  // Reschedule appointment state
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false)
+  const [rescheduleData, setRescheduleData] = useState({
+    new_date: "",
+    new_time: "",
+    reason: ""
+  })
+  const [isRescheduling, setIsRescheduling] = useState(false)
+  const [rescheduleAvailabilityGrid, setRescheduleAvailabilityGrid] = useState<any>(null)
+  const [loadingRescheduleAvailability, setLoadingRescheduleAvailability] = useState(false)
+  const [rescheduleWeekStart, setRescheduleWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
+
+  // Complete appointment state
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
+  const [completionNotes, setCompletionNotes] = useState("")
+  const [isCompleting, setIsCompleting] = useState(false)
+
+  // Edit mode state
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editData, setEditData] = useState({
+    appointment_date: "",
+    start_time: "",
+    notes: ""
+  })
+  const [isSaving, setIsSaving] = useState(false)
+
   const [newBookingOpen, setNewBookingOpen] = useState(false)
   const [newBookingStep, setNewBookingStep] = useState(1)
   const [newBookingData, setNewBookingData] = useState<any>({
@@ -116,7 +150,7 @@ export default function CalendarPage() {
 
   // Availability grid state (for booking flow)
   const [availabilityGrid, setAvailabilityGrid] = useState<any>(null)
-  const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [loadingNewBookingAvailability, setLoadingNewBookingAvailability] = useState(false)
   const [outletId, setOutletId] = useState<string | null>(null)
   const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
 
@@ -251,7 +285,7 @@ export default function CalendarPage() {
   const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string) => {
     if (!serviceId || !staffId || !outletId) return
 
-    setLoadingAvailability(true)
+    setLoadingNewBookingAvailability(true)
     try {
       const response = await fetch(
         `/api/availability/grid?` +
@@ -280,7 +314,7 @@ export default function CalendarPage() {
       })
       setAvailabilityGrid(null)
     } finally {
-      setLoadingAvailability(false)
+      setLoadingNewBookingAvailability(false)
     }
   }
 
@@ -405,35 +439,309 @@ export default function CalendarPage() {
   }
 
   const handleDeleteBooking = async (id: string) => {
+    // Open cancel dialog instead of directly deleting
+    setCancelDialogOpen(true)
+  }
+
+  const handleConfirmCancellation = async () => {
+    if (!selectedBooking) return
+
+    // Validate cancellation reason
+    if (!cancellationReason.trim()) {
+      toast({
+        title: "Cancellation reason required",
+        description: "Please provide a reason for cancelling this appointment",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (cancellationReason.length > 500) {
+      toast({
+        title: "Reason too long",
+        description: "Cancellation reason must be 500 characters or less",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsCancelling(true)
     try {
-      await deleteBooking(id)
-      toast({ title: "Booking deleted successfully" })
+      await deleteBooking(selectedBooking.id, cancellationReason)
+      toast({
+        title: "Appointment cancelled successfully",
+        description: "The appointment has been cancelled and the time slot is now available."
+      })
+      setCancelDialogOpen(false)
       setDetailDialogOpen(false)
       setSelectedBooking(null)
+      setCancellationReason("")
+    } catch (error: any) {
+      console.error('Failed to cancel appointment:', error)
+      toast({
+        title: "Failed to cancel appointment",
+        description: error?.message || "An error occurred while cancelling the appointment",
+        variant: "destructive"
+      })
+    } finally {
+      setIsCancelling(false)
+    }
+  }
+
+  const handleOpenReschedule = async () => {
+    if (!selectedBooking) return
+
+    // Pre-fill with current appointment date and time
+    setRescheduleData({
+      new_date: selectedBooking.appointment_date || "",
+      new_time: selectedBooking.start_time || "",
+      reason: ""
+    })
+    setRescheduleDialogOpen(true)
+
+    // Fetch availability grid for staff
+    const staffId = selectedBooking.staffId
+    const treatmentId = selectedBooking.treatmentId
+
+    if (staffId && treatmentId && outletId) {
+      setLoadingRescheduleAvailability(true)
+      try {
+        const startDate = format(rescheduleWeekStart, 'yyyy-MM-dd')
+
+        const response = await fetch(
+          `/api/availability/grid?` +
+          `service_id=${treatmentId}&` +
+          `staff_id=${staffId}&` +
+          `outlet_id=${outletId}&` +
+          `start_date=${startDate}&` +
+          `num_days=7&` +
+          `slot_interval_minutes=30`
+        )
+
+        if (response.ok) {
+          const data = await response.json()
+          console.log('[Reschedule] Availability grid loaded:', data)
+          setRescheduleAvailabilityGrid(data)
+        } else {
+          console.error('[Reschedule] Failed to load availability grid')
+          toast({
+            title: "Warning",
+            description: "Could not load availability. Please try again.",
+            variant: "destructive"
+          })
+        }
+      } catch (error) {
+        console.error('[Reschedule] Error loading availability:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load availability. Please try again.",
+          variant: "destructive"
+        })
+      } finally {
+        setLoadingRescheduleAvailability(false)
+      }
+    }
+  }
+
+  // Fetch reschedule availability grid when week changes
+  const fetchRescheduleAvailabilityGrid = async (newWeekStart: Date) => {
+    if (!selectedBooking || !outletId) return
+
+    const staffId = selectedBooking.staffId
+    const treatmentId = selectedBooking.treatmentId
+
+    if (!staffId || !treatmentId) return
+
+    setLoadingRescheduleAvailability(true)
+    try {
+      const startDate = format(newWeekStart, 'yyyy-MM-dd')
+
+      const response = await fetch(
+        `/api/availability/grid?` +
+        `service_id=${treatmentId}&` +
+        `staff_id=${staffId}&` +
+        `outlet_id=${outletId}&` +
+        `start_date=${startDate}&` +
+        `num_days=7&` +
+        `slot_interval_minutes=30`
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('[Reschedule] Availability grid loaded for new week:', data)
+        setRescheduleAvailabilityGrid(data)
+      }
     } catch (error) {
-      toast({ title: "Failed to delete booking", variant: "destructive" })
+      console.error('[Reschedule] Error loading availability:', error)
+    } finally {
+      setLoadingRescheduleAvailability(false)
+    }
+  }
+
+  const handleConfirmReschedule = async () => {
+    if (!selectedBooking) return
+
+    // Validate required fields
+    if (!rescheduleData.new_date || !rescheduleData.new_time) {
+      toast({
+        title: "Date & Time required",
+        description: "Please select a date and time from the calendar",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validate reason length if provided
+    if (rescheduleData.reason && rescheduleData.reason.length > 500) {
+      toast({
+        title: "Reason too long",
+        description: "Reason must be 500 characters or less",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsRescheduling(true)
+    try {
+      await rescheduleBooking(selectedBooking.id, rescheduleData)
+      toast({
+        title: "Appointment rescheduled successfully",
+        description: `New appointment time: ${rescheduleData.new_date} at ${rescheduleData.new_time}`
+      })
+      setRescheduleDialogOpen(false)
+      setDetailDialogOpen(false)
+      setSelectedBooking(null)
+      setRescheduleData({ new_date: "", new_time: "", reason: "" })
+    } catch (error: any) {
+      console.error('Failed to reschedule appointment:', error)
+      toast({
+        title: "Failed to reschedule appointment",
+        description: error?.message || "An error occurred while rescheduling the appointment",
+        variant: "destructive"
+      })
+    } finally {
+      setIsRescheduling(false)
     }
   }
 
   const handleOpenDetails = (booking: any) => {
     setSelectedBooking(booking)
     setTempStatus(booking.status)
+    setIsEditMode(false)
+    setEditData({
+      appointment_date: booking.appointment_date || "",
+      start_time: booking.start_time || "",
+      notes: booking.notes || ""
+    })
     setDetailDialogOpen(true)
+  }
+
+  const handleEnterEditMode = () => {
+    if (!selectedBooking) return
+    setEditData({
+      appointment_date: selectedBooking.appointment_date || "",
+      start_time: selectedBooking.start_time || "",
+      notes: selectedBooking.notes || ""
+    })
+    setIsEditMode(true)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false)
+    setEditData({
+      appointment_date: selectedBooking?.appointment_date || "",
+      start_time: selectedBooking?.start_time || "",
+      notes: selectedBooking?.notes || ""
+    })
+  }
+
+  const handleSaveChanges = async () => {
+    if (!selectedBooking) return
+
+    // Validate that completed or cancelled appointments cannot be rescheduled
+    if (['completed', 'cancelled'].includes(selectedBooking.status)) {
+      toast({
+        title: "Cannot edit this appointment",
+        description: "Completed or cancelled appointments cannot be modified",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const updates: any = {}
+
+      // Only include changed fields
+      if (editData.appointment_date !== selectedBooking.appointment_date) {
+        updates.appointment_date = editData.appointment_date
+      }
+      if (editData.start_time !== selectedBooking.start_time) {
+        updates.start_time = editData.start_time
+      }
+      if (editData.notes !== (selectedBooking.notes || "")) {
+        updates.notes = editData.notes
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateBooking(selectedBooking.id, updates)
+        toast({ title: "Appointment updated successfully" })
+        setIsEditMode(false)
+      } else {
+        toast({ title: "No changes to save" })
+        setIsEditMode(false)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to update appointment",
+        description: error.message || "Please try again",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleFinishBooking = async () => {
     if (!selectedBooking) return
 
+    // Open complete dialog
+    setCompleteDialogOpen(true)
+  }
+
+  const handleConfirmComplete = async () => {
+    if (!selectedBooking) return
+
+    // Validate completion notes length if provided
+    if (completionNotes && completionNotes.length > 1000) {
+      toast({
+        title: "Notes too long",
+        description: "Completion notes must be 1000 characters or less",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsCompleting(true)
     try {
-      if (tempStatus !== selectedBooking.status) {
-        await updateBooking(selectedBooking.id, { status: tempStatus })
-        toast({ title: "Booking updated successfully" })
-      }
+      await completeBooking(selectedBooking.id, completionNotes || undefined)
+      toast({
+        title: "Appointment completed successfully",
+        description: "The appointment has been marked as completed"
+      })
+      setCompleteDialogOpen(false)
       setDetailDialogOpen(false)
       setSelectedBooking(null)
-      setTempStatus("")
-    } catch (error) {
-      toast({ title: "Failed to update booking", variant: "destructive" })
+      setCompletionNotes("")
+    } catch (error: any) {
+      console.error('Failed to complete appointment:', error)
+      toast({
+        title: "Failed to complete appointment",
+        description: error?.message || "An error occurred while completing the appointment",
+        variant: "destructive"
+      })
+    } finally {
+      setIsCompleting(false)
     }
   }
 
@@ -1161,12 +1469,25 @@ export default function CalendarPage() {
                         <CalendarIcon className="h-4 w-4 text-gray-400" />
                         <span className="text-xs text-gray-500 font-medium">Booking ID #{selectedBooking.id.slice(0, 8).toUpperCase()}</span>
                       </div>
-                      <button
-                        onClick={() => setDetailDialogOpen(false)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {!isEditMode && !['completed', 'cancelled'].includes(selectedBooking.status) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleEnterEditMode}
+                            className="h-7 text-xs"
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                        )}
+                        <button
+                          onClick={() => setDetailDialogOpen(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
                     <h2 className="text-xl font-bold text-gray-900 mb-3">{patient?.name || "Unknown Customer"}</h2>
                     <Select
@@ -1256,12 +1577,39 @@ export default function CalendarPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Date & Time</p>
-                          <p className="font-bold text-gray-900 text-sm">
-                            {format(new Date(selectedBooking.startAt), "EEE, MMM dd")}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {format(new Date(selectedBooking.startAt), "HH:mm")} - {format(new Date(selectedBooking.endAt), "HH:mm")}
-                          </p>
+                          {isEditMode ? (
+                            <div className="space-y-2">
+                              <div>
+                                <Label htmlFor="edit-date" className="text-xs">Date</Label>
+                                <Input
+                                  id="edit-date"
+                                  type="date"
+                                  value={editData.appointment_date}
+                                  onChange={(e) => setEditData({ ...editData, appointment_date: e.target.value })}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor="edit-time" className="text-xs">Start Time</Label>
+                                <Input
+                                  id="edit-time"
+                                  type="time"
+                                  value={editData.start_time}
+                                  onChange={(e) => setEditData({ ...editData, start_time: e.target.value })}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="font-bold text-gray-900 text-sm">
+                                {format(new Date(selectedBooking.startAt), "EEE, MMM dd")}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {format(new Date(selectedBooking.startAt), "HH:mm")} - {format(new Date(selectedBooking.endAt), "HH:mm")}
+                              </p>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -1307,35 +1655,76 @@ export default function CalendarPage() {
                     </div>
 
                     {/* Notes */}
-                    {selectedBooking.notes && (
+                    {(selectedBooking.notes || isEditMode) && (
                       <div>
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-1 h-3 bg-[#C8B6FF] rounded-full"></div>
                           <h3 className="text-xs font-bold text-gray-900">Notes</h3>
                         </div>
-                        <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-3">
-                          <p className="text-xs text-gray-700">{selectedBooking.notes}</p>
-                        </div>
+                        {isEditMode ? (
+                          <Textarea
+                            value={editData.notes}
+                            onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                            placeholder="Add notes for this appointment..."
+                            className="min-h-[80px] text-xs"
+                          />
+                        ) : (
+                          <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-3">
+                            <p className="text-xs text-gray-700">{selectedBooking.notes}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
 
                   {/* Footer Actions */}
                   <div className="sticky bottom-0 bg-white pt-3 border-t border-gray-100 flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      className="flex-1 h-10 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-sm"
-                      onClick={() => handleDeleteBooking(selectedBooking.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-2" />
-                      Delete Booking
-                    </Button>
-                    <Button
-                      className="flex-1 h-10 bg-[#C8B6FF] hover:bg-[#B8A6EF] text-white text-sm font-medium"
-                      onClick={handleFinishBooking}
-                    >
-                      Finish
-                    </Button>
+                    {isEditMode ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          className="flex-1 h-10 text-sm"
+                          onClick={handleCancelEdit}
+                          disabled={isSaving}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          className="flex-1 h-10 bg-[#C8B6FF] hover:bg-[#B8A6EF] text-white text-sm font-medium"
+                          onClick={handleSaveChanges}
+                          disabled={isSaving}
+                        >
+                          {isSaving ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          className="flex-1 h-10 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-sm"
+                          onClick={() => handleDeleteBooking(selectedBooking.id)}
+                          disabled={['completed', 'cancelled'].includes(selectedBooking.status)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 h-10 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 text-sm"
+                          onClick={handleOpenReschedule}
+                          disabled={['completed', 'cancelled'].includes(selectedBooking.status)}
+                        >
+                          <Clock className="h-3.5 w-3.5 mr-2" />
+                          Reschedule
+                        </Button>
+                        <Button
+                          className="flex-1 h-10 bg-[#C8B6FF] hover:bg-[#B8A6EF] text-white text-sm font-medium"
+                          onClick={handleFinishBooking}
+                        >
+                          Finish
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               )
@@ -1542,7 +1931,7 @@ export default function CalendarPage() {
                 return (
                   <div className="space-y-6">
                     {/* Booking Date & Time - BookingDateTime Component */}
-                    {loadingAvailability && newBookingData.treatmentId && newBookingData.staffId ? (
+                    {loadingNewBookingAvailability && newBookingData.treatmentId && newBookingData.staffId ? (
                       <div className="flex items-center justify-center py-8">
                         <div className="flex flex-col items-center gap-3">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -1570,7 +1959,7 @@ export default function CalendarPage() {
                           onWeekChange={(newWeekStart) => {
                             setWeekStart(newWeekStart)
                           }}
-                          isLoading={loadingAvailability}
+                          isLoading={loadingNewBookingAvailability}
                         />
                       </>
                     ) : (
@@ -1989,6 +2378,247 @@ export default function CalendarPage() {
                   Create Appointment
                 </Button>
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Cancel Appointment Dialog */}
+        <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="h-5 w-5" />
+                Cancel Appointment
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <p className="text-sm text-gray-600">
+                Are you sure you want to cancel this appointment? This action cannot be undone.
+              </p>
+
+              <div className="space-y-2">
+                <Label htmlFor="cancellation-reason" className="text-sm font-medium">
+                  Cancellation Reason <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="cancellation-reason"
+                  placeholder="Please provide a reason for cancelling this appointment (required, max 500 characters)"
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  rows={4}
+                  maxLength={500}
+                  className="resize-none"
+                />
+                <p className="text-xs text-gray-500 text-right">
+                  {cancellationReason.length}/500 characters
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCancelDialogOpen(false)
+                    setCancellationReason("")
+                  }}
+                  disabled={isCancelling}
+                  className="flex-1"
+                >
+                  Keep Appointment
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleConfirmCancellation}
+                  disabled={isCancelling || !cancellationReason.trim()}
+                  className="flex-1"
+                >
+                  {isCancelling ? "Cancelling..." : "Cancel Appointment"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reschedule Appointment Dialog */}
+        <Dialog open={rescheduleDialogOpen} onOpenChange={setRescheduleDialogOpen}>
+          <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-blue-600">
+                <Clock className="h-5 w-5" />
+                Reschedule Appointment
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <p className="text-sm text-gray-600">
+                Choose a new date and time for this appointment. Only available time slots are shown.
+              </p>
+
+              {/* BookingDateTime Component */}
+              {selectedBooking && (() => {
+                const staffMember = staff.find(s => s.id === selectedBooking.staffId)
+                const treatment = treatments.find(t => t.id === selectedBooking.treatmentId)
+
+                return (
+                  <div className="space-y-4">
+                    {/* Staff & Service Info */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        <User className="h-4 w-4 text-blue-600" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-900">
+                            {staffMember?.name} - {treatment?.name}
+                          </p>
+                          <p className="text-xs text-blue-700">
+                            Duration: {treatment?.durationMin || 60} minutes
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Date & Time Selection */}
+                    {loadingRescheduleAvailability ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          <p className="text-sm text-gray-600">Loading available time slots...</p>
+                        </div>
+                      </div>
+                    ) : rescheduleAvailabilityGrid ? (
+                      <BookingDateTime
+                        provider={{
+                          name: staffMember?.display_name || staffMember?.name || "Staff",
+                          address: "Beauty Clinic",
+                          avatarUrl: staffMember?.profile_image_url
+                        }}
+                        selectedStaffId={selectedBooking.staffId}
+                        existingBookings={bookings.filter(b => b.id !== selectedBooking.id).map(b => ({
+                          bookingDate: (b as any).appointment_date || format(new Date(b.startAt), 'yyyy-MM-dd'),
+                          timeSlot: (b as any).start_time || format(new Date(b.startAt), 'HH:mm'),
+                          staffId: b.staffId
+                        }))}
+                        availabilityGrid={rescheduleAvailabilityGrid}
+                        onSelectDateTime={(date, time) => {
+                          setRescheduleData({ ...rescheduleData, new_date: date, new_time: time })
+                        }}
+                        onWeekChange={(newWeekStart) => {
+                          setRescheduleWeekStart(newWeekStart)
+                          fetchRescheduleAvailabilityGrid(newWeekStart)
+                        }}
+                        isLoading={loadingRescheduleAvailability}
+                      />
+                    ) : (
+                      <div className="p-4 bg-gray-50 rounded-lg border border-dashed">
+                        <p className="text-sm text-gray-600 text-center">
+                          No availability data loaded. Please try again.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Reason Field */}
+                    <div className="space-y-2">
+                      <Label htmlFor="reschedule-reason" className="text-sm font-medium">
+                        Reason (Optional)
+                      </Label>
+                      <Textarea
+                        id="reschedule-reason"
+                        placeholder="Reason for rescheduling (optional, max 500 characters)"
+                        value={rescheduleData.reason}
+                        onChange={(e) => setRescheduleData({ ...rescheduleData, reason: e.target.value })}
+                        rows={3}
+                        maxLength={500}
+                        className="resize-none"
+                      />
+                      <p className="text-xs text-gray-500 text-right">
+                        {rescheduleData.reason.length}/500 characters
+                      </p>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setRescheduleDialogOpen(false)
+                    setRescheduleData({ new_date: "", new_time: "", reason: "" })
+                  }}
+                  disabled={isRescheduling}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  onClick={handleConfirmReschedule}
+                  disabled={isRescheduling || !rescheduleData.new_date || !rescheduleData.new_time}
+                >
+                  {isRescheduling ? "Rescheduling..." : "Reschedule"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Complete Dialog */}
+        <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle2 className="h-5 w-5" />
+                Complete Appointment
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <p className="text-sm text-gray-600">
+                Mark this appointment as completed. The payment status will be verified and updated.
+              </p>
+
+              {/* Completion Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="completion-notes" className="text-sm font-medium">
+                  Completion Notes (Optional)
+                </Label>
+                <Textarea
+                  id="completion-notes"
+                  placeholder="Add any notes about the appointment completion (optional, max 1000 characters)"
+                  value={completionNotes}
+                  onChange={(e) => setCompletionNotes(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                  className="resize-none"
+                />
+                <p className="text-xs text-gray-500 text-right">
+                  {completionNotes.length}/1000 characters
+                </p>
+              </div>
+
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-xs text-green-800">
+                  <span className="font-medium">Note:</span> This will mark the appointment as completed and verify the payment status.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCompleteDialogOpen(false)
+                    setCompletionNotes("")
+                  }}
+                  disabled={isCompleting}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleConfirmComplete}
+                  disabled={isCompleting}
+                >
+                  {isCompleting ? "Completing..." : "Complete Appointment"}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

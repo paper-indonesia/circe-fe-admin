@@ -59,7 +59,7 @@ export async function GET(
   }
 }
 
-// PATCH - Update appointment
+// PATCH - Update appointment (partial update)
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -80,7 +80,7 @@ export async function PATCH(
     console.log('[PATCH /api/appointments/[id]] Updating appointment:', appointmentId, body)
 
     const response = await fetch(`${FASTAPI_URL}/api/v1/appointments/${appointmentId}`, {
-      method: 'PATCH',
+      method: 'PUT', // FastAPI uses PUT for updates
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
@@ -110,6 +110,57 @@ export async function PATCH(
   }
 }
 
+// PUT - Update appointment (full update)
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const authToken = getAuthToken(req)
+
+    if (!authToken) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const appointmentId = params.id
+    const body = await req.json()
+
+    console.log('[PUT /api/appointments/[id]] Updating appointment:', appointmentId, body)
+
+    const response = await fetch(`${FASTAPI_URL}/api/v1/appointments/${appointmentId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body)
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error('[PUT /api/appointments/[id]] Error:', data)
+      return NextResponse.json(
+        { error: data.detail || 'Failed to update appointment' },
+        { status: response.status }
+      )
+    }
+
+    console.log('[PUT /api/appointments/[id]] Success')
+
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error('[PUT /api/appointments/[id]] Error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 // DELETE - Cancel/delete appointment
 export async function DELETE(
   req: NextRequest,
@@ -126,8 +177,24 @@ export async function DELETE(
     }
 
     const appointmentId = params.id
+    const body = await req.json()
 
-    console.log('[DELETE /api/appointments/[id]] Deleting appointment:', appointmentId)
+    console.log('[DELETE /api/appointments/[id]] Cancelling appointment:', appointmentId, body)
+
+    // Validate cancellation_reason
+    if (!body.cancellation_reason || typeof body.cancellation_reason !== 'string') {
+      return NextResponse.json(
+        { error: 'Cancellation reason is required' },
+        { status: 400 }
+      )
+    }
+
+    if (body.cancellation_reason.length < 1 || body.cancellation_reason.length > 500) {
+      return NextResponse.json(
+        { error: 'Cancellation reason must be between 1 and 500 characters' },
+        { status: 400 }
+      )
+    }
 
     const response = await fetch(`${FASTAPI_URL}/api/v1/appointments/${appointmentId}`, {
       method: 'DELETE',
@@ -135,20 +202,24 @@ export async function DELETE(
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        cancellation_reason: body.cancellation_reason
+      })
     })
 
     if (!response.ok) {
       const data = await response.json()
       console.error('[DELETE /api/appointments/[id]] Error:', data)
       return NextResponse.json(
-        { error: data.detail || 'Failed to delete appointment' },
+        { error: data.detail || 'Failed to cancel appointment' },
         { status: response.status }
       )
     }
 
+    const data = await response.json()
     console.log('[DELETE /api/appointments/[id]] Success')
 
-    return NextResponse.json({ message: 'Appointment deleted successfully' })
+    return NextResponse.json(data)
   } catch (error) {
     console.error('[DELETE /api/appointments/[id]] Error:', error)
     return NextResponse.json(

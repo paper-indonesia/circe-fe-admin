@@ -235,9 +235,24 @@ class ApiClient {
     })
   }
 
-  async deleteAppointment(id: string) {
+  async deleteAppointment(id: string, cancellationReason?: string) {
     return this.request<any>(`/appointments/${id}`, {
       method: 'DELETE',
+      body: cancellationReason ? JSON.stringify({ cancellation_reason: cancellationReason }) : undefined,
+    })
+  }
+
+  async rescheduleAppointment(id: string, data: { new_date: string; new_time: string; reason?: string }) {
+    return this.request<any>(`/appointments/${id}/reschedule`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async completeAppointment(id: string, completionNotes?: string) {
+    return this.request<any>(`/appointments/${id}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ completion_notes: completionNotes || undefined }),
     })
   }
 
@@ -257,8 +272,16 @@ class ApiClient {
     return this.updateAppointment(id, updates)
   }
 
-  async deleteBooking(id: string) {
-    return this.deleteAppointment(id)
+  async deleteBooking(id: string, cancellationReason?: string) {
+    return this.deleteAppointment(id, cancellationReason)
+  }
+
+  async rescheduleBooking(id: string, data: { new_date: string; new_time: string; reason?: string }) {
+    return this.rescheduleAppointment(id, data)
+  }
+
+  async completeBooking(id: string, completionNotes?: string) {
+    return this.completeAppointment(id, completionNotes)
   }
 
   async getWalkInBookings() {

@@ -26,7 +26,9 @@ interface AppContextType {
 
   addBooking: (booking: Omit<Booking, "id">) => Promise<void>
   updateBooking: (id: string, updates: Partial<Booking>) => Promise<void>
-  deleteBooking: (id: string) => Promise<void>
+  deleteBooking: (id: string, cancellationReason?: string) => Promise<void>
+  rescheduleBooking: (id: string, data: { new_date: string; new_time: string; reason?: string }) => Promise<void>
+  completeBooking: (id: string, completionNotes?: string) => Promise<void>
 
   addTreatment: (treatment: Omit<Treatment, "id">) => Promise<void>
   updateTreatment: (id: string, updates: Partial<Treatment>) => Promise<void>
@@ -414,12 +416,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const deleteBooking = async (id: string) => {
+  const deleteBooking = async (id: string, cancellationReason?: string) => {
     try {
-      await apiClient.deleteBooking(id)
+      await apiClient.deleteBooking(id, cancellationReason)
       setBookings(prev => prev.filter(b => b.id !== id))
     } catch (error) {
       console.error('Failed to delete booking:', error)
+      throw error
+    }
+  }
+
+  const rescheduleBooking = async (id: string, data: { new_date: string; new_time: string; reason?: string }) => {
+    try {
+      const updatedAppointment = await apiClient.rescheduleBooking(id, data)
+
+      // Update booking in state with new date/time
+      setBookings(prev => prev.map(b => {
+        if (b.id === id) {
+          return {
+            ...b,
+            appointment_date: updatedAppointment.appointment_date,
+            start_time: updatedAppointment.start_time,
+            end_time: updatedAppointment.end_time,
+            startAt: updatedAppointment.appointment_date && updatedAppointment.start_time
+              ? `${updatedAppointment.appointment_date}T${updatedAppointment.start_time}`
+              : b.startAt,
+            endAt: updatedAppointment.appointment_date && updatedAppointment.end_time
+              ? `${updatedAppointment.appointment_date}T${updatedAppointment.end_time}`
+              : b.endAt,
+            notes: updatedAppointment.notes || b.notes,
+          }
+        }
+        return b
+      }))
+    } catch (error) {
+      console.error('Failed to reschedule booking:', error)
+      throw error
+    }
+  }
+
+  const completeBooking = async (id: string, completionNotes?: string) => {
+    try {
+      const updatedAppointment = await apiClient.completeBooking(id, completionNotes)
+
+      // Update booking in state with completed status
+      setBookings(prev => prev.map(b => {
+        if (b.id === id) {
+          return {
+            ...b,
+            status: 'completed',
+            paymentStatus: updatedAppointment.payment_status || b.paymentStatus,
+            notes: updatedAppointment.notes || b.notes,
+          }
+        }
+        return b
+      }))
+    } catch (error) {
+      console.error('Failed to complete booking:', error)
+      throw error
     }
   }
 
@@ -527,6 +581,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addBooking,
         updateBooking,
         deleteBooking,
+        rescheduleBooking,
+        completeBooking,
         addTreatment,
         updateTreatment,
         deleteTreatment,
@@ -591,6 +647,8 @@ export function useBookings() {
     addBooking: context.addBooking,
     updateBooking: context.updateBooking,
     deleteBooking: context.deleteBooking,
+    rescheduleBooking: context.rescheduleBooking,
+    completeBooking: context.completeBooking,
   }
 }
 
