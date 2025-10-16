@@ -301,10 +301,34 @@ export default function WalkInPage() {
   // Get available staff for selected treatment
   const availableStaff = useMemo(() => {
     if (!selectedTreatment) return staff
-    if (selectedTreatment.assignedStaff && selectedTreatment.assignedStaff.length > 0) {
-      return staff.filter(s => selectedTreatment.assignedStaff?.includes(s.id))
-    }
-    return staff
+
+    const serviceId = selectedTreatment.id || selectedTreatment._id || selectedTreatment.service_id
+    console.log('[Walk-In] Filtering staff for service:', serviceId)
+
+    // Filter staff yang punya service_id ini di skills.service_ids
+    const filtered = staff.filter(s => {
+      // Check di skills.service_ids (API format from GET /api/v1/staff)
+      if (s.skills && Array.isArray(s.skills.service_ids)) {
+        const hasService = s.skills.service_ids.includes(serviceId)
+        if (hasService) {
+          console.log(`[Walk-In] ✓ Staff ${s.name} can handle service ${serviceId}`)
+        }
+        return hasService
+      }
+
+      // Fallback: Check di assignedStaff (old local format)
+      if (selectedTreatment.assignedStaff && selectedTreatment.assignedStaff.includes(s.id)) {
+        console.log(`[Walk-In] ✓ Staff ${s.name} in assignedStaff (fallback)`)
+        return true
+      }
+
+      return false
+    })
+
+    console.log(`[Walk-In] Filtered ${filtered.length} of ${staff.length} staff for service ${serviceId}`)
+
+    // Return filtered staff (empty array if no staff is qualified for this product)
+    return filtered
   }, [selectedTreatment, staff])
 
   // API Integration - Replace existingClients with customers from API
@@ -921,6 +945,7 @@ export default function WalkInPage() {
                           onClick={() => {
                             // Reset staff and time slot when treatment changes
                             setFormData({ ...formData, treatmentId: treatment.id, staffId: "", timeSlot: "" })
+
                             // Auto-scroll to staff section after short delay
                             setTimeout(() => {
                               staffSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
