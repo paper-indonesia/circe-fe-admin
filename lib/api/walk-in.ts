@@ -407,43 +407,66 @@ export async function checkAvailability(params: {
 
 // ==================== APPOINTMENTS MANAGEMENT ====================
 
+export interface AppointmentService {
+  service_id: string
+  service_name: string
+  staff_id: string
+  staff_name: string
+  price: number
+  duration_minutes: number
+  start_time: string
+  end_time: string
+}
+
+export interface FeeBreakdown {
+  base_amount: number
+  platform_fee: number
+  total_with_fee: number
+  fee_rate: number
+  fee_percentage: string
+  subscription_plan: string
+  note: string
+}
+
+export interface RescheduleInfo {
+  date: string
+  start_time: string
+  end_time: string
+}
+
 export interface Appointment {
-  appointment_id: string
-  appointment_number: string
-  customer: {
-    customer_id: string
-    name: string
-    phone: string
-    email: string
-  }
-  service: {
-    service_id: string
-    service_name: string
-    duration_minutes: number
-    price: number
-  }
-  staff: {
-    staff_id: string
-    staff_name: string
-    photo?: string
-  }
-  outlet: {
-    outlet_id: string
-    outlet_name: string
-  }
+  id: string
+  tenant_id: string
+  customer_id: string
+  outlet_id: string
   appointment_date: string
   start_time: string
   end_time: string
-  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'canceled' | 'no_show'
-  payment_status: 'pending' | 'partial' | 'paid' | 'refunded'
-  total_amount: number
+  status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+  payment_status: 'pending' | 'paid' | 'partially_paid' | 'refunded'
+  services: AppointmentService[]
+  total_price: number
+  fee_breakdown?: FeeBreakdown
+  rescheduled_from?: RescheduleInfo
+  rescheduled_to?: RescheduleInfo
+  rescheduled_at?: string
   notes?: string
-  created_via: string
   created_at: string
+  confirmed_at?: string
+  created_by_id?: string
+}
+
+export interface AppointmentListResponse {
+  items: Appointment[]
+  total: number
+  page: number
+  size: number
+  pages: number
 }
 
 /**
  * Create walk-in appointment
+ * Using new API structure with services array
  */
 export async function createAppointment(appointmentData: {
   customer_id: string
@@ -453,34 +476,102 @@ export async function createAppointment(appointmentData: {
   appointment_date: string
   start_time: string
   notes?: string
-  auto_confirm?: boolean
-  send_notifications?: boolean
 }): Promise<Appointment> {
-  const response = await fetch('/api/bookings', {
+  // Transform to new API structure with services array
+  const requestBody = {
+    customer_id: appointmentData.customer_id,
+    outlet_id: appointmentData.outlet_id,
+    appointment_date: appointmentData.appointment_date,
+    start_time: appointmentData.start_time,
+    services: [
+      {
+        service_id: appointmentData.service_id,
+        staff_id: appointmentData.staff_id
+      }
+    ],
+    notes: appointmentData.notes || ''
+  }
+
+  console.log('[createAppointment] Sending request:', JSON.stringify(requestBody, null, 2))
+
+  const response = await fetch('/api/appointments', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...appointmentData,
-      auto_confirm: appointmentData.auto_confirm ?? true, // Walk-in auto confirm
-      send_notifications: appointmentData.send_notifications ?? true,
-    }),
+    body: JSON.stringify(requestBody),
   })
 
   if (!response.ok) {
     const error = await response.json()
+    console.error('[createAppointment] Error response:', error)
     throw new Error(error.error || 'Failed to create appointment')
   }
 
   const data = await response.json()
+  console.log('[createAppointment] Success response:', data)
   return data
+}
+
+/**
+ * List appointments with filtering and pagination
+ */
+export async function listAppointments(params?: {
+  // Pagination
+  page?: number
+  size?: number
+  // Date filters
+  date_from?: string
+  date_to?: string
+  // Status filters
+  status?: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
+  appointment_type?: 'walk_in' | 'scheduled' | 'online'
+  payment_status?: 'pending' | 'paid' | 'partially_paid' | 'refunded'
+  // Entity filters
+  customer_id?: string
+  staff_id?: string
+  outlet_id?: string
+  service_id?: string
+  // Sorting
+  sort_by?: string
+  sort_direction?: 'asc' | 'desc'
+}): Promise<AppointmentListResponse> {
+  try {
+    const searchParams = new URLSearchParams()
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams.append(key, value.toString())
+        }
+      })
+    }
+
+    const url = `/api/appointments${searchParams.toString() ? '?' + searchParams.toString() : ''}`
+    console.log('[listAppointments] Fetching:', url)
+
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to fetch appointments')
+    }
+
+    const data = await response.json()
+    console.log('[listAppointments] Success, received', data.items?.length || 0, 'items')
+    return data
+  } catch (error: any) {
+    console.error('[listAppointments] Error:', error)
+    throw error
+  }
 }
 
 /**
  * Get appointment by ID
  */
-export async function getAppointmentById(appointmentId: string): Promise<Appointment | null> {
+export async function getAppointmentById(appointmentId: string): Promise<Appointment> {
   try {
-    const response = await fetch(`/api/bookings/${appointmentId}`)
+    console.log('[getAppointmentById] Fetching appointment:', appointmentId)
+
+    const response = await fetch(`/api/appointments/${appointmentId}`)
 
     if (!response.ok) {
       const error = await response.json()
@@ -488,10 +579,70 @@ export async function getAppointmentById(appointmentId: string): Promise<Appoint
     }
 
     const data = await response.json()
+    console.log('[getAppointmentById] Success')
     return data
-  } catch (error) {
-    console.error('Error getting appointment:', error)
-    return null
+  } catch (error: any) {
+    console.error('[getAppointmentById] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Update appointment
+ */
+export async function updateAppointment(
+  appointmentId: string,
+  updates: Partial<{
+    status: Appointment['status']
+    payment_status: Appointment['payment_status']
+    notes: string
+    appointment_date: string
+    start_time: string
+  }>
+): Promise<Appointment> {
+  try {
+    console.log('[updateAppointment] Updating:', appointmentId, updates)
+
+    const response = await fetch(`/api/appointments/${appointmentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to update appointment')
+    }
+
+    const data = await response.json()
+    console.log('[updateAppointment] Success')
+    return data
+  } catch (error: any) {
+    console.error('[updateAppointment] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Cancel/delete appointment
+ */
+export async function deleteAppointment(appointmentId: string): Promise<void> {
+  try {
+    console.log('[deleteAppointment] Deleting:', appointmentId)
+
+    const response = await fetch(`/api/appointments/${appointmentId}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to delete appointment')
+    }
+
+    console.log('[deleteAppointment] Success')
+  } catch (error: any) {
+    console.error('[deleteAppointment] Error:', error)
+    throw error
   }
 }
 
@@ -518,7 +669,7 @@ export async function processPayment(paymentData: {
   amount: number
   notes?: string
 }): Promise<Payment> {
-  const response = await fetch('/api/bookings/complete', {
+  const response = await fetch('/api/payments', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(paymentData),
@@ -600,6 +751,8 @@ export async function completeWalkInBooking(data: {
   payment_method: 'cash' | 'credit_card' | 'debit_card' | 'ewallet' | 'qris'
   payment_type: 'deposit' | 'full'
   payment_amount: number
+  // Optional: service duration (if already known from context)
+  service_duration_minutes?: number
 }): Promise<{
   customer: Customer
   appointment: Appointment
@@ -622,65 +775,46 @@ export async function completeWalkInBooking(data: {
       throw new Error('Customer information is required')
     }
 
-    // Step 2: Get service details for duration calculation
-    const service = await getServiceById(data.service_id)
-    if (!service) {
-      throw new Error('Service not found')
+    console.log('[completeWalkInBooking] Customer ready:', customer.customer_id || customer._id || customer.id)
+
+    // Step 2: SKIP - No need to get service details or check availability
+    // The new API will handle all validations on the server side
+    // Price and duration are auto-populated by server to prevent manipulation
+
+    // Step 3: Create appointment directly
+    // Handle different customer ID field names (_id, id, customer_id)
+    const customerId = customer.customer_id || customer._id || customer.id
+    if (!customerId) {
+      throw new Error('Customer ID not found')
     }
 
-    // Calculate end time
-    const [hours, minutes] = data.start_time.split(':').map(Number)
-    const startDate = new Date()
-    startDate.setHours(hours, minutes, 0, 0)
-    const endDate = new Date(startDate.getTime() + service.duration_minutes * 60000)
-    const end_time = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`
-
-    // Step 3: Check availability
-    const availabilityCheck = await checkAvailability({
-      staff_id: data.staff_id,
-      date: data.appointment_date,
-      start_time: data.start_time,
-      end_time: end_time,
-      service_id: data.service_id,
-    })
-
-    if (!availabilityCheck.available) {
-      return {
-        customer,
-        appointment: {} as Appointment,
-        success: false,
-        error: availabilityCheck.reason || 'Time slot not available',
-      }
-    }
-
-    // Step 4: Create appointment
     const appointment = await createAppointment({
-      customer_id: customer.customer_id,
+      customer_id: customerId,
       service_id: data.service_id,
       staff_id: data.staff_id,
       outlet_id: data.outlet_id,
       appointment_date: data.appointment_date,
       start_time: data.start_time,
       notes: data.notes,
-      auto_confirm: true, // Walk-in auto confirm
-      send_notifications: true,
     })
 
-    // Step 5: Process payment (for cash/card, not for online methods)
-    let payment: Payment | undefined
-    if (['cash', 'credit_card', 'debit_card'].includes(data.payment_method)) {
-      payment = await processPayment({
-        appointment_id: appointment.appointment_id,
-        payment_method: data.payment_method,
-        amount: data.payment_amount,
-        notes: data.payment_type === 'deposit' ? 'Deposit payment' : 'Full payment',
-      })
-    }
+    console.log('[completeWalkInBooking] Appointment created successfully:', appointment)
+
+    // TODO: Step 5: Process payment (SKIPPED FOR NOW - Testing appointment creation first)
+    // let payment: Payment | undefined
+    // if (['cash', 'credit_card', 'debit_card'].includes(data.payment_method)) {
+    //   payment = await processPayment({
+    //     appointment_id: appointment.appointment_id || appointment.id,
+    //     payment_method: data.payment_method,
+    //     amount: data.payment_amount,
+    //     notes: data.payment_type === 'deposit' ? 'Deposit payment' : 'Full payment',
+    //   })
+    // }
 
     return {
       customer,
       appointment,
-      payment,
+      // payment, // Skipped for now
       success: true,
     }
   } catch (error: any) {

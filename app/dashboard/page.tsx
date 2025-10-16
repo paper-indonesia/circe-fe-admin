@@ -56,6 +56,7 @@ const formatResourceName = (key: string) => {
   const labels: Record<string, string> = {
     outlets: 'Outlets',
     staff: 'Staff',
+    customers: 'Customers',
     appointments_this_month: 'Appointments',
     services: 'Services',
     products: 'Products'
@@ -83,6 +84,7 @@ export default function DashboardPage() {
   const [subscriptionLoading, setSubscriptionLoading] = useState(false)
   const [usage, setUsage] = useState<any>(null)
   const [usageLoading, setUsageLoading] = useState(false)
+  const [showUsageDetails, setShowUsageDetails] = useState(false)
 
   // Load user, tenant and set greeting
   useEffect(() => {
@@ -322,7 +324,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-bold text-gray-900 capitalize">
                         {subscription.plan} Plan
                       </h3>
@@ -331,6 +333,32 @@ export default function DashboardPage() {
                           Active
                         </Badge>
                       )}
+                      {/* Usage Warning Badges */}
+                      {usage && usage.usage_summary && (() => {
+                        const criticalResources = Object.entries(usage.usage_summary).filter(([key, value]: [string, any]) => {
+                          return value.percentage >= 100
+                        })
+                        const warningResources = Object.entries(usage.usage_summary).filter(([key, value]: [string, any]) => {
+                          return value.percentage >= 80 && value.percentage < 100 && value.limit !== -1
+                        })
+
+                        return (
+                          <>
+                            {criticalResources.length > 0 && (
+                              <Badge variant="destructive" className="text-xs animate-pulse">
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                {criticalResources.length} at limit
+                              </Badge>
+                            )}
+                            {warningResources.length > 0 && (
+                              <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                {warningResources.length} near limit
+                              </Badge>
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
                     <p className="text-sm text-gray-600 mt-1">
                       {subscription.plan === "free"
@@ -349,30 +377,165 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {subscription.plan === "free" && (
-                  <Button
-                    size="lg"
-                    className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-pulse"
-                    onClick={() => router.push('/subscription/upgrade')}
-                  >
-                    <Zap className="h-5 w-5 mr-2" />
-                    Upgrade Plan Now
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* Usage Toggle Button */}
+                  {usage && usage.usage_summary && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                      onClick={() => setShowUsageDetails(!showUsageDetails)}
+                    >
+                      <BarChart3 className="h-4 w-4 mr-1" />
+                      {showUsageDetails ? "Hide Usage" : "View Usage"}
+                    </Button>
+                  )}
 
-                {subscription.plan !== "free" && (
-                  <Button
-                    variant="outline"
-                    className="border-[#C8B6FF] text-[#B8C0FF] hover:bg-[#C8B6FF]/10"
-                    onClick={() => router.push('/subscription/manage')}
-                  >
-                    Manage Subscription
-                  </Button>
-                )}
+                  {subscription.plan === "free" && (
+                    <Button
+                      size="lg"
+                      className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-pulse"
+                      onClick={() => router.push('/subscription/upgrade')}
+                    >
+                      <Zap className="h-5 w-5 mr-2" />
+                      Upgrade Plan Now
+                    </Button>
+                  )}
+
+                  {subscription.plan !== "free" && (
+                    <Button
+                      variant="outline"
+                      className="border-[#C8B6FF] text-[#B8C0FF] hover:bg-[#C8B6FF]/10"
+                      onClick={() => router.push('/subscription/manage')}
+                    >
+                      Manage Subscription
+                    </Button>
+                  )}
+                </div>
               </div>
 
-              {/* Plan Features Preview */}
-              {subscription.plan === "free" && (
+              {/* Collapsible Usage Details */}
+              {usage && usage.usage_summary && showUsageDetails && (
+                <div className="mt-6 pt-6 border-t border-gray-200 space-y-4 animate-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-blue-600" />
+                      <h4 className="text-sm font-semibold text-gray-900">Usage Details</h4>
+                    </div>
+                    {usage.current_period_start && usage.current_period_end && (
+                      <p className="text-xs text-gray-500">
+                        Period: {format(new Date(usage.current_period_start), "MMM dd")} - {format(new Date(usage.current_period_end), "MMM dd, yyyy")}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {Object.entries(usage.usage_summary).map(([key, value]: [string, any]) => {
+                      if (key === 'overage_warnings') return null
+
+                      // Determine status based on percentage and approaching_limits
+                      let status = 'normal'
+                      if (value.limit === -1 || value.limit === null) {
+                        status = 'unlimited'
+                      } else if (value.percentage >= 100) {
+                        status = 'exceeded'
+                      } else if (value.percentage === 100) {
+                        status = 'at_limit'
+                      } else if (usage.approaching_limits?.includes(key) || value.percentage >= 80) {
+                        status = 'approaching_limit'
+                      }
+
+                      const colors = getUsageColor(status)
+                      const isUnlimited = status === 'unlimited'
+
+                      return (
+                        <div key={key} className={cn("p-3 rounded-lg border", colors.bg)}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-gray-700">
+                              {formatResourceName(key)}
+                            </span>
+                            {(status === 'approaching_limit' || status === 'at_limit' || status === 'exceeded') && (
+                              <AlertTriangle className="h-3 w-3 text-orange-600" />
+                            )}
+                          </div>
+
+                          {isUnlimited ? (
+                            <div className="space-y-1">
+                              <p className={cn("text-xl font-bold", colors.text)}>∞</p>
+                              <p className="text-xs text-gray-600">Unlimited</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <div className="flex items-baseline gap-1">
+                                <span className={cn("text-lg font-bold", colors.text)}>
+                                  {value.used?.toLocaleString() || 0}
+                                </span>
+                                <span className="text-xs text-gray-600">
+                                  / {value.limit?.toLocaleString() || 0}
+                                </span>
+                              </div>
+                              <Progress
+                                value={Math.min(value.percentage || 0, 100)}
+                                className={cn("h-1.5", colors.progress)}
+                              />
+                              <p className="text-xs text-gray-600">
+                                {value.percentage?.toFixed(0)}% used
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Warnings and Recommendations */}
+                  {(usage.upgrade_recommended || (usage.approaching_limits && usage.approaching_limits.length > 0)) && (
+                    <div className="flex flex-col gap-2">
+                      {/* Approaching Limits Notice */}
+                      {usage.approaching_limits && usage.approaching_limits.length > 0 && (
+                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-xs font-medium text-yellow-900">Approaching Limits</p>
+                              <p className="text-xs text-yellow-700 mt-0.5">
+                                {usage.approaching_limits.map((item: string) => formatResourceName(item)).join(', ')} {usage.approaching_limits.length === 1 ? 'is' : 'are'} near capacity
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Upgrade Recommendation */}
+                      {usage.upgrade_recommended && (
+                        <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-start gap-2">
+                              <TrendingUp className="h-4 w-4 text-purple-600 mt-0.5" />
+                              <div>
+                                <p className="text-xs font-medium text-purple-900">Upgrade Recommended</p>
+                                <p className="text-xs text-purple-700 mt-0.5">
+                                  Consider upgrading for more capacity and features
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              size="sm"
+                              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-xs h-7"
+                              onClick={() => router.push('/subscription/upgrade')}
+                            >
+                              Upgrade
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Plan Features Preview - Only show when usage is hidden */}
+              {subscription.plan === "free" && !showUsageDetails && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <p className="text-xs text-gray-600 mb-2">Upgrade to unlock:</p>
                   <div className="flex flex-wrap gap-2">
@@ -395,87 +558,6 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Usage Overview - Only for tenant_admin with usage data */}
-        {usage && user?.role === 'tenant_admin' && (
-          <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50/50 to-indigo-50/50">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <BarChart3 className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Plan Usage</CardTitle>
-                    <p className="text-sm text-gray-600 mt-0.5">
-                      {usage.billing_period?.start && usage.billing_period?.end && (
-                        <>
-                          {format(new Date(usage.billing_period.start), "MMM dd")} - {format(new Date(usage.billing_period.end), "MMM dd, yyyy")}
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                {usage.upgrade_recommended && (
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    onClick={() => router.push('/subscription/upgrade')}
-                  >
-                    <TrendingUp className="h-4 w-4 mr-1" />
-                    Upgrade
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(usage.usage || {}).map(([key, value]: [string, any]) => {
-                  const colors = getUsageColor(value.status)
-                  const isUnlimited = value.status === 'unlimited' || value.limit === -1
-
-                  return (
-                    <div key={key} className={cn("p-4 rounded-lg", colors.bg)}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">
-                          {formatResourceName(key)}
-                        </span>
-                        {(value.status === 'approaching_limit' || value.status === 'at_limit' || value.status === 'exceeded') && (
-                          <AlertTriangle className="h-4 w-4 text-orange-600" />
-                        )}
-                      </div>
-
-                      {isUnlimited ? (
-                        <div className="space-y-1">
-                          <p className={cn("text-2xl font-bold", colors.text)}>∞</p>
-                          <p className="text-xs text-gray-600">Unlimited</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <div className="flex items-baseline gap-1">
-                            <span className={cn("text-2xl font-bold", colors.text)}>
-                              {value.current?.toLocaleString() || 0}
-                            </span>
-                            <span className="text-sm text-gray-600">
-                              / {value.limit?.toLocaleString() || 0}
-                            </span>
-                          </div>
-                          <Progress
-                            value={Math.min(value.percentage || 0, 100)}
-                            className="h-2"
-                          />
-                          <p className="text-xs text-gray-600">
-                            {value.percentage?.toFixed(0)}% used
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
             </CardContent>
           </Card>
         )}

@@ -514,6 +514,8 @@ export default function WalkInPage() {
         payment_method: formData.paymentMethod as any,
         payment_type: formData.paymentType as 'deposit' | 'full',
         payment_amount: formData.paymentType === 'deposit' ? depositAmount : totalAmount,
+        // Service duration from context (optional, for potential future use)
+        service_duration_minutes: selectedTreatment?.duration,
       })
 
       if (!result.success) {
@@ -521,8 +523,10 @@ export default function WalkInPage() {
       }
 
       // Success! Create local booking object
+      // Handle both appointment_id and id from response
+      const appointmentId = result.appointment.appointment_id || result.appointment.id
       const booking: Booking = {
-        id: result.appointment.appointment_id,
+        id: appointmentId,
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
@@ -536,6 +540,8 @@ export default function WalkInPage() {
         paymentMethod: formData.paymentMethod,
         paymentType: formData.paymentType
       }
+
+      console.log('[Walk-In] Booking created:', booking)
 
       setLastBooking(booking)
       setTodayBookings([...todayBookings, booking])

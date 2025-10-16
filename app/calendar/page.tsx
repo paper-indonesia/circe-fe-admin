@@ -1,15 +1,19 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { formatCurrency, cn } from "@/lib/utils"
+import { BookingDateTime } from "@/components/booking-date-time"
+import { searchCustomers, createCustomer, type Customer, completeWalkInBooking } from '@/lib/api/walk-in'
+import { debounce } from 'lodash'
 import {
   format,
   startOfMonth,
@@ -110,6 +114,17 @@ export default function CalendarPage() {
   const treatmentsPerPage = 6
   const [clientSearch, setClientSearch] = useState("")
 
+  // Availability grid state (for booking flow)
+  const [availabilityGrid, setAvailabilityGrid] = useState<any>(null)
+  const [loadingAvailability, setLoadingAvailability] = useState(false)
+  const [outletId, setOutletId] = useState<string | null>(null)
+  const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
+
+  // Customer API state (for booking flow)
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loadingCustomers, setLoadingCustomers] = useState(false)
+  const [customersError, setCustomersError] = useState<string | null>(null)
+
   // Calculate date range based on selection
   const { startDate, endDate } = useMemo(() => {
     if (dateRange === "week") {
@@ -183,12 +198,11 @@ export default function CalendarPage() {
 
     if (searchQuery) {
       filtered = filtered.filter(b => {
-        const patient = patients.find(p => p.id === b.patientId)
         const treatment = treatments.find(t => t.id === b.treatmentId)
         const search = searchQuery.toLowerCase()
 
         return (
-          patient?.name?.toLowerCase().includes(search) ||
+          b.patientName?.toLowerCase().includes(search) ||
           treatment?.name?.toLowerCase().includes(search) ||
           b.id?.toLowerCase().includes(search)
         )
@@ -232,6 +246,125 @@ export default function CalendarPage() {
       revenue: totalRevenue,
     }
   }, [bookings, treatments, startDate, endDate])
+
+  // Fetch availability grid from API
+  const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string) => {
+    if (!serviceId || !staffId || !outletId) return
+
+    setLoadingAvailability(true)
+    try {
+      const response = await fetch(
+        `/api/availability/grid?` +
+        `service_id=${serviceId}&` +
+        `staff_id=${staffId}&` +
+        `outlet_id=${outletId}&` +
+        `start_date=${startDate}&` +
+        `num_days=7&` +
+        `slot_interval_minutes=30`
+      )
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch availability')
+      }
+
+      const data = await response.json()
+      console.log('[Calendar] Availability grid loaded:', data)
+      setAvailabilityGrid(data)
+    } catch (error: any) {
+      console.error('[Calendar] Error fetching availability grid:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load availability. Please try again.",
+        variant: "destructive",
+      })
+      setAvailabilityGrid(null)
+    } finally {
+      setLoadingAvailability(false)
+    }
+  }
+
+  // Get outlet ID from staff data (same as walk-in page)
+  useEffect(() => {
+    if (staff && staff.length > 0 && staff[0].outlet_id) {
+      setOutletId(staff[0].outlet_id)
+      console.log('[Calendar] Outlet ID loaded from staff:', staff[0].outlet_id)
+    }
+  }, [staff])
+
+  // Trigger availability grid fetch when treatment and staff are selected
+  useEffect(() => {
+    if (newBookingData.treatmentId && newBookingData.staffId && outletId) {
+      // Use today's date or week start, whichever is later
+      const today = startOfDay(new Date())
+      const weekStartDay = startOfDay(weekStart)
+      const startDate = weekStartDay < today ? today : weekStartDay
+      const startDateStr = format(startDate, 'yyyy-MM-dd')
+
+      console.log('[Calendar] Fetching availability grid for:', {
+        treatmentId: newBookingData.treatmentId,
+        staffId: newBookingData.staffId,
+        startDate: startDateStr
+      })
+
+      fetchAvailabilityGrid(newBookingData.treatmentId, newBookingData.staffId, startDateStr)
+    }
+  }, [newBookingData.treatmentId, newBookingData.staffId, weekStart, outletId])
+
+  // Load initial customers
+  const loadInitialCustomers = async () => {
+    setLoadingCustomers(true)
+    setCustomersError(null)
+    try {
+      // Load all customers (empty query loads all)
+      const results = await searchCustomers('')
+      console.log('[Calendar] Initial customers loaded:', results.length)
+      setCustomers(results)
+    } catch (error: any) {
+      console.error('[Calendar] Error loading customers:', error)
+      setCustomersError(error.message || 'Failed to load customers')
+    } finally {
+      setLoadingCustomers(false)
+    }
+  }
+
+  // Load customers when "Existing Customer" is selected
+  useEffect(() => {
+    if (!newBookingData.isNewClient && newBookingOpen && customers.length === 0) {
+      loadInitialCustomers()
+    }
+  }, [newBookingData.isNewClient, newBookingOpen])
+
+  // Customer search with debounce (for filtering)
+  const handleCustomerSearchChange = useCallback(
+    debounce(async (query: string) => {
+      console.log('[Calendar] Filtering customers with query:', query)
+      setLoadingCustomers(true)
+      setCustomersError(null)
+
+      try {
+        const results = await searchCustomers(query)
+        console.log('[Calendar] Customer search results:', results.length)
+        setCustomers(results)
+
+        if (results.length === 0) {
+          setCustomersError('No customers found')
+        }
+      } catch (error: any) {
+        console.error('[Calendar] Customer search error:', error)
+        setCustomersError(error.message || 'Failed to search customers')
+        setCustomers([])
+      } finally {
+        setLoadingCustomers(false)
+      }
+    }, 300),
+    []
+  )
+
+  const handleCustomerSearch = (query: string) => {
+    setClientSearch(query)
+    handleCustomerSearchChange(query)
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -527,7 +660,6 @@ export default function CalendarPage() {
                           <div className="space-y-1.5">
                             {dayBookings.slice(0, 2).map((booking, i) => {
                               const treatment = treatments.find(t => t.id === booking.treatmentId)
-                              const patient = patients.find(p => p.id === booking.patientId)
                               return (
                                 <div
                                   key={i}
@@ -540,7 +672,7 @@ export default function CalendarPage() {
                                     {format(new Date(booking.startAt), "HH:mm")}
                                   </div>
                                   <div className="text-[10px] truncate opacity-90">
-                                    {patient?.name || "Unknown"}
+                                    {booking.patientName || "Unknown"}
                                   </div>
                                 </div>
                               )
@@ -639,7 +771,19 @@ export default function CalendarPage() {
                   </thead>
                   <tbody>
                     {paginatedBookings.map((booking) => {
-                      const patient = patients.find(p => p.id === booking.patientId)
+                      const customerData = booking.customer
+                      const patient = customerData ? {
+                        ...customerData,
+                        id: customerData._id || customerData.id,
+                        name: `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim() || booking.patientName || 'Unknown',
+                        phone: customerData.phone || booking.patientPhone,
+                        email: customerData.email || booking.patientEmail,
+                      } : {
+                        id: booking.patientId,
+                        name: booking.patientName,
+                        phone: booking.patientPhone,
+                        email: booking.patientEmail,
+                      }
                       const treatment = treatments.find(t => t.id === booking.treatmentId)
                       const staffMember = staff.find(s => s.id === booking.staffId)
 
@@ -833,13 +977,12 @@ export default function CalendarPage() {
                         {/* Preview Avatars */}
                         <div className="flex -space-x-3">
                           {timeBookings.slice(0, 3).map((booking, idx) => {
-                            const patient = patients.find(p => p.id === booking.patientId)
                             return (
                               <div
                                 key={idx}
                                 className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center border-2 border-white text-xs font-bold text-gray-700 shadow-sm"
                               >
-                                {patient?.name?.charAt(0)?.toUpperCase() || "?"}
+                                {booking.patientName?.charAt(0)?.toUpperCase() || "?"}
                               </div>
                             )
                           })}
@@ -865,7 +1008,19 @@ export default function CalendarPage() {
                       >
                         <div className="space-y-3 pl-3">
                           {timeBookings.map((booking, idx) => {
-                            const patient = patients.find(p => p.id === booking.patientId)
+                            const customerData = booking.customer
+                            const patient = customerData ? {
+                              ...customerData,
+                              id: customerData._id || customerData.id,
+                              name: `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim() || booking.patientName || 'Unknown',
+                              phone: customerData.phone || booking.patientPhone,
+                              email: customerData.email || booking.patientEmail,
+                            } : {
+                              id: booking.patientId,
+                              name: booking.patientName,
+                              phone: booking.patientPhone,
+                              email: booking.patientEmail,
+                            }
                             const treatment = treatments.find(t => t.id === booking.treatmentId)
                             const staffMember = staff.find(s => s.id === booking.staffId)
                             const endTime = format(new Date(booking.endAt), "HH:mm")
@@ -980,7 +1135,20 @@ export default function CalendarPage() {
         <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
           <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
             {selectedBooking && (() => {
-              const patient = patients.find(p => p.id === selectedBooking.patientId)
+              // Use customer data directly from booking (already populated in context)
+              const customerData = selectedBooking.customer
+              const patient = customerData ? {
+                ...customerData,
+                id: customerData._id || customerData.id,
+                name: `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim() || selectedBooking.patientName || 'Unknown',
+                phone: customerData.phone || selectedBooking.patientPhone,
+                email: customerData.email || selectedBooking.patientEmail,
+              } : {
+                id: selectedBooking.patientId,
+                name: selectedBooking.patientName,
+                phone: selectedBooking.patientPhone,
+                email: selectedBooking.patientEmail,
+              }
               const treatment = treatments.find(t => t.id === selectedBooking.treatmentId)
               const staffMember = staff.find(s => s.id === selectedBooking.staffId)
 
@@ -1177,7 +1345,7 @@ export default function CalendarPage() {
 
         {/* New Booking Dialog */}
         <Dialog open={newBookingOpen} onOpenChange={setNewBookingOpen}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-gray-50 to-white">
+          <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-y-auto bg-gradient-to-br from-gray-50 to-white">
             <DialogHeader className="border-b-2 border-gray-200 pb-5">
               <div className="flex items-center justify-between">
                 <DialogTitle className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -1311,9 +1479,18 @@ export default function CalendarPage() {
               {/* Step 2: Staff Selection (filtered by selected treatment) */}
               {newBookingStep === 2 && (() => {
                 const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
-                const availableStaff = selectedTreatment?.assignedStaff
-                  ? staff.filter(s => selectedTreatment.assignedStaff.includes(s.id))
-                  : staff
+
+                // Use staffIds from treatment (from include_staff=true API)
+                let availableStaff = staff
+                if (selectedTreatment?.staffIds && Array.isArray(selectedTreatment.staffIds) && selectedTreatment.staffIds.length > 0) {
+                  console.log('[Calendar] Using staffIds from treatment:', selectedTreatment.staffIds)
+                  availableStaff = staff.filter(s => selectedTreatment.staffIds.includes(s.id))
+                  console.log(`[Calendar] Filtered ${availableStaff.length} of ${staff.length} staff using staffIds`)
+                } else if (selectedTreatment?.assignedStaff) {
+                  // Fallback: Use old assignedStaff field for backward compatibility
+                  console.log('[Calendar] Fallback to assignedStaff:', selectedTreatment.assignedStaff)
+                  availableStaff = staff.filter(s => selectedTreatment.assignedStaff.includes(s.id))
+                }
 
                 return (
                   <div className="space-y-4">
@@ -1351,346 +1528,196 @@ export default function CalendarPage() {
                 )
               })()}
 
-              {/* Step 3: Schedule (Date & Time) */}
+              {/* Step 3: Schedule (Date & Time) + Customer Selection */}
               {newBookingStep === 3 && (() => {
                 const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
-                const workingHours = {
-                  start: selectedStaff?.workingHours?.start || '09:00',
-                  end: selectedStaff?.workingHours?.end || '18:00'
-                }
+                const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
 
-                // Generate time slots based on staff availability
-                const generateTimeSlots = () => {
-                  const slots = []
-                  const [startHour, startMin] = workingHours.start.split(':').map(Number)
-                  const [endHour, endMin] = workingHours.end.split(':').map(Number)
-
-                  const categories = [
-                    { name: 'Morning', start: startHour, end: 12, color: 'from-amber-50 to-orange-50 border-amber-200', badge: 'bg-amber-500 text-white', textColor: 'text-amber-900' },
-                    { name: 'Afternoon', start: 12, end: 17, color: 'from-sky-50 to-blue-50 border-sky-200', badge: 'bg-sky-500 text-white', textColor: 'text-sky-900' },
-                    { name: 'Evening', start: 17, end: endHour + 1, color: 'from-violet-50 to-purple-50 border-violet-200', badge: 'bg-violet-500 text-white', textColor: 'text-violet-900' }
-                  ]
-
-                  return categories.map(category => {
-                    const categorySlots = []
-                    for (let hour = Math.max(category.start, startHour); hour < Math.min(category.end, endHour + 1); hour++) {
-                      for (let min = 0; min < 60; min += 30) {
-                        if (hour === startHour && min < startMin) continue
-                        if (hour === endHour && min >= endMin) continue
-                        categorySlots.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`)
-                      }
-                    }
-                    return { ...category, slots: categorySlots }
-                  }).filter(cat => cat.slots.length > 0)
-                }
-
-                const timeCategories = generateTimeSlots()
-
-                // Generate calendar dates for current month
-                const generateCalendarDates = () => {
-                  const start = startOfWeek(startOfMonth(currentMonth))
-                  const end = endOfWeek(endOfMonth(currentMonth))
-                  const dates = []
-                  let day = start
-
-                  while (day <= end) {
-                    dates.push(day)
-                    day = addDays(day, 1)
-                  }
-                  return dates
-                }
-
-                const calendarDates = generateCalendarDates()
+                // Get today's bookings from context
+                const todayBookings = bookings.filter(b => {
+                  const bookingDate = format(new Date(b.startAt), 'yyyy-MM-dd')
+                  return bookingDate === format(new Date(), 'yyyy-MM-dd')
+                })
 
                 return (
                   <div className="space-y-6">
-                    {/* Date Input - Quick Select */}
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
-                          <CalendarIcon className="h-4 w-4 text-[#C8B6FF]" />
-                        </div>
-                        Select Date
-                      </h3>
-                      <Input
-                        type="date"
-                        value={newBookingData.date}
-                        onChange={(e) => setNewBookingData({ ...newBookingData, date: e.target.value })}
-                        min={format(new Date(), 'yyyy-MM-dd')}
-                        className="h-14 border-2 text-base font-semibold"
-                        style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                      />
-                    </div>
-
-                    {/* Selected Date Display */}
-                    {newBookingData.date && (
-                      <div className="bg-gradient-to-r from-[#C8B6FF] to-[#B8A6EF] rounded-2xl p-5 text-white shadow-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
-                            <CalendarIcon className="h-7 w-7 text-white" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Selected Date</p>
-                            <p className="text-lg font-bold">{format(new Date(newBookingData.date), 'EEEE, MMMM d, yyyy')}</p>
-                          </div>
+                    {/* Booking Date & Time - BookingDateTime Component */}
+                    {loadingAvailability && newBookingData.treatmentId && newBookingData.staffId ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                          <p className="text-sm text-muted-foreground">Loading available time slots...</p>
                         </div>
                       </div>
-                    )}
-
-                    {/* Date Selection with Custom Calendar - Optional Visual */}
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
-                          <CalendarIcon className="h-4 w-4 text-[#C8B6FF]" />
-                        </div>
-                        Select Date
-                      </h3>
-
-                      {/* Month Navigation */}
-                      <div className="flex items-center justify-between mb-4 px-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                          className="hover:bg-[#FFD6FF]/30 hover:text-[#C8B6FF] font-semibold"
-                        >
-                          <ChevronLeft className="h-5 w-5" />
-                        </Button>
-                        <h4 className="font-bold text-lg text-gray-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                          {format(currentMonth, 'MMMM yyyy')}
-                        </h4>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                          className="hover:bg-[#FFD6FF]/30 hover:text-[#C8B6FF] font-semibold"
-                        >
-                          <ChevronRight className="h-5 w-5" />
-                        </Button>
-                      </div>
-
-                      {/* Calendar Grid */}
-                      <div className="bg-white rounded-2xl p-5 shadow-md border-2 border-gray-100">
-                        {/* Day Headers */}
-                        <div className="grid grid-cols-7 gap-2 mb-3">
-                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                            <div key={day} className="text-center text-xs font-bold text-gray-600 py-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                              {day}
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Date Grid */}
-                        <div className="grid grid-cols-7 gap-2">
-                          {calendarDates.map((date, idx) => {
-                            const dateStr = format(date, 'yyyy-MM-dd')
-                            const isSelected = newBookingData.date === dateStr
-                            const isCurrentMonth = isSameMonth(date, currentMonth)
-                            const isTodayDate = isToday(date)
-                            const isPast = date < startOfDay(new Date())
-
-                            return (
-                              <button
-                                key={idx}
-                                onClick={() => {
-                                  if (!isPast && isCurrentMonth) {
-                                    setNewBookingData({ ...newBookingData, date: dateStr })
-                                  }
-                                }}
-                                disabled={isPast || !isCurrentMonth}
-                                className={cn(
-                                  "aspect-square rounded-xl text-sm font-bold transition-all relative",
-                                  "hover:shadow-md hover:scale-105",
-                                  isSelected && "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white shadow-lg scale-105",
-                                  !isSelected && isTodayDate && isCurrentMonth && "bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] text-gray-900 ring-2 ring-[#C8B6FF]",
-                                  !isSelected && !isTodayDate && isCurrentMonth && !isPast && "bg-gray-50 hover:bg-gray-100 text-gray-900",
-                                  !isCurrentMonth && "text-gray-300 cursor-not-allowed",
-                                  isPast && isCurrentMonth && "text-gray-300 cursor-not-allowed opacity-40"
-                                )}
-                                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                              >
-                                {format(date, 'd')}
-                                {isTodayDate && isCurrentMonth && !isSelected && (
-                                  <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#C8B6FF]"></div>
-                                )}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Time Selection by Category */}
-                    {newBookingData.date && (
-                      <div>
-                        <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
-                            <Clock className="h-4 w-4 text-[#C8B6FF]" />
-                          </div>
-                          Select Time
-                          <span className="text-xs font-normal text-gray-500 ml-1">({selectedStaff?.name})</span>
-                        </h3>
-                        <div className="space-y-3">
-                          {timeCategories.map((category) => (
-                            <div key={category.name} className={cn("rounded-2xl bg-gradient-to-br p-5 border-2 shadow-sm", category.color)}>
-                              <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-2">
-                                  <Badge className={cn("text-xs font-bold px-3 py-1", category.badge)}>
-                                    {category.name}
-                                  </Badge>
-                                  <span className={cn("text-xs font-semibold", category.textColor)}>{category.slots.length} slots available</span>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-4 gap-2">
-                                {category.slots.map((time) => {
-                                  const isSelected = newBookingData.time === time
-                                  return (
-                                    <button
-                                      key={time}
-                                      onClick={() => setNewBookingData({ ...newBookingData, time })}
-                                      className={cn(
-                                        "px-3 py-3 rounded-xl text-sm font-bold transition-all",
-                                        isSelected
-                                          ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white shadow-lg scale-105"
-                                          : "bg-white hover:bg-gray-50 text-gray-900 hover:shadow-md hover:scale-105 border-2 border-transparent hover:border-gray-200"
-                                      )}
-                                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                                    >
-                                      {time}
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                    ) : newBookingData.treatmentId && newBookingData.staffId ? (
+                      <>
+                        <BookingDateTime
+                          provider={{
+                            name: selectedStaff?.display_name || selectedStaff?.first_name || "Staff",
+                            address: "Beauty Clinic",
+                            avatarUrl: selectedStaff?.profile_image_url
+                          }}
+                          selectedStaffId={newBookingData.staffId}
+                          existingBookings={todayBookings.map(b => ({
+                            bookingDate: format(new Date(b.startAt), 'yyyy-MM-dd'),
+                            timeSlot: format(new Date(b.startAt), 'HH:mm'),
+                            staffId: b.staffId
+                          }))}
+                          availabilityGrid={availabilityGrid}
+                          onSelectDateTime={(date, time) => {
+                            setNewBookingData({ ...newBookingData, date, time })
+                          }}
+                          onWeekChange={(newWeekStart) => {
+                            setWeekStart(newWeekStart)
+                          }}
+                          isLoading={loadingAvailability}
+                        />
+                      </>
+                    ) : (
+                      <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
+                        <p className="text-sm text-muted-foreground text-center">
+                          Please select a treatment and staff member to view available time slots
+                        </p>
                       </div>
                     )}
 
                     {/* Customer Selection */}
-                    {newBookingData.date && newBookingData.time && (
-                      <div>
-                        <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
-                            <User className="h-4 w-4 text-[#C8B6FF]" />
-                          </div>
-                          Select Customer
-                        </h3>
-
-                        {/* Toggle: Existing or New Customer */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <button
-                            onClick={() => setNewBookingData({ ...newBookingData, isNewClient: false, newClientName: "", newClientPhone: "" })}
-                            className={cn(
-                              "px-5 py-4 rounded-xl font-bold text-sm transition-all border-2",
-                              !newBookingData.isNewClient
-                                ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white shadow-lg border-transparent"
-                                : "bg-white text-gray-700 hover:bg-gray-50 border-gray-200"
-                            )}
-                            style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                          >
-                            Existing Customer
-                          </button>
-                          <button
-                            onClick={() => setNewBookingData({ ...newBookingData, isNewClient: true, patientId: "" })}
-                            className={cn(
-                              "px-5 py-4 rounded-xl font-bold text-sm transition-all border-2",
-                              newBookingData.isNewClient
-                                ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white shadow-lg border-transparent"
-                                : "bg-white text-gray-700 hover:bg-gray-50 border-gray-200"
-                            )}
-                            style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                          >
-                            New Customer
-                          </button>
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
+                          <User className="h-4 w-4 text-[#C8B6FF]" />
                         </div>
+                        Customer Information
+                      </h3>
 
-                        {/* Existing Customer - Searchable List */}
-                        {!newBookingData.isNewClient && (
-                          <div className="space-y-3">
-                            {/* Search Input */}
-                            <div className="relative">
-                              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                              <Input
-                                value={clientSearch}
-                                onChange={(e) => setClientSearch(e.target.value)}
-                                placeholder="Search customer by name or phone..."
-                                className="h-14 pl-12 border-2 text-base font-medium"
-                                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                              />
-                            </div>
-
-                            {/* Client List */}
-                            <div className="max-h-64 overflow-y-auto space-y-2 bg-gray-50 rounded-xl p-3 border-2 border-gray-200">
-                              {patients
-                                .filter(p =>
-                                  p.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                                  p.phone?.toLowerCase().includes(clientSearch.toLowerCase())
-                                )
-                                .map((patient) => (
-                                  <button
-                                    key={patient.id}
-                                    onClick={() => setNewBookingData({ ...newBookingData, patientId: patient.id })}
-                                    className={cn(
-                                      "w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all hover:shadow-md text-left",
-                                      newBookingData.patientId === patient.id
-                                        ? "border-[#C8B6FF] bg-gradient-to-br from-[#FFD6FF]/30 to-[#E7C6FF]/30 shadow-md"
-                                        : "border-transparent bg-white hover:border-gray-200"
-                                    )}
-                                    style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                                  >
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center text-base font-bold text-gray-900 shadow-sm flex-shrink-0">
-                                      {patient.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="font-bold text-gray-900 text-base">{patient.name}</p>
-                                      <p className="text-sm text-gray-600 font-medium">{patient.phone}</p>
-                                    </div>
-                                    {newBookingData.patientId === patient.id && (
-                                      <CheckCircle className="h-6 w-6 text-[#C8B6FF] flex-shrink-0" />
-                                    )}
-                                  </button>
-                                ))}
-                              {patients.filter(p =>
-                                p.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                                p.phone?.toLowerCase().includes(clientSearch.toLowerCase())
-                              ).length === 0 && (
-                                <div className="text-center py-8 text-gray-500">
-                                  <p className="font-semibold">No customers found</p>
-                                  <p className="text-sm">Try a different search term</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* New Customer Form */}
-                        {newBookingData.isNewClient && (
-                          <div className="space-y-4 bg-white rounded-xl p-5 border-2 border-gray-200">
-                            <div>
-                              <label className="text-xs text-gray-600 font-bold mb-2 block uppercase tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Customer Name</label>
-                              <Input
-                                value={newBookingData.newClientName}
-                                onChange={(e) => setNewBookingData({ ...newBookingData, newClientName: e.target.value })}
-                                placeholder="Enter full name"
-                                className="h-14 border-2 text-base font-semibold"
-                                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-600 font-bold mb-2 block uppercase tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Phone Number</label>
-                              <Input
-                                value={newBookingData.newClientPhone}
-                                onChange={(e) => setNewBookingData({ ...newBookingData, newClientPhone: e.target.value })}
-                                placeholder="Enter phone number"
-                                className="h-14 border-2 text-base font-semibold"
-                                style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                              />
-                            </div>
-                          </div>
-                        )}
+                      {/* New or Existing Customer Toggle */}
+                      <div className="flex gap-3 mb-4">
+                        <Button
+                          type="button"
+                          variant={!newBookingData.isNewClient ? "default" : "outline"}
+                          onClick={() => setNewBookingData({ ...newBookingData, isNewClient: false, patientId: "", newClientName: "", newClientPhone: "" })}
+                          className="flex-1"
+                        >
+                          Existing Customer
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={newBookingData.isNewClient ? "default" : "outline"}
+                          onClick={() => setNewBookingData({ ...newBookingData, isNewClient: true, patientId: "" })}
+                          className="flex-1"
+                        >
+                          New Customer
+                        </Button>
                       </div>
-                    )}
+
+                      {/* Existing Customer Search */}
+                      {!newBookingData.isNewClient && (
+                        <div className="space-y-3">
+                          <Label>Search Customer</Label>
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Filter by name or phone..."
+                              value={clientSearch}
+                              onChange={(e) => handleCustomerSearch(e.target.value)}
+                              className="pl-10"
+                            />
+                          </div>
+
+                          {/* Customer List */}
+                          <div className="border rounded-lg max-h-80 overflow-y-auto">
+                            {loadingCustomers ? (
+                              <div className="p-4 text-center">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                                <p className="text-sm text-muted-foreground">Loading customers...</p>
+                              </div>
+                            ) : customersError ? (
+                              <div className="p-4 text-center">
+                                <p className="text-sm text-red-500 mb-2">{customersError}</p>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={loadInitialCustomers}
+                                >
+                                  Retry
+                                </Button>
+                              </div>
+                            ) : customers.length > 0 ? (
+                              <div className="divide-y">
+                                {customers.map((customer) => {
+                                  const customerId = customer._id || customer.id || ""
+                                  const isSelected = newBookingData.patientId === customerId
+
+                                  return (
+                                    <button
+                                      key={customerId}
+                                      type="button"
+                                      onClick={() => {
+                                        setNewBookingData({
+                                          ...newBookingData,
+                                          patientId: customerId,
+                                          newClientName: `${customer.first_name} ${customer.last_name}`.trim(),
+                                          newClientPhone: customer.phone
+                                        })
+                                      }}
+                                      className={cn(
+                                        "w-full p-3 text-left transition-colors relative",
+                                        isSelected
+                                          ? "bg-primary/10 border-l-4 border-l-primary"
+                                          : "hover:bg-muted/50"
+                                      )}
+                                    >
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-medium truncate">{customer.first_name} {customer.last_name}</p>
+                                          <p className="text-sm text-muted-foreground">{customer.phone}</p>
+                                          {customer.email && (
+                                            <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
+                                          )}
+                                        </div>
+                                        {isSelected && (
+                                          <Badge className="bg-primary text-white shrink-0">
+                                            Selected
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            ) : (
+                              <div className="p-8 text-center text-muted-foreground">
+                                <p className="text-sm mb-2">No customers found</p>
+                                <p className="text-xs">Try adjusting your search</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* New Customer Form */}
+                      {newBookingData.isNewClient && (
+                        <div className="space-y-3">
+                          <div>
+                            <Label>Customer Name *</Label>
+                            <Input
+                              placeholder="Full name"
+                              value={newBookingData.newClientName}
+                              onChange={(e) => setNewBookingData({ ...newBookingData, newClientName: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label>Phone Number *</Label>
+                            <Input
+                              placeholder="+62 xxx xxx xxxx"
+                              value={newBookingData.newClientPhone}
+                              onChange={(e) => setNewBookingData({ ...newBookingData, newClientPhone: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )
               })()}
@@ -1883,47 +1910,53 @@ export default function CalendarPage() {
                 <Button
                   onClick={async () => {
                     try {
-                      // Calculate end time based on treatment duration
-                      const treatment = treatments.find(t => t.id === newBookingData.treatmentId)
-                      const startDateTime = new Date(`${newBookingData.date}T${newBookingData.time}`)
-                      const endDateTime = new Date(startDateTime.getTime() + (treatment?.durationMin || 60) * 60000)
-
-                      // If new client, create patient first
-                      let patientId = newBookingData.patientId
-                      if (newBookingData.isNewClient) {
-                        const patientResponse = await fetch('/api/patients', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            name: newBookingData.newClientName,
-                            phone: newBookingData.newClientPhone
-                          })
-                        })
-
-                        if (!patientResponse.ok) throw new Error('Failed to create new customer')
-                        const newPatient = await patientResponse.json()
-                        patientId = newPatient.id
+                      if (!outletId) {
+                        toast({ title: "Outlet not found", variant: "destructive" })
+                        return
                       }
 
-                      // Create booking
-                      const response = await fetch('/api/bookings', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          treatmentId: newBookingData.treatmentId,
-                          patientId: patientId,
-                          staffId: newBookingData.staffId,
-                          startAt: startDateTime.toISOString(),
-                          endAt: endDateTime.toISOString(),
-                          paymentMethod: newBookingData.paymentMethod,
-                          notes: newBookingData.notes,
-                          status: 'pending'
-                        })
-                      })
+                      const treatment = treatments.find(t => t.id === newBookingData.treatmentId)
+                      const selectedCustomer = customers.find(c => (c._id || c.id) === newBookingData.patientId)
 
-                      if (!response.ok) throw new Error('Failed to create booking')
+                      // Prepare booking data for appointments API
+                      const bookingData: any = {
+                        service_id: newBookingData.treatmentId,
+                        staff_id: newBookingData.staffId,
+                        outlet_id: outletId,
+                        appointment_date: newBookingData.date,
+                        start_time: newBookingData.time,
+                        notes: newBookingData.notes || '',
+                        payment_method: newBookingData.paymentMethod,
+                        payment_type: 'full',
+                        payment_amount: treatment?.price || 0,
+                      }
 
-                      toast({ title: "Booking created successfully!" })
+                      // Handle customer
+                      if (newBookingData.isNewClient) {
+                        bookingData.newCustomer = {
+                          name: newBookingData.newClientName,
+                          phone: newBookingData.newClientPhone,
+                          email: '',
+                        }
+                      } else {
+                        bookingData.customer = {
+                          customer_id: selectedCustomer?._id || selectedCustomer?.id || newBookingData.patientId,
+                          name: `${selectedCustomer?.first_name || ''} ${selectedCustomer?.last_name || ''}`.trim(),
+                          phone: selectedCustomer?.phone || '',
+                          email: selectedCustomer?.email || '',
+                        }
+                      }
+
+                      console.log('[Calendar] Creating appointment:', bookingData)
+
+                      // Use the same completeWalkInBooking function as Walk-In
+                      const result = await completeWalkInBooking(bookingData)
+
+                      if (!result.success) {
+                        throw new Error(result.error || 'Failed to create appointment')
+                      }
+
+                      toast({ title: "Appointment created successfully!" })
                       setNewBookingOpen(false)
                       setNewBookingStep(1)
                       setNewBookingData({
@@ -1939,16 +1972,21 @@ export default function CalendarPage() {
                         notes: ""
                       })
 
-                      // Refresh data
-                      fetchBookings()
-                    } catch (error) {
-                      toast({ title: "Failed to create booking", variant: "destructive" })
+                      // Reload page to refresh appointments
+                      window.location.reload()
+                    } catch (error: any) {
+                      console.error('[Calendar] Error creating appointment:', error)
+                      toast({
+                        title: "Failed to create appointment",
+                        description: error.message,
+                        variant: "destructive"
+                      })
                     }
                   }}
                   disabled={!newBookingData.paymentMethod}
                   className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                 >
-                  Create Booking
+                  Create Appointment
                 </Button>
               )}
             </div>

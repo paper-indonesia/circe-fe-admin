@@ -60,8 +60,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             console.warn('[Context] Failed to load treatments:', err)
             return { items: [] }
           }),
-          apiClient.getBookings().catch(err => {
-            console.warn('[Context] Failed to load bookings:', err)
+          apiClient.getAppointments({ size: 100 }).catch(err => {
+            console.warn('[Context] Failed to load appointments:', err)
             return { items: [] }
           }),
         ])
@@ -149,25 +149,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }))
 
         // Handle paginated response from API
+        // Appointments API returns { items: [...], total, page, size, pages }
         const bookingsArray = Array.isArray(mongoBookings)
           ? mongoBookings
           : (mongoBookings.items || [])
 
-        const bookings = bookingsArray.map((b: any) => ({
-          id: b._id || b.id,
-          patientId: b.patientId || b.customer_id,
-          patientName: b.patientName || b.customer_name || 'Unknown',
-          staffId: b.staffId || b.staff_id,
-          treatmentId: b.treatmentId || b.service_id,
-          startAt: b.startAt || b.start_at,
-          endAt: b.endAt || b.end_at,
-          status: b.status || 'confirmed',
-          source: b.source || 'online',
-          paymentStatus: b.paymentStatus || b.payment_status || 'unpaid',
-          notes: b.notes || '',
-          queueNumber: b.queueNumber || b.queue_number,
-          createdAt: new Date(b.createdAt || b.created_at || Date.now()),
-        }))
+        console.log('[Context] Bookings array:', bookingsArray)
+
+        // Collect unique customer IDs for lookup
+        const customerIds = [...new Set(bookingsArray.map((b: any) => b.customer_id).filter(Boolean))]
+        console.log('[Context] Fetching customer details for', customerIds.length, 'customers')
+
+        // Fetch customer details for all appointments
+        const customerDetailsMap: Record<string, any> = {}
+        if (customerIds.length > 0) {
+          await Promise.all(
+            customerIds.map(async (customerId) => {
+              try {
+                const response = await fetch(`/api/customers/${customerId}`)
+                if (response.ok) {
+                  const customerData = await response.json()
+                  customerDetailsMap[customerId] = customerData
+                }
+              } catch (error) {
+                console.warn(`[Context] Failed to fetch customer ${customerId}:`, error)
+              }
+            })
+          )
+        }
+
+        console.log('[Context] Customer details loaded:', Object.keys(customerDetailsMap).length)
+        console.log('[Context] Customer details map:', customerDetailsMap)
+
+        const bookings = bookingsArray.map((b: any) => {
+          // Get first service for backward compatibility
+          const firstService = b.services && b.services.length > 0 ? b.services[0] : null
+
+          // Lookup customer details
+          const customer = customerDetailsMap[b.customer_id]
+          const customerName = customer
+            ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown'
+            : b.customer_name || 'Unknown'
+
+          console.log(`[Context] Booking ${b.id}: customer_id=${b.customer_id}, customer=`, customer)
+          console.log(`[Context] Booking ${b.id}: customerName="${customerName}"`)
+
+          return {
+            id: b._id || b.id,
+            patientId: b.patientId || b.customer_id,
+            patientName: customerName, // Always use constructed customerName from lookup
+            patientPhone: customer?.phone || b.customer_phone,
+            patientEmail: customer?.email || b.customer_email,
+            staffId: b.staffId || firstService?.staff_id || b.staff_id,
+            treatmentId: b.treatmentId || firstService?.service_id || b.service_id,
+            startAt: b.startAt || (b.appointment_date && b.start_time ? `${b.appointment_date}T${b.start_time}` : b.start_at),
+            endAt: b.endAt || (b.appointment_date && b.end_time ? `${b.appointment_date}T${b.end_time}` : b.end_at),
+            status: b.status || 'confirmed',
+            source: b.source || b.appointment_type || 'online',
+            paymentStatus: b.paymentStatus || b.payment_status || 'unpaid',
+            notes: b.notes || '',
+            queueNumber: b.queueNumber || b.queue_number,
+            createdAt: new Date(b.createdAt || b.created_at || Date.now()),
+            // New fields from appointments API
+            appointment_date: b.appointment_date,
+            start_time: b.start_time,
+            end_time: b.end_time,
+            services: b.services || [],
+            total_price: b.total_price,
+            fee_breakdown: b.fee_breakdown,
+            // Customer details
+            customer: customer || null,
+          }
+        })
 
         console.log('[Context] Parsed data:', {
           staff: staff.length,

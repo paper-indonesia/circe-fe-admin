@@ -189,34 +189,80 @@ class ApiClient {
     })
   }
 
-  // Booking endpoints
-  async getBookings(source?: 'walk-in' | 'online') {
-    const query = source ? `?source=${source}` : ''
-    return this.request<any[]>(`/bookings${query}`)
+  // Appointment endpoints (formerly bookings)
+  async getAppointments(params?: {
+    page?: number
+    size?: number
+    date_from?: string
+    date_to?: string
+    status?: string
+    appointment_type?: 'walk_in' | 'scheduled' | 'online'
+    payment_status?: string
+    customer_id?: string
+    staff_id?: string
+    outlet_id?: string
+    service_id?: string
+    sort_by?: string
+    sort_direction?: 'asc' | 'desc'
+  }) {
+    const query = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          query.append(key, value.toString())
+        }
+      })
+    }
+    const queryString = query.toString()
+    return this.request<any>(`/appointments${queryString ? `?${queryString}` : ''}`)
   }
 
-  async createBooking(data: any) {
-    return this.request<any>('/bookings', {
+  async getAppointmentById(id: string) {
+    return this.request<any>(`/appointments/${id}`)
+  }
+
+  async createAppointment(data: any) {
+    return this.request<any>('/appointments', {
       method: 'POST',
       body: JSON.stringify(data),
     })
   }
 
-  async updateBooking(id: string, updates: any) {
-    return this.request<any>(`/bookings/${id}`, {
-      method: 'PUT',
+  async updateAppointment(id: string, updates: any) {
+    return this.request<any>(`/appointments/${id}`, {
+      method: 'PATCH',
       body: JSON.stringify(updates),
     })
   }
 
-  async deleteBooking(id: string) {
-    return this.request<any>(`/bookings/${id}`, {
+  async deleteAppointment(id: string) {
+    return this.request<any>(`/appointments/${id}`, {
       method: 'DELETE',
     })
   }
 
+  // Legacy aliases for backwards compatibility
+  async getBookings(source?: 'walk-in' | 'online') {
+    return this.getAppointments({
+      appointment_type: source,
+      size: 100 // Get more items for compatibility
+    })
+  }
+
+  async createBooking(data: any) {
+    return this.createAppointment(data)
+  }
+
+  async updateBooking(id: string, updates: any) {
+    return this.updateAppointment(id, updates)
+  }
+
+  async deleteBooking(id: string) {
+    return this.deleteAppointment(id)
+  }
+
   async getWalkInBookings() {
-    return this.getBookings('walk-in')
+    return this.getAppointments({ appointment_type: 'walk_in', size: 100 })
   }
 
   // Outlet endpoints
