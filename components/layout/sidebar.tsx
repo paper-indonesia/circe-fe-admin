@@ -91,7 +91,7 @@ export function Sidebar() {
           { name: 'Calendar', href: '/calendar', icon: Calendar, tourId: 'sidebar-calendar' },
           { name: 'Customers', href: '/clients', icon: Users, tourId: 'sidebar-clients' },
           { name: 'Staff', href: '/staff', icon: Users, tourId: 'sidebar-staff' },
-          { name: 'Walk-in', href: '/walk-in', icon: UserPlus, tourId: 'sidebar-walkin' },
+          { name: 'Walk-in', href: '/calendar?action=create&source=walk-in', icon: UserPlus, tourId: 'sidebar-walkin' },
         ]
       },
       {

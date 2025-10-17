@@ -136,10 +136,12 @@ export default function SettingsPage() {
     enabled: boolean
     client_id: string
     client_secret: string
+    is_production: boolean
   }>({
     enabled: false,
     client_id: "",
-    client_secret: ""
+    client_secret: "",
+    is_production: false
   })
 
   useEffect(() => {
@@ -170,16 +172,21 @@ export default function SettingsPage() {
               }
             })
 
-            // Load Paper.id configuration
-            // Check both new fields (paper_id_api_key, paper_id_secret_key) and old structure (paper_id_config)
-            const hasNewFormat = tenantData.paper_id_api_key || tenantData.paper_id_secret_key
-            const hasOldFormat = tenantData.paper_id_config?.client_id || tenantData.paper_id_config?.client_secret
-
-            setPaperIdForm({
-              enabled: hasNewFormat || hasOldFormat || tenantData.paper_id_config?.enabled || false,
-              client_id: tenantData.paper_id_api_key || tenantData.paper_id_config?.client_id || "",
-              client_secret: tenantData.paper_id_secret_key || tenantData.paper_id_config?.client_secret || ""
-            })
+            // Load Paper.id configuration from dedicated endpoint
+            try {
+              const paperIdResponse = await fetch('/api/tenants/paper-id-config')
+              if (paperIdResponse.ok) {
+                const paperIdData = await paperIdResponse.json()
+                setPaperIdForm({
+                  enabled: paperIdData.enabled || false,
+                  client_id: paperIdData.client_id || "",
+                  client_secret: "", // Never returned by API for security
+                  is_production: paperIdData.is_production || false
+                })
+              }
+            } catch (error) {
+              console.error('Failed to load Paper.id config:', error)
+            }
           }
         }
 
@@ -286,19 +293,28 @@ export default function SettingsPage() {
     try {
       setSavingPaperId(true)
 
-      // Save to new field names: paper_id_api_key and paper_id_secret_key
-      const response = await fetch('/api/tenants/current', {
+      // Use dedicated Paper.id configuration endpoint
+      const response = await fetch('/api/tenants/paper-id-config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          paper_id_api_key: paperIdForm.enabled ? paperIdForm.client_id : null,
-          paper_id_secret_key: paperIdForm.enabled ? paperIdForm.client_secret : null
+          client_id: paperIdForm.client_id,
+          client_secret: paperIdForm.client_secret,
+          is_production: paperIdForm.is_production,
+          enabled: paperIdForm.enabled
         })
       })
 
       if (response.ok) {
         const updatedData = await response.json()
-        setTenantInfo(updatedData)
+        // Update form with response (client_secret won't be returned)
+        setPaperIdForm(prev => ({
+          ...prev,
+          client_id: updatedData.client_id || prev.client_id,
+          client_secret: "", // Clear for security (not returned by API)
+          is_production: updatedData.is_production,
+          enabled: updatedData.enabled
+        }))
         toast({
           title: "Success",
           description: "Paper.id configuration saved successfully"
@@ -991,6 +1007,29 @@ export default function SettingsPage() {
                   {/* Credentials Form */}
                   {paperIdForm.enabled && (
                     <div className="space-y-4 pt-2">
+                      {/* Environment Mode Toggle */}
+                      <div className="flex items-center justify-between p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-cyan-50">
+                        <div>
+                          <div className="font-medium text-gray-900 flex items-center gap-2">
+                            {paperIdForm.is_production ? (
+                              <Badge className="bg-green-600 text-white">Production</Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-orange-400 text-orange-700">Sandbox</Badge>
+                            )}
+                            Environment Mode
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {paperIdForm.is_production
+                              ? "Using production mode - Real transactions will be processed"
+                              : "Using sandbox mode - Test mode for development"}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={paperIdForm.is_production}
+                          onCheckedChange={(checked) => setPaperIdForm(prev => ({ ...prev, is_production: checked }))}
+                        />
+                      </div>
+
                       <div className="space-y-2">
                         <Label htmlFor="paperClientId" className="flex items-center gap-2">
                           <CreditCard className="h-4 w-4 text-indigo-600" />

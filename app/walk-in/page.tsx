@@ -81,6 +81,11 @@ export default function WalkInPage() {
 
   const loading = patientsLoading || staffLoading || treatmentsLoading || bookingsLoading
 
+  // Redirect to calendar with query params to auto-open create booking dialog
+  useEffect(() => {
+    router.push('/calendar?action=create&source=walk-in')
+  }, [router])
+
   // Filter walk-in appointments from API bookings
   const walkInBookings = useMemo(() => {
     const today = format(new Date(), 'yyyy-MM-dd')

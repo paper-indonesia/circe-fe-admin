@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
+import { useSearchParams } from "next/navigation"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -85,6 +86,7 @@ type DateRange = "week" | "month" | "2weeks"
 
 export default function CalendarPage() {
   const { toast } = useToast()
+  const searchParams = useSearchParams()
 
   const { bookings = [], loading, updateBooking, deleteBooking, rescheduleBooking, completeBooking, markNoShowBooking, reloadBookings } = useBookings()
   const { patients = [] } = usePatients()
@@ -137,10 +139,33 @@ export default function CalendarPage() {
   // Payment link state
   const [paymentLinkDialogOpen, setPaymentLinkDialogOpen] = useState(false)
 
+  // Payment options dialog state (after appointment created)
+  const [paymentOptionsDialogOpen, setPaymentOptionsDialogOpen] = useState(false)
+  const [pendingAppointment, setPendingAppointment] = useState<any>(null)
+
   // Fix hydration error - only render after client mount
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Check for query params to auto-open new booking dialog
+  useEffect(() => {
+    if (isMounted && searchParams) {
+      const action = searchParams.get('action')
+      const source = searchParams.get('source')
+
+      if (action === 'create') {
+        // Auto-open new booking dialog
+        setNewBookingOpen(true)
+
+        // If coming from walk-in, could set some defaults here
+        if (source === 'walk-in') {
+          // Could set default values for walk-in appointments
+          console.log('[Calendar] Opening create dialog from walk-in menu')
+        }
+      }
+    }
+  }, [isMounted, searchParams])
 
   // No-show appointment state
   const [noShowDialogOpen, setNoShowDialogOpen] = useState(false)
@@ -2729,14 +2754,14 @@ export default function CalendarPage() {
 
                       toast({
                         title: "Appointment created successfully!",
-                        description: "Now proceeding to payment..."
+                        description: "Choose payment option..."
                       })
 
                       // Close new booking dialog
                       setNewBookingOpen(false)
 
-                      // Open payment dialog with the newly created appointment
-                      setSelectedBooking({
+                      // Save appointment data for payment options
+                      const appointmentData = {
                         id: appointmentId,
                         patientId: result.customer?.customer_id || newBookingData.patientId,
                         patientName: newBookingData.isNewClient ? newBookingData.newClientName : `${selectedCustomer?.first_name || ''} ${selectedCustomer?.last_name || ''}`.trim(),
@@ -2752,10 +2777,12 @@ export default function CalendarPage() {
                         payment_status: 'unpaid',
                         notes: newBookingData.notes || '',
                         createdAt: new Date()
-                      })
+                      }
 
-                      // Open record payment dialog
-                      setRecordPaymentDialogOpen(true)
+                      setPendingAppointment(appointmentData)
+
+                      // Open payment options dialog instead of payment dialog directly
+                      setPaymentOptionsDialogOpen(true)
 
                       // Reset booking form
                       setNewBookingStep(1)
@@ -3155,6 +3182,134 @@ export default function CalendarPage() {
                 >
                   {isMarkingNoShow ? "Marking..." : "Mark as No-Show"}
                 </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Payment Options Dialog - After Appointment Created */}
+        <Dialog open={paymentOptionsDialogOpen} onOpenChange={setPaymentOptionsDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-green-600">
+                <CheckCircle2 className="h-5 w-5" />
+                Appointment Created Successfully!
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6 py-4">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-4 text-center">
+                <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-3" />
+                <p className="text-lg font-semibold text-gray-900 mb-1">Booking Confirmed!</p>
+                <p className="text-sm text-gray-600">Appointment has been created successfully</p>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-gray-700">Choose payment option:</p>
+
+                {/* Pay Now Button */}
+                <Button
+                  onClick={() => {
+                    if (pendingAppointment) {
+                      // Get treatment to calculate total amount
+                      const treatment = treatments.find(t => t.id === pendingAppointment.treatmentId)
+                      const totalAmount = treatment?.price || 0
+
+                      // Set selected booking
+                      setSelectedBooking(pendingAppointment)
+
+                      // Set payment status manually for new appointment
+                      setCompletePaymentStatus({
+                        total_amount: totalAmount,
+                        paid_amount: 0,
+                        remaining_balance: totalAmount,
+                        payment_status: 'unpaid',
+                        can_complete: false,
+                        message: 'Payment must be completed before marking appointment as done.',
+                        payments: []
+                      })
+
+                      // Close payment options dialog
+                      setPaymentOptionsDialogOpen(false)
+
+                      // Small delay to ensure dialog transitions smoothly
+                      setTimeout(() => {
+                        // Open Complete Appointment Dialog to show payment status and options
+                        setCompleteDialogOpen(true)
+                      }, 100)
+                    }
+                  }}
+                  className="w-full h-auto py-4 px-6 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-md"
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-5 w-5" />
+                      <span className="text-lg font-semibold">Pay Now</span>
+                    </div>
+                    <span className="text-xs opacity-90">Record payment immediately</span>
+                  </div>
+                </Button>
+
+                {/* Pay Later Button */}
+                <Button
+                  onClick={async () => {
+                    if (pendingAppointment) {
+                      try {
+                        // Add note to appointment that payment will be done later
+                        const currentNotes = pendingAppointment.notes || ''
+                        const payLaterNote = '\n[Payment will be processed after treatment completion]'
+                        const updatedNotes = currentNotes + (currentNotes ? payLaterNote : payLaterNote.trim())
+
+                        // Update appointment with pay later note
+                        await apiClient.updateAppointment(pendingAppointment.id, {
+                          notes: updatedNotes
+                        })
+
+                        toast({
+                          title: "Payment scheduled for later",
+                          description: "A note has been added to the appointment. Payment can be recorded after treatment."
+                        })
+
+                        setPaymentOptionsDialogOpen(false)
+                        setPendingAppointment(null)
+
+                        // Reload bookings to show updated appointment
+                        await reloadBookings()
+                      } catch (error: any) {
+                        console.error('Failed to add pay later note:', error)
+                        toast({
+                          title: "Note update failed",
+                          description: "Could not add payment note, but appointment is created. You can add it manually.",
+                          variant: "destructive"
+                        })
+                        // Still close dialog even if note update fails
+                        setPaymentOptionsDialogOpen(false)
+                        setPendingAppointment(null)
+                        await reloadBookings()
+                      }
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full h-auto py-4 px-6 border-2 border-gray-300 hover:bg-gray-50 shadow-sm"
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-gray-600" />
+                      <span className="text-lg font-semibold text-gray-700">Pay Later</span>
+                    </div>
+                    <span className="text-xs text-gray-500">Record payment after treatment</span>
+                  </div>
+                </Button>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-blue-800">
+                    <span className="font-medium">Note:</span> You can record payment now or mark it for later.
+                    If you choose "Pay Later", a note will be added to the appointment.
+                  </p>
+                </div>
               </div>
             </div>
           </DialogContent>
