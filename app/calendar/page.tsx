@@ -185,6 +185,7 @@ export default function CalendarPage() {
   const [newBookingStep, setNewBookingStep] = useState(1)
   const [isCreatingAppointment, setIsCreatingAppointment] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false)
   const [newBookingData, setNewBookingData] = useState<any>({
     treatmentId: "",
     patientId: "",
@@ -201,6 +202,7 @@ export default function CalendarPage() {
   const [treatmentPage, setTreatmentPage] = useState(0)
   const treatmentsPerPage = 6
   const [clientSearch, setClientSearch] = useState("")
+  const [staffSearch, setStaffSearch] = useState("")
 
   // Availability grid state (for booking flow)
   const [availabilityGrid, setAvailabilityGrid] = useState<any>(null)
@@ -541,13 +543,59 @@ export default function CalendarPage() {
     }
   }
 
-  // Confirm creating new customer
-  const handleConfirmNewCustomer = () => {
-    setCustomerConfirmed(true)
-    toast({
-      title: "New Customer Confirmed",
-      description: "Customer will be created when booking is completed",
-    })
+  // Confirm creating new customer - Actually create the customer
+  const handleConfirmNewCustomer = async () => {
+    if (!newBookingData.newClientName || !newBookingData.newClientPhone) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in name and phone number",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setSearchingCustomer(true)
+    try {
+      // Create the customer via API
+      const response = await createCustomer({
+        name: newBookingData.newClientName,
+        phone: newBookingData.newClientPhone,
+        email: newBookingData.newClientEmail || '',
+      })
+
+      if (response.success && response.customer) {
+        const customerId = response.customer._id || response.customer.id
+
+        // Set the customer as selected
+        setNewBookingData({
+          ...newBookingData,
+          patientId: customerId,
+          isNewClient: false, // Switch to existing mode
+        })
+
+        // Add to customers list
+        setCustomers(prev => [response.customer, ...prev])
+
+        setCustomerConfirmed(true)
+        setCustomerSearchResult('found')
+
+        toast({
+          title: "Customer created successfully!",
+          description: `${newBookingData.newClientName} has been added to your customer list.`,
+        })
+      } else {
+        throw new Error(response.error || 'Failed to create customer')
+      }
+    } catch (error: any) {
+      console.error('[Calendar] Error creating customer:', error)
+      toast({
+        title: "Failed to create customer",
+        description: error.message || "Please try again",
+        variant: "destructive"
+      })
+    } finally {
+      setSearchingCustomer(false)
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -2085,181 +2133,207 @@ export default function CalendarPage() {
           </DialogContent>
         </Dialog>
 
-        {/* New Booking Dialog */}
+        {/* New Booking Dialog - Modern Wide Layout */}
         <Dialog open={newBookingOpen} onOpenChange={setNewBookingOpen}>
-          <DialogContent className="min-w-[960px] max-w-[1200px] w-[90vw] h-[90vh] flex flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-white p-0">
-            <DialogHeader className="sticky top-0 z-10 bg-gradient-to-br from-gray-50 to-white border-b-2 border-gray-200 pb-5 pt-6 px-6">
-              <div className="flex items-center justify-between">
-                <DialogTitle className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  Book Appointment
-                </DialogTitle>
-                <button onClick={() => setNewBookingOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+          <DialogContent className="max-w-[1120px] w-[90vw] min-w-[960px] h-[92vh] flex flex-col overflow-hidden bg-white p-0 gap-0 rounded-2xl shadow-2xl">
+            {/* Header - Sticky */}
+            <div className="sticky top-0 z-10 flex items-center justify-between px-7 py-5 border-b border-gray-200 bg-gradient-to-r from-indigo-50/40 via-purple-50/30 to-pink-50/40 backdrop-blur-sm">
+              <DialogTitle className="text-2xl font-semibold text-gray-900">
+                Book appointment
+              </DialogTitle>
+              <button
+                onClick={() => setNewBookingOpen(false)}
+                className="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-lg hover:bg-white/60"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-              {/* Progress Steps */}
-              <div className="flex items-center gap-1 mt-4">
-                {[
-                  { num: 1, label: 'Customer', icon: User },
-                  { num: 2, label: 'Product', icon: Star },
-                  { num: 3, label: 'Staff', icon: User },
-                  { num: 4, label: 'Schedule', icon: Clock },
-                  { num: 5, label: 'Review', icon: CheckCircle }
-                ].map((step, idx) => (
-                  <>
-                    <div key={step.num} className={cn(
-                      "flex items-center gap-2 flex-1",
-                      newBookingStep >= step.num ? "text-[#C8B6FF]" : "text-gray-400"
-                    )}>
-                      <div className={cn(
-                        "w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shadow-sm transition-all",
-                        newBookingStep > step.num ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white" :
-                        newBookingStep === step.num ? "bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] text-white ring-4 ring-[#FFD6FF]/50" :
-                        "bg-gray-100 text-gray-400"
-                      )}>
-                        {newBookingStep > step.num ? <CheckCircle className="h-4 w-4" /> : step.num}
-                      </div>
-                      <span className="text-[10px] font-bold uppercase hidden md:block">{step.label}</span>
+            {/* Main Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto px-7 py-6">
+              {/* Top Bar: Customer, Service, Staff - 12 Column Grid */}
+              <div className="grid grid-cols-12 gap-6 mb-8">
+                {/* Customer Selection - 4 cols */}
+                <div className="col-span-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold text-gray-800">Customer</Label>
+                    <div className="flex gap-1.5 bg-gray-100 p-1 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setNewBookingData({ ...newBookingData, isNewClient: false, patientId: "", newClientName: "", newClientPhone: "" })}
+                        className={cn(
+                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                          !newBookingData.isNewClient
+                            ? "bg-indigo-600 text-white shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        )}
+                      >
+                        Existing
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewBookingData({ ...newBookingData, isNewClient: true, patientId: "" })}
+                        className={cn(
+                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                          newBookingData.isNewClient
+                            ? "bg-indigo-600 text-white shadow-sm"
+                            : "text-gray-600 hover:text-gray-900"
+                        )}
+                      >
+                        New
+                      </button>
                     </div>
-                    {idx < 4 && <div className={cn("h-0.5 w-8", newBookingStep > step.num ? "bg-[#C8B6FF]" : "bg-gray-200")} />}
-                  </>
-                ))}
-              </div>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              {/* Step 1: Customer Selection */}
-              {newBookingStep === 1 && (
-                <div>
-                  <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
-                      <User className="h-4 w-4 text-[#C8B6FF]" />
-                    </div>
-                    Customer Information
-                  </h3>
-
-                  {/* New or Existing Customer Toggle */}
-                  <div className="flex gap-3 mb-4">
-                    <Button
-                      type="button"
-                      variant={!newBookingData.isNewClient ? "default" : "outline"}
-                      onClick={() => setNewBookingData({ ...newBookingData, isNewClient: false, patientId: "", newClientName: "", newClientPhone: "" })}
-                      className="flex-1"
-                    >
-                      Existing Customer
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={newBookingData.isNewClient ? "default" : "outline"}
-                      onClick={() => setNewBookingData({ ...newBookingData, isNewClient: true, patientId: "" })}
-                      className="flex-1"
-                    >
-                      New Customer
-                    </Button>
                   </div>
 
-                  {/* Existing Customer Search */}
-                  {!newBookingData.isNewClient && (
-                    <div className="space-y-3">
-                      <Label>Search Customer</Label>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Filter by name or phone..."
-                          value={clientSearch}
-                          onChange={(e) => handleCustomerSearch(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
+                  {!newBookingData.isNewClient ? (
+                    <div className="relative">
+                      {!newBookingData.patientId ? (
+                        <>
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
+                          <Input
+                            placeholder="Search by name or phone..."
+                            value={clientSearch}
+                            onChange={(e) => handleCustomerSearch(e.target.value)}
+                            onFocus={() => {
+                              setCustomerDropdownOpen(true)
+                              // Load customers when focused if not already loaded
+                              if (customers.length === 0 && !loadingCustomers) {
+                                loadInitialCustomers()
+                              }
+                            }}
+                            onBlur={() => {
+                              // Delay to allow click on dropdown item
+                              setTimeout(() => setCustomerDropdownOpen(false), 200)
+                            }}
+                            className="pl-10 h-11 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                          />
 
-                      {/* Customer List */}
-                      <div className="border rounded-lg max-h-80 overflow-y-auto">
-                        {loadingCustomers ? (
-                          <div className="p-4 text-center">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                            <p className="text-sm text-muted-foreground">Loading customers...</p>
-                          </div>
-                        ) : customersError ? (
-                          <div className="p-4 text-center">
-                            <p className="text-sm text-red-500 mb-2">{customersError}</p>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={loadInitialCustomers}
-                            >
-                              Retry
-                            </Button>
-                          </div>
-                        ) : customers.length > 0 ? (
-                          <div className="divide-y">
-                            {customers.map((customer) => {
-                              const customerId = customer._id || customer.id || ""
-                              const isSelected = newBookingData.patientId === customerId
-
-                              return (
-                                <button
-                                  key={customerId}
-                                  type="button"
-                                  onClick={() => {
-                                    setNewBookingData({
-                                      ...newBookingData,
-                                      patientId: customerId,
-                                      newClientName: `${customer.first_name} ${customer.last_name}`.trim(),
-                                      newClientPhone: customer.phone
-                                    })
-                                  }}
-                                  className={cn(
-                                    "w-full p-3 text-left transition-colors relative",
-                                    isSelected
-                                      ? "bg-primary/10 border-l-4 border-l-primary"
-                                      : "hover:bg-muted/50"
-                                  )}
-                                >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="flex-1 min-w-0">
-                                      <p className="font-medium truncate">{customer.first_name} {customer.last_name}</p>
-                                      <p className="text-sm text-muted-foreground">{customer.phone}</p>
-                                      {customer.email && (
-                                        <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
-                                      )}
+                          {/* Recent/Search Dropdown - Show when focused */}
+                          {customerDropdownOpen && !newBookingData.patientId && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto z-20">
+                              {loadingCustomers ? (
+                                <div className="p-4 text-center">
+                                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+                                  <p className="text-xs text-gray-500">Loading...</p>
+                                </div>
+                              ) : customers.length > 0 ? (
+                                <div className="py-1">
+                                  {/* Show label for recent vs search results */}
+                                  {!clientSearch && (
+                                    <div className="px-3 py-1.5 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                                      Recent Customers
                                     </div>
-                                    {isSelected && (
-                                      <Badge className="bg-primary text-white shrink-0">
-                                        Selected
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </button>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <div className="p-8 text-center text-muted-foreground">
-                            <p className="text-sm mb-2">No customers found</p>
-                            <p className="text-xs">Try adjusting your search</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                                  )}
+                                  {customers.slice(0, 8).map((customer) => {
+                                    const customerId = customer._id || customer.id || ""
+                                    return (
+                                      <button
+                                        key={customerId}
+                                        type="button"
+                                        onClick={() => {
+                                          setNewBookingData({
+                                            ...newBookingData,
+                                            patientId: customerId,
+                                            newClientName: `${customer.first_name} ${customer.last_name}`.trim(),
+                                            newClientPhone: customer.phone
+                                          })
+                                          setClientSearch("")
+                                        }}
+                                        className="group relative w-full px-3 py-2 hover:bg-indigo-50 transition-colors flex items-center gap-2.5 text-left"
+                                      >
+                                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                                          {customer.first_name?.charAt(0)}{customer.last_name?.charAt(0)}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-medium text-gray-900 truncate">
+                                            {customer.first_name} {customer.last_name}
+                                          </p>
+                                          <p className="text-xs text-gray-500 truncate">{customer.phone}</p>
+                                        </div>
 
-                  {/* New Customer Form */}
-                  {newBookingData.isNewClient && (
-                    <div className="space-y-3">
+                                        {/* Hover Tooltip */}
+                                        <div className="absolute left-full ml-2 top-0 z-50 hidden group-hover:block">
+                                          <div className="bg-gray-900 text-white text-xs rounded-lg shadow-lg p-3 min-w-[200px] max-w-[280px]">
+                                            <div className="space-y-1.5">
+                                              <div>
+                                                <p className="font-semibold text-sm">{customer.first_name} {customer.last_name}</p>
+                                              </div>
+                                              <div className="space-y-0.5 text-gray-300">
+                                                <p>📱 {customer.phone}</p>
+                                                {customer.email && <p>✉️ {customer.email}</p>}
+                                                {customer.address && <p>📍 {customer.address}</p>}
+                                                {customer.date_of_birth && <p>🎂 {customer.date_of_birth}</p>}
+                                              </div>
+                                            </div>
+                                            {/* Arrow */}
+                                            <div className="absolute right-full top-3 w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-r-4 border-r-gray-900"></div>
+                                          </div>
+                                        </div>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="p-4 text-center">
+                                  <p className="text-sm text-gray-500 mb-3">No customers found</p>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setNewBookingData({ ...newBookingData, isNewClient: true })
+                                    }}
+                                    className="text-xs"
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Add new customer
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      ) : (() => {
+                        // Selected Customer Chip
+                        const selectedCustomer = customers.find(c => (c._id || c.id) === newBookingData.patientId)
+                        return selectedCustomer && (
+                          <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50/60 border border-indigo-200 rounded-lg">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                              {selectedCustomer.first_name?.charAt(0)}{selectedCustomer.last_name?.charAt(0)}
+                            </div>
+                            <span className="text-sm text-gray-900 flex-1 truncate">
+                              {selectedCustomer.first_name} {selectedCustomer.last_name} · <span className="text-indigo-600">{selectedCustomer.phone}</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewBookingData({ ...newBookingData, patientId: "", newClientName: "", newClientPhone: "" })
+                                setClientSearch("")
+                              }}
+                              className="text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:underline flex-shrink-0"
+                            >
+                              Change
+                            </button>
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {/* Name Input */}
                       <div>
-                        <Label>Customer Name *</Label>
                         <Input
-                          placeholder="Full name"
+                          placeholder="Full name *"
                           value={newBookingData.newClientName}
                           onChange={(e) => setNewBookingData({ ...newBookingData, newClientName: e.target.value })}
+                          className="h-11 text-sm border-gray-300 focus:border-indigo-500"
                         />
                       </div>
-                      <div>
-                        <Label>Phone Number *</Label>
+
+                      {/* Phone Input with Search */}
+                      <div className="space-y-2">
                         <div className="flex gap-2">
-                          <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
+                          <div className="flex items-center px-3 border border-gray-300 bg-gray-50 rounded-md text-sm font-medium text-gray-600 h-11">
                             +62
                           </div>
                           <Input
@@ -2269,14 +2343,20 @@ export default function CalendarPage() {
                               const input = e.target.value.replace(/\D/g, '') // Only allow digits
                               const fullPhone = input ? `+62${input}` : ''
                               setNewBookingData({ ...newBookingData, newClientPhone: fullPhone })
+                              // Reset search result when phone changes
+                              if (customerSearchResult !== 'not_searched') {
+                                setCustomerSearchResult('not_searched')
+                                setCustomerConfirmed(false)
+                              }
                             }}
+                            className="flex-1 h-11 text-sm border-gray-300 focus:border-indigo-500"
                           />
                           <Button
                             type="button"
                             variant="outline"
                             onClick={handleSearchCustomerByPhone}
                             disabled={searchingCustomer || !newBookingData.newClientPhone || newBookingData.newClientPhone.length < 11}
-                            className="shrink-0"
+                            className="h-11 px-4 text-sm flex-shrink-0"
                           >
                             {searchingCustomer ? (
                               <>
@@ -2290,212 +2370,298 @@ export default function CalendarPage() {
                               </>
                             )}
                           </Button>
-
-                          {/* Confirmation Button - Show when customer not found and not yet confirmed */}
-                          {customerSearchResult === 'not_found' && !customerConfirmed && (
-                            <Button
-                              type="button"
-                              variant="default"
-                              onClick={handleConfirmNewCustomer}
-                              className="shrink-0 bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              <UserPlus className="h-4 w-4 mr-2" />
-                              Create New
-                            </Button>
-                          )}
-
-                          {/* Success Indicator - Show when confirmed */}
-                          {customerConfirmed && customerSearchResult === 'not_found' && (
-                            <div className="shrink-0 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md">
-                              <CheckCircle2 className="h-4 w-4 text-green-600" />
-                              <span className="text-sm text-green-700 font-medium">Confirmed</span>
-                            </div>
-                          )}
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {customerSearchResult === 'not_searched' && 'Enter phone number and click Search to check if customer exists.'}
-                          {customerSearchResult === 'found' && 'Customer found and confirmed. Proceed to next step.'}
-                          {customerSearchResult === 'not_found' && !customerConfirmed && 'Customer not found. Click "Create New" to confirm creating a new customer profile.'}
-                          {customerSearchResult === 'not_found' && customerConfirmed && 'New customer confirmed. Will be created when booking is completed.'}
-                        </p>
+
+                        {/* Search Result Messages */}
+                        {customerSearchResult === 'found' && (
+                          <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-900">Customer found!</p>
+                              <p className="text-xs text-green-700 mt-0.5">This phone number is already registered. Using existing customer data.</p>
+                            </div>
+                          </div>
+                        )}
+                        {customerSearchResult === 'not_found' && !customerConfirmed && (
+                          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-amber-900">Customer not found</p>
+                              <p className="text-xs text-amber-700 mt-0.5 mb-2">This phone number is not registered yet.</p>
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={handleConfirmNewCustomer}
+                                className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                              >
+                                <UserPlus className="h-3 w-3 mr-1.5" />
+                                Confirm as New Customer
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        {customerSearchResult === 'not_found' && customerConfirmed && (
+                          <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-900">Confirmed as new customer</p>
+                              <p className="text-xs text-green-700 mt-0.5">Customer profile will be created when booking is completed.</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
 
-              {/* Step 2: Product Selection with Search & Pagination */}
-              {newBookingStep === 2 && (() => {
-                const filteredTreatments = treatments.filter(t =>
-                  t.name.toLowerCase().includes(treatmentSearch.toLowerCase()) ||
-                  t.category.toLowerCase().includes(treatmentSearch.toLowerCase())
-                )
-                const paginatedTreatments = filteredTreatments.slice(
-                  treatmentPage * treatmentsPerPage,
-                  (treatmentPage + 1) * treatmentsPerPage
-                )
-                const totalTreatmentPages = Math.ceil(filteredTreatments.length / treatmentsPerPage)
-
-                return (
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Select Product</h3>
-
-                      {/* Search */}
-                      <div className="relative mb-4">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      {/* Email Input (Optional) */}
+                      <div>
                         <Input
-                          placeholder="Search product..."
-                          value={treatmentSearch}
-                          onChange={(e) => {
-                            setTreatmentSearch(e.target.value)
-                            setTreatmentPage(0)
-                          }}
-                          className="pl-9 h-11"
+                          type="email"
+                          placeholder="Email (optional)"
+                          value={newBookingData.newClientEmail || ''}
+                          onChange={(e) => setNewBookingData({ ...newBookingData, newClientEmail: e.target.value })}
+                          className="h-11 text-sm border-gray-300 focus:border-indigo-500"
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        {paginatedTreatments.map((treatment) => (
-                        <button
-                          key={treatment.id}
-                          onClick={() => setNewBookingData({ ...newBookingData, treatmentId: treatment.id })}
-                          className={cn(
-                            "p-4 rounded-xl border-2 text-left transition-all hover:shadow-md",
-                            newBookingData.treatmentId === treatment.id
-                              ? "border-[#C8B6FF] bg-[#FFD6FF]/10"
-                              : "border-gray-200 hover:border-gray-300"
-                          )}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
-                              <Star className="h-5 w-5 text-[#C8B6FF]" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 text-sm mb-1">{treatment.name}</p>
-                              <p className="text-xs text-gray-500">{treatment.category}</p>
-                              <div className="flex items-center gap-3 mt-2 text-xs">
-                                <span className="text-gray-600">{treatment.durationMin} min</span>
-                                <span className="font-semibold text-gray-900">{formatCurrency(treatment.price)}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-                        ))}
-                      </div>
-
-                      {/* Pagination */}
-                      {totalTreatmentPages > 1 && (
-                        <div className="flex items-center justify-center gap-2 mt-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setTreatmentPage(prev => Math.max(0, prev - 1))}
-                            disabled={treatmentPage === 0}
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <span className="text-sm text-gray-600">
-                            Page {treatmentPage + 1} of {totalTreatmentPages}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setTreatmentPage(prev => Math.min(totalTreatmentPages - 1, prev + 1))}
-                            disabled={treatmentPage === totalTreatmentPages - 1}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      {customerSearchResult === 'not_searched' && (
+                        <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-gray-400"></span>
+                          Please search phone number to verify customer
+                        </p>
                       )}
                     </div>
-                  </div>
-                )
-              })()}
+                  )}
+                </div>
 
-              {/* Step 3: Staff Selection (filtered by selected product) */}
-              {newBookingStep === 3 && (() => {
-                const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
-
-                // Use staffIds from treatment (from include_staff=true API)
-                let availableStaff = staff
-                if (selectedTreatment?.staffIds && Array.isArray(selectedTreatment.staffIds) && selectedTreatment.staffIds.length > 0) {
-                  console.log('[Calendar] Using staffIds from treatment:', selectedTreatment.staffIds)
-                  availableStaff = staff.filter(s => selectedTreatment.staffIds.includes(s.id))
-                  console.log(`[Calendar] Filtered ${availableStaff.length} of ${staff.length} staff using staffIds`)
-                } else if (selectedTreatment?.assignedStaff) {
-                  // Fallback: Use old assignedStaff field for backward compatibility
-                  console.log('[Calendar] Fallback to assignedStaff:', selectedTreatment.assignedStaff)
-                  availableStaff = staff.filter(s => selectedTreatment.assignedStaff.includes(s.id))
-                }
-
-                return (
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Select Available Staff</h3>
-                      <p className="text-xs text-gray-500 mb-4">
-                        {availableStaff.length} staff member(s) available for this product
-                      </p>
-                      <div className="grid grid-cols-2 gap-3">
-                        {availableStaff.map((staffMember) => (
-                          <button
-                            key={staffMember.id}
-                            onClick={() => setNewBookingData({ ...newBookingData, staffId: staffMember.id })}
-                            className={cn(
-                              "p-4 rounded-xl border-2 text-left transition-all hover:shadow-md",
-                              newBookingData.staffId === staffMember.id
-                                ? "border-[#C8B6FF] bg-[#FFD6FF]/10"
-                                : "border-gray-200 hover:border-gray-300"
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center text-lg font-bold text-gray-700">
-                                {staffMember.name.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-gray-900 text-sm">{staffMember.name}</p>
-                                <p className="text-xs text-gray-500">{staffMember.email}</p>
-                              </div>
+                {/* Service Selection - 4 cols */}
+                <div className="col-span-4 space-y-2">
+                  <Label className="text-sm font-semibold text-gray-800">Service</Label>
+                  {!newBookingData.treatmentId ? (
+                    <div className="relative">
+                      <Select
+                        value={newBookingData.treatmentId}
+                        onValueChange={(value) => setNewBookingData({ ...newBookingData, treatmentId: value, staffId: "", date: "", time: "" })}
+                      >
+                        <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500">
+                          <SelectValue placeholder="Select a service" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80">
+                          {/* Search Input */}
+                          <div className="px-2 pb-2 sticky top-0 bg-white z-10 border-b">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <Input
+                                placeholder="Search services..."
+                                value={treatmentSearch}
+                                onChange={(e) => setTreatmentSearch(e.target.value)}
+                                className="pl-9 h-9 text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                              />
                             </div>
-                          </button>
-                        ))}
-                      </div>
+                          </div>
+                          {/* Filtered Results */}
+                          {(() => {
+                            const filtered = treatments.filter(t =>
+                              t.name.toLowerCase().includes(treatmentSearch.toLowerCase()) ||
+                              t.category?.toLowerCase().includes(treatmentSearch.toLowerCase())
+                            )
+                            return filtered.length > 0 ? (
+                              filtered.map((treatment) => (
+                                <SelectItem key={treatment.id} value={treatment.id} className="group relative text-sm py-2.5">
+                                  <div className="flex items-center gap-2.5">
+                                    <Star className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium truncate text-sm">{treatment.name}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {formatCurrency(treatment.price)} · {treatment.duration || treatment.durationMin} min
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Hover Tooltip */}
+                                  <div className="absolute left-full ml-2 top-0 z-50 hidden group-hover:block pointer-events-none">
+                                    <div className="bg-gray-900 text-white text-xs rounded-lg shadow-xl p-3 min-w-[220px] max-w-[300px]">
+                                      <div className="space-y-1.5">
+                                        <div>
+                                          <p className="font-semibold text-sm text-purple-300">{treatment.name}</p>
+                                          {treatment.category && (
+                                            <p className="text-xs text-gray-400 mt-0.5">{treatment.category}</p>
+                                          )}
+                                        </div>
+                                        <div className="space-y-0.5 text-gray-300">
+                                          <p>💰 {formatCurrency(treatment.price)}</p>
+                                          <p>⏱️ {treatment.duration || treatment.durationMin} minutes</p>
+                                          {treatment.description && (
+                                            <p className="text-xs text-gray-400 mt-1 pt-1 border-t border-gray-700">{treatment.description}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {/* CSS Arrow pointing back */}
+                                      <div className="absolute right-full top-3 w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-r-4 border-r-gray-900"></div>
+                                    </div>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="py-6 text-center text-sm text-gray-500">
+                                No services found
+                              </div>
+                            )
+                          })()}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-                )
-              })()}
-
-              {/* Step 4: Schedule (Date & Time) */}
-              {newBookingStep === 4 && (() => {
-                const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
-                const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
-
-                // Get today's bookings from context
-                const todayBookings = bookings.filter(b => {
-                  const bookingDate = format(new Date(b.startAt), 'yyyy-MM-dd')
-                  return bookingDate === format(new Date(), 'yyyy-MM-dd')
-                })
-
-                return (
-                  <div className="space-y-6">
-                    {/* Booking Date & Time - BookingDateTime Component */}
-                    {loadingNewBookingAvailability && newBookingData.treatmentId && newBookingData.staffId ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                          <p className="text-sm text-muted-foreground">Loading available time slots...</p>
-                        </div>
+                  ) : (() => {
+                    const selected = treatments.find(t => t.id === newBookingData.treatmentId)
+                    return selected && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-purple-50/60 border border-purple-200 rounded-lg">
+                        <Star className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                        <span className="text-sm text-gray-900 flex-1 truncate">
+                          {selected.name} · <span className="text-purple-600">{formatCurrency(selected.price)}</span> · {selected.duration || selected.durationMin} min
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setNewBookingData({ ...newBookingData, treatmentId: "", staffId: "", date: "", time: "" })}
+                          className="text-xs font-medium text-purple-600 hover:text-purple-700 hover:underline flex-shrink-0"
+                        >
+                          Change
+                        </button>
                       </div>
-                    ) : newBookingData.treatmentId && newBookingData.staffId ? (
-                      <>
+                    )
+                  })()}
+                </div>
+
+                {/* Staff Selection - 4 cols */}
+                <div className="col-span-4 space-y-2">
+                  <Label className="text-sm font-semibold text-gray-800">Staff</Label>
+                  {!newBookingData.staffId ? (
+                    <div className="relative">
+                      <Select
+                        value={newBookingData.staffId}
+                        onValueChange={(value) => setNewBookingData({ ...newBookingData, staffId: value, date: "", time: "" })}
+                        disabled={!newBookingData.treatmentId}
+                      >
+                        <SelectTrigger className="h-11 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50">
+                          <SelectValue placeholder={!newBookingData.treatmentId ? "Select service first" : "Select staff member"} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-80">
+                          {/* Search Input */}
+                          <div className="px-2 pb-2 sticky top-0 bg-white z-10 border-b">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <Input
+                                placeholder="Search staff..."
+                                value={staffSearch}
+                                onChange={(e) => setStaffSearch(e.target.value)}
+                                className="pl-9 h-9 text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          </div>
+                          {/* Filtered Results */}
+                          {(() => {
+                            const treatment = treatments.find(t => t.id === newBookingData.treatmentId)
+                            let availableStaff = treatment?.staffIds?.length
+                              ? staff.filter(s => treatment.staffIds.includes(s.id))
+                              : staff
+
+                            // Apply search filter
+                            const filtered = availableStaff.filter(s =>
+                              s.name.toLowerCase().includes(staffSearch.toLowerCase()) ||
+                              s.role?.toLowerCase().includes(staffSearch.toLowerCase()) ||
+                              s.email?.toLowerCase().includes(staffSearch.toLowerCase())
+                            )
+
+                            return filtered.length > 0 ? (
+                              filtered.map((member) => (
+                                <SelectItem key={member.id} value={member.id} className="group relative text-sm py-2.5">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                                      {member.name.charAt(0)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium text-sm truncate">{member.name}</p>
+                                      <p className="text-xs text-gray-500 truncate">{member.role || 'Staff'}</p>
+                                    </div>
+                                  </div>
+
+                                  {/* Hover Tooltip */}
+                                  <div className="absolute left-full ml-2 top-0 z-50 hidden group-hover:block pointer-events-none">
+                                    <div className="bg-gray-900 text-white text-xs rounded-lg shadow-xl p-3 min-w-[220px] max-w-[300px]">
+                                      <div className="space-y-1.5">
+                                        <div>
+                                          <p className="font-semibold text-sm text-blue-300">{member.name}</p>
+                                          <p className="text-xs text-gray-400 mt-0.5">{member.role || 'Staff'}</p>
+                                        </div>
+                                        <div className="space-y-0.5 text-gray-300">
+                                          {member.email && <p>✉️ {member.email}</p>}
+                                          {member.phone && <p>📱 {member.phone}</p>}
+                                          {member.specialties && member.specialties.length > 0 && (
+                                            <p className="text-xs text-gray-400 mt-1 pt-1 border-t border-gray-700">
+                                              <span className="font-medium">Specialties:</span> {member.specialties.join(', ')}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {/* CSS Arrow pointing back */}
+                                      <div className="absolute right-full top-3 w-0 h-0 border-t-4 border-t-transparent border-b-4 border-b-transparent border-r-4 border-r-gray-900"></div>
+                                    </div>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="py-6 text-center text-sm text-gray-500">
+                                No staff found
+                              </div>
+                            )
+                          })()}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : (() => {
+                    const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
+                    return selectedStaff && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50/60 border border-blue-200 rounded-lg">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+                          {selectedStaff.name.charAt(0)}
+                        </div>
+                        <span className="text-sm text-gray-900 flex-1 truncate">
+                          {selectedStaff.name} · <span className="text-blue-600">{selectedStaff.role || 'Staff'}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setNewBookingData({ ...newBookingData, staffId: "", date: "", time: "" })}
+                          className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline flex-shrink-0"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+
+              {/* Availability Section - Show when service and staff selected */}
+              {newBookingData.treatmentId && newBookingData.staffId && (
+                <div className="space-y-5">
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">Select Date & Time</h3>
+                    <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                      {loadingNewBookingAvailability ? (
+                        <div className="flex items-center justify-center py-16">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-3 border-indigo-600"></div>
+                            <p className="text-sm font-medium text-gray-600">Loading available time slots...</p>
+                          </div>
+                        </div>
+                      ) : (
                         <BookingDateTime
                           provider={{
-                            name: selectedStaff?.display_name || selectedStaff?.first_name || "Staff",
+                            name: staff.find(s => s.id === newBookingData.staffId)?.display_name || staff.find(s => s.id === newBookingData.staffId)?.first_name || "Staff",
                             address: "Beauty Clinic",
-                            avatarUrl: selectedStaff?.profile_image_url
+                            avatarUrl: staff.find(s => s.id === newBookingData.staffId)?.profile_image_url
                           }}
                           selectedStaffId={newBookingData.staffId}
-                          existingBookings={todayBookings.map(b => ({
+                          existingBookings={bookings.map(b => ({
                             bookingDate: format(new Date(b.startAt), 'yyyy-MM-dd'),
                             timeSlot: format(new Date(b.startAt), 'HH:mm'),
                             staffId: b.staffId
@@ -2509,323 +2675,238 @@ export default function CalendarPage() {
                           }}
                           isLoading={loadingNewBookingAvailability}
                         />
-                      </>
-                    ) : (
-                      <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
-                        <p className="text-sm text-muted-foreground text-center">
-                          Please select a product and staff member to view available time slots
-                        </p>
+                      )}
+                    </div>
+                    {newBookingData.date && newBookingData.time && (
+                      <div className="mt-4 flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl">
+                        <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle2 className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-indigo-600 uppercase tracking-wide mb-0.5">Selected Time</p>
+                          <p className="text-sm font-semibold text-indigo-900">
+                            {format(new Date(newBookingData.date), 'EEEE, MMMM d, yyyy')} at {newBookingData.time}
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
-                )
-              })()}
+                </div>
+              )}
 
-              {/* Step 5: Booking Summary */}
-              {newBookingStep === 5 && (() => {
-                const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
-                const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
-                const selectedCustomer = customers.find(c => (c._id || c.id) === newBookingData.patientId)
-
-                // Get customer data - prioritize newBookingData for consistency
-                const customerName = newBookingData.isNewClient
-                  ? newBookingData.newClientName
-                  : newBookingData.newClientName || `${selectedCustomer?.first_name || ''} ${selectedCustomer?.last_name || ''}`.trim()
-
-                const customerPhone = newBookingData.isNewClient
-                  ? newBookingData.newClientPhone
-                  : newBookingData.newClientPhone || selectedCustomer?.phone
-
-                const customerEmail = selectedCustomer?.email
-
-                return (
-                  <div className="space-y-6">
-                    {/* Modern Header */}
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-4">
-                        <CheckCircle className="h-9 w-9 text-white" />
-                      </div>
-                      <h3 className="text-3xl font-bold text-gray-900 mb-2">Review Booking</h3>
-                      <p className="text-gray-500 text-sm">Please verify all information before confirming</p>
-                    </div>
-
-                    {/* Clean Grid Layout */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Customer Card - Full Width */}
-                      <div className="col-span-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-                        <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
-                              <User className="h-8 w-8 text-white" />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Customer</p>
-                              {newBookingData.isNewClient && (
-                                <Badge className="bg-green-500 text-white text-xs px-2 py-0.5">New Customer</Badge>
-                              )}
-                            </div>
-                            <p className="text-xl font-bold text-gray-900 mb-1">{customerName}</p>
-                            <div className="flex flex-col gap-1">
-                              {customerPhone && (
-                                <p className="text-sm text-gray-600 flex items-center gap-1">
-                                  <span className="font-medium">📱</span> {customerPhone}
-                                </p>
-                              )}
-                              {customerEmail && (
-                                <p className="text-sm text-gray-600 flex items-center gap-1">
-                                  <span className="font-medium">✉️</span> {customerEmail}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Product Card */}
-                      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-                            <Star className="h-6 w-6 text-purple-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Product</p>
-                            <p className="font-bold text-gray-900 truncate">{selectedTreatment?.name}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-600 pt-3 border-t border-gray-100">
-                          <span className="font-semibold text-gray-900">{formatCurrency(selectedTreatment?.price || 0)}</span>
-                          <span>•</span>
-                          <span>{selectedTreatment?.durationMin} min</span>
-                        </div>
-                      </div>
-
-                      {/* Staff Card */}
-                      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                            {selectedStaff?.name?.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Staff</p>
-                            <p className="font-bold text-gray-900 truncate">{selectedStaff?.name}</p>
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-600 pt-3 border-t border-gray-100">
-                          <span className="text-xs text-gray-500">{selectedStaff?.email}</span>
-                        </div>
-                      </div>
-
-                      {/* Date & Time Card - Full Width */}
-                      <div className="col-span-2 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-6 border border-cyan-100">
-                        <div className="flex items-center gap-4">
-                          <div className="flex-shrink-0">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-md">
-                              <CalendarIcon className="h-8 w-8 text-white" />
-                            </div>
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-xs font-semibold text-cyan-600 uppercase tracking-wider mb-2">Appointment</p>
-                            <p className="text-xl font-bold text-gray-900 mb-1">
-                              {format(new Date(newBookingData.date), 'EEEE, MMMM d, yyyy')}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-gray-500" />
-                              <span className="text-base font-semibold text-gray-700">{newBookingData.time}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Notes Card - Full Width (if exists) */}
-                      {newBookingData.notes && (
-                        <div className="col-span-2 bg-amber-50 rounded-2xl p-5 border border-amber-100">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                              <span className="text-xl">📝</span>
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Additional Notes</p>
-                              <p className="text-sm text-gray-700 leading-relaxed">{newBookingData.notes}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })()}
+              {/* Notes Section */}
+              <div className="space-y-3 mt-8 pb-4">
+                <Label className="text-sm font-semibold text-gray-800">Additional Notes (Optional)</Label>
+                <Textarea
+                  placeholder="Add any special requests or instructions..."
+                  value={newBookingData.notes}
+                  onChange={(e) => setNewBookingData({ ...newBookingData, notes: e.target.value })}
+                  rows={3}
+                  className="text-sm resize-none border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              </div>
             </div>
 
-            {/* Footer Actions */}
-            <div className="sticky bottom-0 z-10 bg-gradient-to-br from-gray-50 to-white border-t border-gray-100 pt-4 pb-4 px-6 flex items-center gap-3">
-              {newBookingStep > 1 && (
-                <Button
-                  variant="outline"
-                  onClick={() => setNewBookingStep(newBookingStep - 1)}
-                  className="flex-1"
-                >
-                  Back
-                </Button>
-              )}
-              {newBookingStep < 5 ? (
-                <Button
-                  onClick={() => setNewBookingStep(newBookingStep + 1)}
-                  disabled={
-                    (newBookingStep === 1 && (!newBookingData.patientId && !newBookingData.isNewClient) || (newBookingData.isNewClient && (!newBookingData.newClientName || !newBookingData.newClientPhone || !customerConfirmed))) ||
-                    (newBookingStep === 2 && !newBookingData.treatmentId) ||
-                    (newBookingStep === 3 && !newBookingData.staffId) ||
-                    (newBookingStep === 4 && (!newBookingData.date || !newBookingData.time))
-                  }
-                  className="flex-1 bg-gradient-to-r from-[#C8B6FF] to-[#B8A6EF] hover:from-[#B8A6EF] hover:to-[#A896DF] text-white font-bold shadow-md"
-                >
-                  Next
-                </Button>
-              ) : (
-                <Button
-                  onClick={async () => {
-                    setIsCreatingAppointment(true)
-                    try {
-                      if (!outletId) {
-                        toast({ title: "Outlet not found", variant: "destructive" })
-                        setIsCreatingAppointment(false)
-                        return
-                      }
+            {/* Footer - Sticky with Clear All and Book Now */}
+            <div className="sticky bottom-0 z-10 border-t border-gray-200 px-7 py-5 bg-gradient-to-r from-gray-50 to-gray-100/80 backdrop-blur-sm flex items-center justify-between gap-4">
+              {/* Clear All Button */}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setNewBookingData({
+                    treatmentId: "",
+                    patientId: "",
+                    staffId: "",
+                    date: "",
+                    time: "",
+                    paymentMethod: "cash",
+                    isNewClient: false,
+                    newClientName: "",
+                    newClientPhone: "",
+                    notes: ""
+                  })
+                  setClientSearch("")
+                  setCustomerSearchResult('not_searched')
+                  setCustomerConfirmed(false)
+                }}
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100/80 px-4"
+              >
+                CLEAR ALL
+              </Button>
 
-                      const treatment = treatments.find(t => t.id === newBookingData.treatmentId)
-                      const selectedCustomer = customers.find(c => (c._id || c.id) === newBookingData.patientId)
-
-                      // Prepare booking data for appointments API (without payment)
-                      const bookingData: any = {
-                        service_id: newBookingData.treatmentId,
-                        staff_id: newBookingData.staffId,
-                        outlet_id: outletId,
-                        appointment_date: newBookingData.date,
-                        start_time: newBookingData.time,
-                        notes: newBookingData.notes || '',
-                        // Payment will be handled separately after appointment creation
-                        payment_method: 'cash', // Default value required by API
-                        payment_type: 'full',
-                        payment_amount: 0, // Will be updated when payment is recorded
-                      }
-
-                      // Handle customer
-                      if (newBookingData.isNewClient) {
-                        bookingData.newCustomer = {
-                          name: newBookingData.newClientName,
-                          phone: newBookingData.newClientPhone,
-                          email: '',
-                        }
-                      } else {
-                        bookingData.customer = {
-                          customer_id: selectedCustomer?._id || selectedCustomer?.id || newBookingData.patientId,
-                          name: `${selectedCustomer?.first_name || ''} ${selectedCustomer?.last_name || ''}`.trim(),
-                          phone: selectedCustomer?.phone || '',
-                          email: selectedCustomer?.email || '',
-                        }
-                      }
-
-                      console.log('[Calendar] Creating appointment:', bookingData)
-
-                      // Use the same completeWalkInBooking function as Walk-In
-                      const result = await completeWalkInBooking(bookingData)
-
-                      console.log('[Calendar] Create appointment result:', result)
-
-                      if (!result.success) {
-                        throw new Error(result.error || 'Failed to create appointment')
-                      }
-
-                      // Extract appointment ID from result - try multiple possible fields
-                      const appointmentId = result.appointment?.appointment_id ||
-                                          result.appointment?.id ||
-                                          result.appointment?._id ||
-                                          result.appointment_id ||
-                                          result.id ||
-                                          result._id
-
-                      console.log('[Calendar] Extracted appointment ID:', appointmentId)
-
-                      if (!appointmentId) {
-                        console.error('[Calendar] Failed to extract appointment ID from result:', result)
-                        throw new Error('Failed to get appointment ID from server response')
-                      }
-
-                      toast({
-                        title: "Appointment created successfully!",
-                        description: "Choose payment option..."
-                      })
-
-                      // Close new booking dialog
-                      setNewBookingOpen(false)
-
-                      // Save appointment data for payment options
-                      const appointmentData = {
-                        id: appointmentId,
-                        patientId: result.customer?.customer_id || newBookingData.patientId,
-                        patientName: newBookingData.isNewClient ? newBookingData.newClientName : `${selectedCustomer?.first_name || ''} ${selectedCustomer?.last_name || ''}`.trim(),
-                        patientPhone: newBookingData.isNewClient ? newBookingData.newClientPhone : selectedCustomer?.phone,
-                        patientEmail: selectedCustomer?.email || '',
-                        staffId: newBookingData.staffId,
-                        treatmentId: newBookingData.treatmentId,
-                        startAt: `${newBookingData.date}T${newBookingData.time}`,
-                        endAt: `${newBookingData.date}T${newBookingData.time}`,
-                        status: 'confirmed',
-                        source: 'online',
-                        paymentStatus: 'unpaid',
-                        payment_status: 'unpaid',
-                        notes: newBookingData.notes || '',
-                        createdAt: new Date()
-                      }
-
-                      setPendingAppointment(appointmentData)
-
-                      // Open payment options dialog instead of payment dialog directly
-                      setPaymentOptionsDialogOpen(true)
-
-                      // Reset booking form
-                      setNewBookingStep(1)
-                      setCustomerSearchResult('not_searched')
-                      setCustomerConfirmed(false)
-                      setNewBookingData({
-                        treatmentId: "",
-                        patientId: "",
-                        staffId: "",
-                        date: "",
-                        time: "",
-                        paymentMethod: "cash",
-                        isNewClient: false,
-                        newClientName: "",
-                        newClientPhone: "",
-                        notes: ""
-                      })
-
-                      // Reset loading state
+              {/* Book Now Button */}
+              <Button
+                onClick={async () => {
+                  setIsCreatingAppointment(true)
+                  try {
+                    // Validation
+                    if (!newBookingData.patientId && !newBookingData.isNewClient) {
+                      toast({ title: "Please select or create a customer", variant: "destructive" })
                       setIsCreatingAppointment(false)
-                    } catch (error: any) {
-                      console.error('[Calendar] Error creating appointment:', error)
-                      toast({
-                        title: "Failed to create appointment",
-                        description: error.message,
-                        variant: "destructive"
-                      })
-                      setIsCreatingAppointment(false)
+                      return
                     }
-                  }}
-                  disabled={isCreatingAppointment}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isCreatingAppointment ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Creating Appointment...
-                    </>
-                  ) : (
-                    'Create Appointment'
-                  )}
-                </Button>
-              )}
+                    if (newBookingData.isNewClient && (!newBookingData.newClientName || !newBookingData.newClientPhone)) {
+                      toast({ title: "Please complete customer information", variant: "destructive" })
+                      setIsCreatingAppointment(false)
+                      return
+                    }
+                    if (!newBookingData.treatmentId) {
+                      toast({ title: "Please select a service", variant: "destructive" })
+                      setIsCreatingAppointment(false)
+                      return
+                    }
+                    if (!newBookingData.staffId) {
+                      toast({ title: "Please select a staff member", variant: "destructive" })
+                      setIsCreatingAppointment(false)
+                      return
+                    }
+                    if (!newBookingData.date || !newBookingData.time) {
+                      toast({ title: "Please select date and time", variant: "destructive" })
+                      setIsCreatingAppointment(false)
+                      return
+                    }
+                    if (!outletId) {
+                      toast({ title: "Outlet not found", variant: "destructive" })
+                      setIsCreatingAppointment(false)
+                      return
+                    }
+
+                    const treatment = treatments.find(t => t.id === newBookingData.treatmentId)
+                    const selectedCustomer = customers.find(c => (c._id || c.id) === newBookingData.patientId)
+
+                    // Prepare booking data for appointments API (without payment)
+                    const bookingData: any = {
+                      service_id: newBookingData.treatmentId,
+                      staff_id: newBookingData.staffId,
+                      outlet_id: outletId,
+                      appointment_date: newBookingData.date,
+                      start_time: newBookingData.time,
+                      notes: newBookingData.notes || '',
+                      // Payment will be handled separately after appointment creation
+                      payment_method: 'cash', // Default value required by API
+                      payment_type: 'full',
+                      payment_amount: 0, // Will be updated when payment is recorded
+                    }
+
+                    // Handle customer
+                    if (newBookingData.isNewClient) {
+                      bookingData.newCustomer = {
+                        name: newBookingData.newClientName,
+                        phone: newBookingData.newClientPhone,
+                        email: '',
+                      }
+                    } else {
+                      bookingData.customer = {
+                        customer_id: selectedCustomer?._id || selectedCustomer?.id || newBookingData.patientId,
+                        name: `${selectedCustomer?.first_name || ''} ${selectedCustomer?.last_name || ''}`.trim(),
+                        phone: selectedCustomer?.phone || '',
+                        email: selectedCustomer?.email || '',
+                      }
+                    }
+
+                    console.log('[Calendar] Creating appointment:', bookingData)
+
+                    // Use the same completeWalkInBooking function as Walk-In
+                    const result = await completeWalkInBooking(bookingData)
+
+                    console.log('[Calendar] Create appointment result:', result)
+
+                    if (!result.success) {
+                      throw new Error(result.error || 'Failed to create appointment')
+                    }
+
+                    // Extract appointment ID from result - try multiple possible fields
+                    const appointmentId = result.appointment?.appointment_id ||
+                                        result.appointment?.id ||
+                                        result.appointment?._id ||
+                                        result.appointment_id ||
+                                        result.id ||
+                                        result._id
+
+                    console.log('[Calendar] Extracted appointment ID:', appointmentId)
+
+                    if (!appointmentId) {
+                      console.error('[Calendar] Failed to extract appointment ID from result:', result)
+                      throw new Error('Failed to get appointment ID from server response')
+                    }
+
+                    toast({
+                      title: "Appointment created successfully!",
+                      description: "Choose payment option..."
+                    })
+
+                    // Close new booking dialog
+                    setNewBookingOpen(false)
+
+                    // Save appointment data for payment options
+                    const appointmentData = {
+                      id: appointmentId,
+                      patientId: result.customer?.customer_id || newBookingData.patientId,
+                      patientName: newBookingData.isNewClient ? newBookingData.newClientName : `${selectedCustomer?.first_name || ''} ${selectedCustomer?.last_name || ''}`.trim(),
+                      patientPhone: newBookingData.isNewClient ? newBookingData.newClientPhone : selectedCustomer?.phone,
+                      patientEmail: selectedCustomer?.email || '',
+                      staffId: newBookingData.staffId,
+                      treatmentId: newBookingData.treatmentId,
+                      startAt: `${newBookingData.date}T${newBookingData.time}`,
+                      endAt: `${newBookingData.date}T${newBookingData.time}`,
+                      status: 'confirmed',
+                      source: 'online',
+                      paymentStatus: 'unpaid',
+                      payment_status: 'unpaid',
+                      notes: newBookingData.notes || '',
+                      createdAt: new Date()
+                    }
+
+                    setPendingAppointment(appointmentData)
+
+                    // Open payment options dialog instead of payment dialog directly
+                    setPaymentOptionsDialogOpen(true)
+
+                    // Reset booking form
+                    setCustomerSearchResult('not_searched')
+                    setCustomerConfirmed(false)
+                    setNewBookingData({
+                      treatmentId: "",
+                      patientId: "",
+                      staffId: "",
+                      date: "",
+                      time: "",
+                      paymentMethod: "cash",
+                      isNewClient: false,
+                      newClientName: "",
+                      newClientPhone: "",
+                      notes: ""
+                    })
+                    setClientSearch("")
+
+                    // Reset loading state
+                    setIsCreatingAppointment(false)
+                  } catch (error: any) {
+                    console.error('[Calendar] Error creating appointment:', error)
+                    toast({
+                      title: "Failed to create appointment",
+                      description: error.message,
+                      variant: "destructive"
+                    })
+                    setIsCreatingAppointment(false)
+                  }
+                }}
+                disabled={isCreatingAppointment || (!newBookingData.patientId && !newBookingData.isNewClient) || !newBookingData.treatmentId || !newBookingData.staffId || !newBookingData.date || !newBookingData.time}
+                className="px-10 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2.5"
+              >
+                {isCreatingAppointment ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Creating...</span>
+                  </>
+                ) : (
+                  <>
+                    <CalendarIcon className="h-5 w-5" />
+                    <span>BOOK NOW</span>
+                  </>
+                )}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
