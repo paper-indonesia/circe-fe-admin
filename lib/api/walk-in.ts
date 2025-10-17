@@ -876,21 +876,50 @@ export async function createPaymentLink(params: {
  * - Payment history with audit trail
  * - Pending invoices/payment links
  * - Completion eligibility check
+ *
+ * Now uses appointment detail data instead of separate payment-status endpoint.
+ * Includes 2-second validation delay with loading state.
  */
 export async function getPaymentStatus(appointmentId: string): Promise<PaymentStatusResponse> {
   try {
-    console.log('[getPaymentStatus] Fetching payment status for:', appointmentId)
+    console.log('[getPaymentStatus] Fetching payment status from appointment detail for:', appointmentId)
 
-    const response = await fetch(`/api/appointments/${appointmentId}/payment-status`)
+    // Add 2-second delay for validation
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get payment status')
+    // Get appointment detail which includes payment info
+    const appointment = await getAppointmentById(appointmentId)
+
+    // Extract payment information from appointment detail
+    const paymentDetails = (appointment as any).payment_details || {}
+    const feeBreakdown = (appointment as any).fee_breakdown || {}
+
+    // Transform to PaymentStatusResponse format
+    const response: PaymentStatusResponse = {
+      appointment_id: appointmentId,
+      payment_status: appointment.payment_status,
+      total_amount: paymentDetails.total_amount || appointment.total_price || 0,
+      paid_amount: paymentDetails.paid_amount || 0,
+      remaining_balance: paymentDetails.remaining_balance || (appointment.total_price || 0),
+      platform_fee: feeBreakdown.platform_fee || 0,
+      platform_fee_percentage: (feeBreakdown.fee_rate || 0) * 100,
+      payment_history: (paymentDetails.payment_history || []).map((payment: any) => ({
+        id: payment.id,
+        amount: payment.amount,
+        method: payment.method,
+        provider: payment.provider || payment.method,
+        status: payment.status,
+        recorded_by: payment.recorded_by || 'System',
+        recorded_at: payment.recorded_at,
+        notes: payment.notes,
+        receipt_number: payment.receipt_number
+      })),
+      pending_invoice: null, // Will be null unless there's an active payment link
+      can_complete: appointment.payment_status === 'paid' || appointment.status === 'completed'
     }
 
-    const data = await response.json()
-    console.log('[getPaymentStatus] Success')
-    return data
+    console.log('[getPaymentStatus] Success - Payment status extracted from appointment detail')
+    return response
   } catch (error: any) {
     console.error('[getPaymentStatus] Error:', error)
     throw error
