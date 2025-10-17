@@ -902,13 +902,21 @@ export default function OutletManagementPage() {
                       <Phone className="h-4 w-4 text-blue-600" />
                       Phone Number *
                     </Label>
-                    <Input
-                      id="phone"
-                      value={formData.contact.phone}
-                      onChange={(e) => setFormData({ ...formData, contact: { ...formData.contact, phone: e.target.value } })}
-                      placeholder="+62-XXX-XXX-XXXX"
-                      className="h-12 text-base"
-                    />
+                    <div className="flex gap-2">
+                      <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium h-12">
+                        +62
+                      </div>
+                      <Input
+                        id="phone"
+                        placeholder="81xxxxxxxxx"
+                        value={formData.contact.phone.startsWith('+62') ? formData.contact.phone.slice(3) : formData.contact.phone}
+                        onChange={(e) => {
+                          const input = e.target.value.replace(/\D/g, '')
+                          setFormData({ ...formData, contact: { ...formData.contact, phone: input ? `+62${input}` : '' } })
+                        }}
+                        className="h-12 text-base"
+                      />
+                    </div>
                     <p className="text-xs text-gray-500">Primary contact number</p>
                   </div>
                   <div className="space-y-3 p-5 border-2 rounded-xl bg-white hover:border-blue-200 transition-all">

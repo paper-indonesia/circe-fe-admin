@@ -18,7 +18,7 @@ interface AuthContextType {
   loading: boolean
   signin: (email: string, password: string) => Promise<void>
   signup: (name: string, email: string, password: string) => Promise<void>
-  signout: () => void
+  signout: () => Promise<void>
   isAdmin: () => boolean
 }
 

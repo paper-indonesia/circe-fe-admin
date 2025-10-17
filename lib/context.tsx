@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { usePathname } from "next/navigation"
 import type { Patient, Staff, Treatment, Booking, Activity } from "./types"
 import { apiClient } from "./api-client"
 
@@ -42,6 +43,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
   const [patients, setPatients] = useState<Patient[]>([])
   const [staff, setStaff] = useState<Staff[]>([])
   const [treatments, setTreatments] = useState<Treatment[]>([])
@@ -50,9 +52,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadData = async () => {
+    // Skip loading data on signin/signup pages
+    const publicPaths = ['/signin', '/signup', '/']
+    if (publicPaths.includes(pathname)) {
+      console.log('[Context] Skipping data load on public page:', pathname)
+      setLoading(false)
+      return
+    }
+
+    // Check if user is logged in before fetching data
+    const checkAuthAndLoadData = async () => {
       try {
-        console.log('[Context] Loading data from API...')
+        const storedUser = localStorage.getItem('user')
+        if (!storedUser) {
+          console.log('[Context] No user found, skipping data load')
+          setLoading(false)
+          return
+        }
+
+        console.log('[Context] User authenticated, loading data from API...')
 
         // Fetch data with individual error handling
         const [mongoStaff, mongoTreatments, mongoBookings] = await Promise.all([
@@ -247,8 +265,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    loadData()
-  }, [])
+    checkAuthAndLoadData()
+  }, [pathname])
 
   const addPatient = async (patient: Omit<Patient, "id">) => {
     // TODO: Re-implement when patients endpoint is available

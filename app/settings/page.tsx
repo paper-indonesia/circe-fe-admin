@@ -1157,11 +1157,20 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <Input
-                    id="phoneNumber"
-                    value={businessInfo.phoneNumber}
-                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                  />
+                  <div className="flex gap-2">
+                    <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
+                      +62
+                    </div>
+                    <Input
+                      id="phoneNumber"
+                      placeholder="81xxxxxxxxx"
+                      value={businessInfo.phoneNumber.startsWith('+62') ? businessInfo.phoneNumber.slice(3) : businessInfo.phoneNumber}
+                      onChange={(e) => {
+                        const input = e.target.value.replace(/\D/g, '')
+                        setBusinessInfo(prev => ({ ...prev, phoneNumber: input ? `+62${input}` : '' }))
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>

@@ -9,8 +9,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
-import { UserCog, Plus, AlertCircle, CheckCircle2, Info, ArrowUpCircle, Calendar, Clock } from "lucide-react"
+import { UserCog, Plus, AlertCircle, CheckCircle2, Info, ArrowUpCircle, Calendar, Clock, Settings, ChevronDown, ChevronUp } from "lucide-react"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 
 interface StaffAvailabilityStepProps {
   onValidChange: (isValid: boolean) => void
@@ -26,48 +28,151 @@ const WEEKDAYS = [
   { value: 6, label: "Sabtu" },
 ]
 
+const EMPLOYMENT_TYPES = [
+  { value: "full_time", label: "Full Time" },
+  { value: "part_time", label: "Part Time" },
+  { value: "contractor", label: "Contractor" },
+]
+
 export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepProps) {
   const { toast } = useToast()
   const { progress, addStaff, addAvailability } = useOperationalOnboarding()
 
   const [currentTab, setCurrentTab] = useState<'staff' | 'availability'>('staff')
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   const [staffForm, setStaffForm] = useState({
     first_name: "",
     last_name: "",
+    display_name: "",
     email: "",
     phone: "",
-    position: "Therapist",
+    position: "",
+    employment_type: "full_time" as "full_time" | "part_time" | "contractor",
+    outlet_id: "",
+    employee_id: "",
+    hire_date: "",
+    birth_date: "",
+    hourly_rate: null as number | null,
+    salary: null as number | null,
+    is_bookable: true,
+    accepts_online_booking: true,
+    max_advance_booking_days: 30,
+    bio: "",
+    profile_image_url: "",
+    instagram_handle: "",
     service_ids: [] as string[],
+    specialties: [] as string[],
+    certifications: [] as string[],
+    years_experience: null as number | null,
   })
 
   const [availabilityForm, setAvailabilityForm] = useState({
     staff_id: "",
-    outlet_id: progress.outlets[0]?.id || "",
     start_time: "09:00",
     end_time: "17:00",
     recurrence_days: [] as number[],
+    recurrence_end_date: "",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [planLimits, setPlanLimits] = useState<{ current: number; max: number } | null>(null)
+  const [positionTemplates, setPositionTemplates] = useState<string[]>([])
+  const [loadingPositions, setLoadingPositions] = useState(false)
+  const [outlets, setOutlets] = useState<any[]>([])
+  const [loadingOutlets, setLoadingOutlets] = useState(false)
+  const [services, setServices] = useState<any[]>([])
+  const [loadingServices, setLoadingServices] = useState(false)
+
+  // Load outlets from API
+  useEffect(() => {
+    const fetchOutlets = async () => {
+      setLoadingOutlets(true)
+      try {
+        const response = await fetch('/api/outlets?page=1&size=100&status=active')
+        if (response.ok) {
+          const data = await response.json()
+          // API might return { items: [...] } or just [...]
+          const outletsList = data.items || data.results || (Array.isArray(data) ? data : [])
+          setOutlets(outletsList)
+
+          // Auto-select first outlet for staff form if available and form is empty
+          if (outletsList.length > 0 && !staffForm.outlet_id) {
+            setStaffForm((prev) => ({
+              ...prev,
+              outlet_id: outletsList[0]._id || outletsList[0].id,
+            }))
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch outlets:', error)
+      } finally {
+        setLoadingOutlets(false)
+      }
+    }
+
+    fetchOutlets()
+  }, [])
+
+  // Load services from API
+  useEffect(() => {
+    const fetchServices = async () => {
+      setLoadingServices(true)
+      try {
+        const response = await fetch('/api/services?page=1&size=100&status=active')
+        if (response.ok) {
+          const data = await response.json()
+          // API returns { items: [...], total, page, size, pages }
+          const servicesList = data.items || []
+          setServices(servicesList)
+        }
+      } catch (error) {
+        console.error('Failed to fetch services:', error)
+      } finally {
+        setLoadingServices(false)
+      }
+    }
+
+    fetchServices()
+  }, [])
+
+  // Load position templates
+  useEffect(() => {
+    const fetchPositionTemplates = async () => {
+      setLoadingPositions(true)
+      try {
+        const response = await fetch('/api/staff/positions/templates')
+        if (response.ok) {
+          const data = await response.json()
+          // API returns array of position strings
+          if (Array.isArray(data)) {
+            setPositionTemplates(data)
+          } else if (data.positions && Array.isArray(data.positions)) {
+            setPositionTemplates(data.positions)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch position templates:', error)
+      } finally {
+        setLoadingPositions(false)
+      }
+    }
+
+    fetchPositionTemplates()
+  }, [])
 
   // Load plan limits
   useEffect(() => {
     const fetchLimits = async () => {
       try {
-        const [subResponse, usageResponse] = await Promise.all([
-          fetch("/api/subscription"),
-          fetch("/api/subscription/usage"),
-        ])
+        const usageResponse = await fetch("/api/subscription/usage")
 
-        if (subResponse.ok && usageResponse.ok) {
-          const subData = await subResponse.json()
+        if (usageResponse.ok) {
           const usageData = await usageResponse.json()
 
           setPlanLimits({
-            current: usageData.staff?.used || 0,
-            max: subData.plan?.limits?.max_staff || 999,
+            current: usageData.usage_summary?.staff?.used || 0,
+            max: usageData.usage_summary?.staff?.limit || 999,
           })
         }
       } catch (error) {
@@ -85,16 +190,6 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     onValidChange(hasStaff && hasAvailability)
   }, [progress.staff, progress.availabilities, onValidChange])
 
-  // Update outlet_id when outlets change
-  useEffect(() => {
-    if (progress.outlets[0]?.id && !availabilityForm.outlet_id) {
-      setAvailabilityForm((prev) => ({
-        ...prev,
-        outlet_id: progress.outlets[0].id!,
-      }))
-    }
-  }, [progress.outlets, availabilityForm.outlet_id])
-
   const validateStaff = () => {
     const newErrors: Record<string, string> = {}
 
@@ -108,6 +203,15 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
       newErrors.email = "Email wajib diisi"
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(staffForm.email)) {
       newErrors.email = "Format email tidak valid"
+    }
+    if (!staffForm.position.trim()) {
+      newErrors.position = "Posisi wajib diisi"
+    }
+    if (!staffForm.employment_type) {
+      newErrors.employment_type = "Tipe employment wajib dipilih"
+    }
+    if (!staffForm.outlet_id) {
+      newErrors.outlet_id = "Outlet wajib dipilih"
     }
     if (staffForm.phone && !/^[\d\s\-\+()]+$/.test(staffForm.phone)) {
       newErrors.phone = "Format nomor telepon tidak valid"
@@ -153,15 +257,28 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
         body: JSON.stringify({
           first_name: staffForm.first_name.trim(),
           last_name: staffForm.last_name.trim(),
+          display_name: staffForm.display_name.trim() || staffForm.first_name.trim(),
           email: staffForm.email.trim(),
           phone: staffForm.phone.trim() || undefined,
-          position: staffForm.position,
-          is_bookable: true,
-          accepts_online_booking: true,
-          is_active: true,
-          status: "active",
+          position: staffForm.position.trim(),
+          employment_type: staffForm.employment_type,
+          outlet_id: staffForm.outlet_id,
+          employee_id: staffForm.employee_id.trim() || undefined,
+          hire_date: staffForm.hire_date || undefined,
+          birth_date: staffForm.birth_date || undefined,
+          hourly_rate: staffForm.hourly_rate || undefined,
+          salary: staffForm.salary || undefined,
+          is_bookable: staffForm.is_bookable,
+          accepts_online_booking: staffForm.accepts_online_booking,
+          max_advance_booking_days: staffForm.max_advance_booking_days,
+          bio: staffForm.bio.trim() || undefined,
+          profile_image_url: staffForm.profile_image_url.trim() || undefined,
+          instagram_handle: staffForm.instagram_handle.trim() || undefined,
           skills: {
             service_ids: staffForm.service_ids,
+            specialties: staffForm.specialties,
+            certifications: staffForm.certifications,
+            years_experience: staffForm.years_experience || undefined,
           },
         }),
       })
@@ -189,11 +306,29 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
         setStaffForm({
           first_name: "",
           last_name: "",
+          display_name: "",
           email: "",
           phone: "",
-          position: "Therapist",
+          position: "",
+          employment_type: "full_time",
+          outlet_id: outlets[0]?._id || outlets[0]?.id || "",
+          employee_id: "",
+          hire_date: "",
+          birth_date: "",
+          hourly_rate: null,
+          salary: null,
+          is_bookable: true,
+          accepts_online_booking: true,
+          max_advance_booking_days: 30,
+          bio: "",
+          profile_image_url: "",
+          instagram_handle: "",
           service_ids: [],
+          specialties: [],
+          certifications: [],
+          years_experience: null,
         })
+        setShowAdvancedSettings(false)
         setAvailabilityForm((prev) => ({
           ...prev,
           staff_id: newStaff.id!,
@@ -222,56 +357,74 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     setLoading(true)
 
     try {
-      // Create availability for each selected day
       const today = new Date()
-      const availabilityPromises = availabilityForm.recurrence_days.map(async (day) => {
-        const response = await fetch("/api/availability", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            staff_id: availabilityForm.staff_id,
-            outlet_id: availabilityForm.outlet_id,
-            date: today.toISOString().split('T')[0],
-            start_time: availabilityForm.start_time + ":00",
-            end_time: availabilityForm.end_time + ":00",
-            availability_type: "working_hours",
-            recurrence_type: "weekly",
-            recurrence_days: [day],
-            is_available: true,
-          }),
-        })
 
-        if (!response.ok) {
-          throw new Error("Failed to create availability")
-        }
+      // Calculate recurrence_end_date (3 months from now if not specified)
+      const endDate = availabilityForm.recurrence_end_date || (() => {
+        const threeMonthsLater = new Date()
+        threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3)
+        return threeMonthsLater.toISOString().split('T')[0]
+      })()
 
-        return response.json()
+      // Convert UI weekday values to API weekday values
+      // UI: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+      // API: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+      // Mapping: apiDay = (uiDay + 6) % 7
+      const apiRecurrenceDays = availabilityForm.recurrence_days
+        .map(day => (day + 6) % 7)
+        .sort((a, b) => a - b) // Sort for consistency
+
+      // Create single availability with weekly recurrence
+      const response = await fetch("/api/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          staff_id: availabilityForm.staff_id,
+          date: today.toISOString().split('T')[0],
+          start_time: availabilityForm.start_time,
+          end_time: availabilityForm.end_time,
+          availability_type: "working_hours",
+          recurrence_type: "weekly",
+          recurrence_end_date: endDate,
+          recurrence_days: apiRecurrenceDays,
+          is_available: true,
+        }),
       })
 
-      await Promise.all(availabilityPromises)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || errorData.detail || "Failed to create availability")
+      }
 
+      const data = await response.json()
+
+      // Add to local context for onboarding wizard
       addAvailability({
         staff_id: availabilityForm.staff_id,
-        outlet_id: availabilityForm.outlet_id,
         date: today.toISOString().split('T')[0],
         start_time: availabilityForm.start_time + ":00",
         end_time: availabilityForm.end_time + ":00",
         recurrence_type: "weekly",
-        recurrence_days: availabilityForm.recurrence_days,
+        recurrence_days: availabilityForm.recurrence_days, // Keep UI format for display
       })
+
+      // Show success with summary if available
+      const successMessage = data.summary
+        ? `Berhasil membuat ${data.summary.total_entries_created} jadwal ketersediaan`
+        : "Jadwal ketersediaan berhasil ditambahkan"
 
       toast({
         title: "Berhasil",
-        description: "Jadwal ketersediaan berhasil ditambahkan",
+        description: successMessage,
       })
 
       // Reset form
       setAvailabilityForm({
         staff_id: "",
-        outlet_id: progress.outlets[0]?.id || "",
         start_time: "09:00",
         end_time: "17:00",
         recurrence_days: [],
+        recurrence_end_date: "",
       })
       setErrors({})
       setCurrentTab('staff')
@@ -384,126 +537,409 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
             <h3 className="text-lg font-semibold">Tambah Staff Baru</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="staff_first_name">
-                Nama Depan <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="staff_first_name"
-                placeholder="Contoh: Siti"
-                value={staffForm.first_name}
-                onChange={(e) => setStaffForm({ ...staffForm, first_name: e.target.value })}
-                className={errors.first_name ? "border-red-500" : ""}
-              />
-              {errors.first_name && (
-                <p className="text-xs text-red-500">{errors.first_name}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="staff_last_name">
-                Nama Belakang <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="staff_last_name"
-                placeholder="Contoh: Rahayu"
-                value={staffForm.last_name}
-                onChange={(e) => setStaffForm({ ...staffForm, last_name: e.target.value })}
-                className={errors.last_name ? "border-red-500" : ""}
-              />
-              {errors.last_name && (
-                <p className="text-xs text-red-500">{errors.last_name}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="staff_email">
-                Email <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="staff_email"
-                type="email"
-                placeholder="siti@example.com"
-                value={staffForm.email}
-                onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && (
-                <p className="text-xs text-red-500">{errors.email}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="staff_phone">Nomor Telepon</Label>
-              <Input
-                id="staff_phone"
-                placeholder="+62 812 3456 7890"
-                value={staffForm.phone}
-                onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
-                className={errors.phone ? "border-red-500" : ""}
-              />
-              {errors.phone && (
-                <p className="text-xs text-red-500">{errors.phone}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="position">Posisi</Label>
-              <Input
-                id="position"
-                placeholder="Therapist, Beautician, dll"
-                value={staffForm.position}
-                onChange={(e) => setStaffForm({ ...staffForm, position: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Layanan yang Dikuasai</Label>
-              <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-gray-50">
-                {progress.products.length > 0 ? (
-                  progress.products.map((product) => (
-                    <label key={product.id} className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={staffForm.service_ids.includes(product.id!)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setStaffForm({
-                              ...staffForm,
-                              service_ids: [...staffForm.service_ids, product.id!],
-                            })
-                          } else {
-                            setStaffForm({
-                              ...staffForm,
-                              service_ids: staffForm.service_ids.filter((id) => id !== product.id),
-                            })
-                          }
-                        }}
-                      />
-                      <span className="text-sm">{product.name}</span>
-                    </label>
-                  ))
-                ) : (
-                  <p className="text-xs text-gray-500">Belum ada layanan tersedia</p>
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="staff_first_name">
+                  Nama Depan <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="staff_first_name"
+                  placeholder="Contoh: Siti"
+                  value={staffForm.first_name}
+                  onChange={(e) => setStaffForm({ ...staffForm, first_name: e.target.value })}
+                  className={errors.first_name ? "border-red-500" : ""}
+                />
+                {errors.first_name && (
+                  <p className="text-xs text-red-500">{errors.first_name}</p>
                 )}
               </div>
-            </div>
-          </div>
 
-          <Button
-            onClick={handleAddStaff}
-            disabled={loading || !canAddMoreStaff}
-            className="mt-6 w-full md:w-auto"
-          >
-            {loading ? (
-              "Menambahkan..."
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Tambah Staff
-              </>
-            )}
-          </Button>
+              <div className="space-y-2">
+                <Label htmlFor="staff_last_name">
+                  Nama Belakang <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="staff_last_name"
+                  placeholder="Contoh: Rahayu"
+                  value={staffForm.last_name}
+                  onChange={(e) => setStaffForm({ ...staffForm, last_name: e.target.value })}
+                  className={errors.last_name ? "border-red-500" : ""}
+                />
+                {errors.last_name && (
+                  <p className="text-xs text-red-500">{errors.last_name}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="display_name">Display Name (Opsional)</Label>
+                <Input
+                  id="display_name"
+                  placeholder="Nama untuk ditampilkan (default: nama depan)"
+                  value={staffForm.display_name}
+                  onChange={(e) => setStaffForm({ ...staffForm, display_name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="staff_email">
+                  Email <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="staff_email"
+                  type="email"
+                  placeholder="siti@example.com"
+                  value={staffForm.email}
+                  onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                  className={errors.email ? "border-red-500" : ""}
+                />
+                {errors.email && (
+                  <p className="text-xs text-red-500">{errors.email}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="staff_phone">Nomor Telepon</Label>
+                <div className="flex gap-2">
+                  <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium h-10">
+                    +62
+                  </div>
+                  <Input
+                    id="staff_phone"
+                    placeholder="81xxxxxxxxx"
+                    value={staffForm.phone.startsWith('+62') ? staffForm.phone.slice(3) : staffForm.phone}
+                    onChange={(e) => {
+                      const input = e.target.value.replace(/\D/g, '')
+                      setStaffForm({ ...staffForm, phone: input ? `+62${input}` : '' })
+                    }}
+                    className={errors.phone ? "border-red-500 flex-1" : "flex-1"}
+                  />
+                </div>
+                {errors.phone && (
+                  <p className="text-xs text-red-500">{errors.phone}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="position">
+                  Posisi <span className="text-red-500">*</span>
+                </Label>
+                {loadingPositions ? (
+                  <div className="h-10 flex items-center justify-center border rounded-md bg-gray-50">
+                    <span className="text-sm text-gray-500">Loading positions...</span>
+                  </div>
+                ) : positionTemplates.length > 0 ? (
+                  <Select
+                    value={staffForm.position}
+                    onValueChange={(value) => setStaffForm({ ...staffForm, position: value })}
+                  >
+                    <SelectTrigger className={errors.position ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Pilih posisi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positionTemplates.map((pos) => (
+                        <SelectItem key={pos} value={pos}>
+                          {pos}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="position"
+                    placeholder="Therapist, Beautician, dll"
+                    value={staffForm.position}
+                    onChange={(e) => setStaffForm({ ...staffForm, position: e.target.value })}
+                    className={errors.position ? "border-red-500" : ""}
+                  />
+                )}
+                {errors.position && (
+                  <p className="text-xs text-red-500">{errors.position}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="employment_type">
+                  Tipe Employment <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={staffForm.employment_type}
+                  onValueChange={(value: any) => setStaffForm({ ...staffForm, employment_type: value })}
+                >
+                  <SelectTrigger className={errors.employment_type ? "border-red-500" : ""}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {EMPLOYMENT_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.employment_type && (
+                  <p className="text-xs text-red-500">{errors.employment_type}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="outlet">
+                  Outlet <span className="text-red-500">*</span>
+                </Label>
+                {loadingOutlets ? (
+                  <div className="h-10 flex items-center justify-center border rounded-md bg-gray-50">
+                    <span className="text-sm text-gray-500">Loading outlets...</span>
+                  </div>
+                ) : (
+                  <select
+                    id="outlet"
+                    value={staffForm.outlet_id}
+                    onChange={(e) => setStaffForm({ ...staffForm, outlet_id: e.target.value })}
+                    className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${errors.outlet_id ? "border-red-500" : ""}`}
+                  >
+                    <option value="">-- Pilih Outlet --</option>
+                    {outlets.map((outlet) => (
+                      <option key={outlet._id || outlet.id} value={outlet._id || outlet.id}>
+                        {outlet.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {errors.outlet_id && (
+                  <p className="text-xs text-red-500">{errors.outlet_id}</p>
+                )}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label>Layanan yang Dikuasai</Label>
+                {loadingServices ? (
+                  <div className="h-20 flex items-center justify-center border rounded-md bg-gray-50">
+                    <span className="text-sm text-gray-500">Loading services...</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-gray-50">
+                    {services.length > 0 ? (
+                      services.map((service) => (
+                        <label key={service.id} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={staffForm.service_ids.includes(service.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setStaffForm({
+                                  ...staffForm,
+                                  service_ids: [...staffForm.service_ids, service.id],
+                                })
+                              } else {
+                                setStaffForm({
+                                  ...staffForm,
+                                  service_ids: staffForm.service_ids.filter((id) => id !== service.id),
+                                })
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{service.name}</span>
+                        </label>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500">Belum ada layanan tersedia. Tambahkan layanan di step sebelumnya.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="is_bookable"
+                        checked={staffForm.is_bookable}
+                        onCheckedChange={(checked) => setStaffForm({ ...staffForm, is_bookable: !!checked })}
+                      />
+                      <Label htmlFor="is_bookable" className="cursor-pointer text-sm">Bisa Dibooking</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="accepts_online"
+                        checked={staffForm.accepts_online_booking}
+                        onCheckedChange={(checked) => setStaffForm({ ...staffForm, accepts_online_booking: !!checked })}
+                      />
+                      <Label htmlFor="accepts_online" className="cursor-pointer text-sm">Terima Online Booking</Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Advanced Settings - Collapsible */}
+            <div className="pt-4 border-t">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 uppercase tracking-wide hover:text-blue-600 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-blue-600" />
+                  Pengaturan Lanjutan (Opsional)
+                </div>
+                {showAdvancedSettings ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
+
+              {showAdvancedSettings && (
+                <div className="mt-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="employee_id">Employee ID</Label>
+                      <Input
+                        id="employee_id"
+                        placeholder="EMP-001"
+                        value={staffForm.employee_id}
+                        onChange={(e) => setStaffForm({ ...staffForm, employee_id: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="max_advance_days">Max Booking (hari)</Label>
+                      <Input
+                        id="max_advance_days"
+                        type="number"
+                        min="1"
+                        value={staffForm.max_advance_booking_days}
+                        onChange={(e) => setStaffForm({ ...staffForm, max_advance_booking_days: parseInt(e.target.value) || 30 })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="hire_date">Tanggal Mulai Kerja</Label>
+                      <Input
+                        id="hire_date"
+                        type="date"
+                        value={staffForm.hire_date}
+                        onChange={(e) => setStaffForm({ ...staffForm, hire_date: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="birth_date">Tanggal Lahir</Label>
+                      <Input
+                        id="birth_date"
+                        type="date"
+                        value={staffForm.birth_date}
+                        onChange={(e) => setStaffForm({ ...staffForm, birth_date: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="hourly_rate">Hourly Rate (IDR)</Label>
+                      <Input
+                        id="hourly_rate"
+                        type="number"
+                        min="0"
+                        placeholder="50000"
+                        value={staffForm.hourly_rate || ""}
+                        onChange={(e) => setStaffForm({ ...staffForm, hourly_rate: parseFloat(e.target.value) || null })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="salary">Salary (IDR)</Label>
+                      <Input
+                        id="salary"
+                        type="number"
+                        min="0"
+                        placeholder="5000000"
+                        value={staffForm.salary || ""}
+                        onChange={(e) => setStaffForm({ ...staffForm, salary: parseFloat(e.target.value) || null })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="profile_image">Profile Image URL</Label>
+                      <Input
+                        id="profile_image"
+                        placeholder="https://example.com/image.jpg"
+                        value={staffForm.profile_image_url}
+                        onChange={(e) => setStaffForm({ ...staffForm, profile_image_url: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="instagram">Instagram Handle</Label>
+                      <Input
+                        id="instagram"
+                        placeholder="@username"
+                        value={staffForm.instagram_handle}
+                        onChange={(e) => setStaffForm({ ...staffForm, instagram_handle: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="years_exp">Tahun Pengalaman</Label>
+                      <Input
+                        id="years_exp"
+                        type="number"
+                        min="0"
+                        placeholder="5"
+                        value={staffForm.years_experience || ""}
+                        onChange={(e) => setStaffForm({ ...staffForm, years_experience: parseInt(e.target.value) || null })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea
+                      id="bio"
+                      placeholder="Deskripsi singkat tentang staff..."
+                      value={staffForm.bio}
+                      onChange={(e) => setStaffForm({ ...staffForm, bio: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="specialties">Specialties (pisahkan dengan koma)</Label>
+                    <Input
+                      id="specialties"
+                      placeholder="color correction, haircut, etc"
+                      value={staffForm.specialties.join(", ")}
+                      onChange={(e) => setStaffForm({ ...staffForm, specialties: e.target.value.split(",").map(s => s.trim()).filter(s => s) })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="certifications">Certifications (pisahkan dengan koma)</Label>
+                    <Input
+                      id="certifications"
+                      placeholder="Certified Therapist, etc"
+                      value={staffForm.certifications.join(", ")}
+                      onChange={(e) => setStaffForm({ ...staffForm, certifications: e.target.value.split(",").map(c => c.trim()).filter(c => c) })}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button
+              onClick={handleAddStaff}
+              disabled={loading || !canAddMoreStaff}
+              className="w-full md:w-auto"
+            >
+              {loading ? (
+                "Menambahkan..."
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Staff
+                </>
+              )}
+            </Button>
+          </div>
         </Card>
       )}
 
@@ -566,6 +1002,18 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="recurrence_end_date">Berlaku Sampai (Opsional)</Label>
+              <Input
+                id="recurrence_end_date"
+                type="date"
+                value={availabilityForm.recurrence_end_date}
+                onChange={(e) => setAvailabilityForm({ ...availabilityForm, recurrence_end_date: e.target.value })}
+                placeholder="Kosongkan untuk 3 bulan ke depan"
+              />
+              <p className="text-xs text-gray-500">Biarkan kosong untuk menggunakan 3 bulan default</p>
             </div>
 
             <div className="space-y-2">

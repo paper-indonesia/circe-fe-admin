@@ -9,20 +9,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { Package, Plus, AlertCircle, CheckCircle2, Info, ArrowUpCircle, Clock, DollarSign } from "lucide-react"
+import { Package, Plus, AlertCircle, CheckCircle2, Info, ArrowUpCircle, Clock, DollarSign, Settings, ChevronDown, ChevronUp, Image, FileText } from "lucide-react"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface ProductServicesStepProps {
   onValidChange: (isValid: boolean) => void
 }
-
-const DEFAULT_CATEGORIES = [
-  "Perawatan Wajah",
-  "Perawatan Tubuh",
-  "Perawatan Rambut",
-  "Spa & Massage",
-  "Konsultasi",
-]
 
 export function ProductServicesStep({ onValidChange }: ProductServicesStepProps) {
   const { toast } = useToast()
@@ -30,32 +24,71 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
 
   const [formData, setFormData] = useState({
     name: "",
+    slug: "",
+    category: "",
     duration_minutes: 60,
     price: 0,
-    category: DEFAULT_CATEGORIES[0],
+    currency: "IDR",
     description: "",
+    image_url: "",
+    preparation_minutes: 0,
+    cleanup_minutes: 0,
+    max_advance_booking_days: 30,
+    min_advance_booking_hours: 2,
+    requires_staff: true,
+    required_staff_count: 1,
+    allow_parallel_bookings: false,
+    max_parallel_bookings: 1,
+    tags: [] as string[],
+    is_active: true,
+    status: "active" as "active" | "inactive" | "draft",
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [planLimits, setPlanLimits] = useState<{ current: number; max: number } | null>(null)
+  const [categoryTemplates, setCategoryTemplates] = useState<string[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(false)
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
+
+  // Load category templates
+  useEffect(() => {
+    const fetchCategoryTemplates = async () => {
+      setLoadingCategories(true)
+      try {
+        const response = await fetch('/api/services/categories/templates')
+        if (response.ok) {
+          const data = await response.json()
+          // API returns array of category strings
+          if (Array.isArray(data)) {
+            setCategoryTemplates(data)
+          } else if (data.categories && Array.isArray(data.categories)) {
+            setCategoryTemplates(data.categories)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch category templates:', error)
+      } finally {
+        setLoadingCategories(false)
+      }
+    }
+
+    fetchCategoryTemplates()
+  }, [])
 
   // Load plan limits
   useEffect(() => {
     const fetchLimits = async () => {
       try {
-        const [subResponse, usageResponse] = await Promise.all([
-          fetch("/api/subscription"),
-          fetch("/api/subscription/usage"),
-        ])
+        const usageResponse = await fetch("/api/subscription/usage")
 
-        if (subResponse.ok && usageResponse.ok) {
-          const subData = await subResponse.json()
+        if (usageResponse.ok) {
           const usageData = await usageResponse.json()
 
+          // Services might not have a limit in some plans
           setPlanLimits({
-            current: usageData.services?.used || 0,
-            max: subData.plan?.limits?.max_services || 999,
+            current: progress.products.length,
+            max: 999, // No explicit service limit in API
           })
         }
       } catch (error) {
@@ -77,6 +110,9 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
     if (!formData.name.trim()) {
       newErrors.name = "Nama layanan wajib diisi"
     }
+    if (!formData.category.trim()) {
+      newErrors.category = "Kategori wajib diisi"
+    }
     if (formData.duration_minutes <= 0) {
       newErrors.duration_minutes = "Durasi harus lebih dari 0"
     }
@@ -86,6 +122,14 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
+  }
+
+  // Auto-generate slug from name
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
   }
 
   const handleAdd = async () => {
@@ -109,14 +153,26 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name.trim(),
-          slug: formData.name.trim().toLowerCase().replace(/\s+/g, '-'),
-          duration_minutes: formData.duration_minutes,
-          price: formData.price,
+          slug: formData.slug.trim() || generateSlug(formData.name),
           category: formData.category,
           description: formData.description.trim() || undefined,
-          currency: "IDR",
-          is_active: true,
-          status: "active",
+          duration_minutes: formData.duration_minutes,
+          preparation_minutes: formData.preparation_minutes || undefined,
+          cleanup_minutes: formData.cleanup_minutes || undefined,
+          max_advance_booking_days: formData.max_advance_booking_days || 30,
+          min_advance_booking_hours: formData.min_advance_booking_hours || 2,
+          requires_staff: formData.requires_staff,
+          required_staff_count: formData.required_staff_count || 1,
+          allow_parallel_bookings: formData.allow_parallel_bookings || false,
+          max_parallel_bookings: formData.max_parallel_bookings || 1,
+          pricing: {
+            base_price: formData.price,
+            currency: formData.currency || "IDR",
+          },
+          tags: formData.tags,
+          image_url: formData.image_url || undefined,
+          is_active: formData.is_active,
+          status: formData.status,
         }),
       })
 
@@ -139,12 +195,27 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
         // Reset form
         setFormData({
           name: "",
+          slug: "",
+          category: "",
           duration_minutes: 60,
           price: 0,
-          category: DEFAULT_CATEGORIES[0],
+          currency: "IDR",
           description: "",
+          image_url: "",
+          preparation_minutes: 0,
+          cleanup_minutes: 0,
+          max_advance_booking_days: 30,
+          min_advance_booking_hours: 2,
+          requires_staff: true,
+          required_staff_count: 1,
+          allow_parallel_bookings: false,
+          max_parallel_bookings: 1,
+          tags: [],
+          is_active: true,
+          status: "active",
         })
         setErrors({})
+        setShowAdvancedSettings(false)
       } else {
         const errorData = await response.json()
         throw new Error(errorData.error || "Gagal menambahkan layanan")
@@ -229,108 +300,353 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
           <h3 className="text-lg font-semibold">Tambah Layanan Baru</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="name">
-              Nama Layanan <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="name"
-              placeholder="Contoh: Facial Treatment Premium"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className={errors.name ? "border-red-500" : ""}
-            />
-            {errors.name && (
-              <p className="text-xs text-red-500">{errors.name}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="duration">
-              Durasi (menit) <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative">
-              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                placeholder="60"
-                value={formData.duration_minutes}
-                onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 0 })}
-                className={`pl-10 ${errors.duration_minutes ? "border-red-500" : ""}`}
-              />
+        <div className="space-y-6">
+          {/* Essential Information */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              <FileText className="h-4 w-4 text-blue-600" />
+              Informasi Dasar
             </div>
-            {errors.duration_minutes && (
-              <p className="text-xs text-red-500">{errors.duration_minutes}</p>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="price">
-              Harga (IDR) <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="price"
-                type="number"
-                min="0"
-                step="1000"
-                placeholder="150000"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
-                className={`pl-10 ${errors.price ? "border-red-500" : ""}`}
-              />
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Nama Layanan <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="Contoh: Facial Treatment Premium"
+                  value={formData.name}
+                  onChange={(e) => {
+                    const newName = e.target.value
+                    setFormData({
+                      ...formData,
+                      name: newName,
+                      slug: generateSlug(newName)
+                    })
+                  }}
+                  className={errors.name ? "border-red-500" : ""}
+                />
+                {errors.name && (
+                  <p className="text-xs text-red-500">{errors.name}</p>
+                )}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="category">
+                    Kategori <span className="text-red-500">*</span>
+                  </Label>
+                  {loadingCategories ? (
+                    <div className="h-10 flex items-center justify-center border rounded-md bg-gray-50">
+                      <span className="text-sm text-gray-500">Loading categories...</span>
+                    </div>
+                  ) : categoryTemplates.length > 0 ? (
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) => setFormData({ ...formData, category: value })}
+                    >
+                      <SelectTrigger className={`h-10 ${errors.category ? "border-red-500" : ""}`}>
+                        <SelectValue placeholder="Pilih kategori" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryTemplates.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="category"
+                      placeholder="contoh: facial, hair_care, nails"
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className={`h-10 ${errors.category ? "border-red-500" : ""}`}
+                    />
+                  )}
+                  {errors.category ? (
+                    <p className="text-xs text-red-500">{errors.category}</p>
+                  ) : (
+                    <p className="text-xs text-gray-500">
+                      {categoryTemplates.length > 0 ? "Pilih dari category template tenant Anda" : "Masukkan category dalam lowercase dengan underscore"}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="duration">
+                    Durasi (menit) <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="duration"
+                      type="number"
+                      min="1"
+                      max="480"
+                      placeholder="60"
+                      value={formData.duration_minutes}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 60
+                        setFormData({ ...formData, duration_minutes: Math.min(480, Math.max(1, value)) })
+                      }}
+                      className={`pl-10 ${errors.duration_minutes ? "border-red-500" : ""}`}
+                    />
+                  </div>
+                  {errors.duration_minutes && (
+                    <p className="text-xs text-red-500">{errors.duration_minutes}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="price">
+                  Harga (IDR) <span className="text-red-500">*</span>
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">Rp</span>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    placeholder="150000"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                    className={`pl-10 ${errors.price ? "border-red-500" : ""}`}
+                  />
+                </div>
+                {errors.price && (
+                  <p className="text-xs text-red-500">{errors.price}</p>
+                )}
+              </div>
             </div>
-            {errors.price && (
-              <p className="text-xs text-red-500">{errors.price}</p>
-            )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category">Kategori</Label>
-            <select
-              id="category"
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          {/* Description & Image */}
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              <Image className="h-4 w-4 text-blue-600" />
+              Deskripsi & Gambar
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="description">Deskripsi</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Jelaskan layanan ini, manfaat, dan apa yang customer dapatkan..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="image_url">Image URL</Label>
+                <Input
+                  id="image_url"
+                  placeholder="https://example.com/image.jpg"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                />
+                <p className="text-xs text-gray-500">Tambahkan gambar untuk membuat layanan lebih menarik</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Status & Active Toggle */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: !!checked })}
+                className="h-5 w-5"
+              />
+              <div>
+                <Label htmlFor="is_active" className="cursor-pointer font-medium text-sm">
+                  Layanan Aktif
+                </Label>
+                <p className="text-xs text-gray-500">Tersedia untuk booking</p>
+              </div>
+            </div>
+
+            <Select
+              value={formData.status}
+              onValueChange={(value: any) => setFormData({ ...formData, status: value })}
             >
-              {DEFAULT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-32 h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="description">Deskripsi (opsional)</Label>
-            <Textarea
-              id="description"
-              placeholder="Jelaskan layanan ini secara singkat..."
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={3}
-            />
+          {/* Advanced Settings - Collapsible */}
+          <div className="pt-4 border-t">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+              className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 uppercase tracking-wide hover:text-blue-600 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4 text-blue-600" />
+                Pengaturan Lanjutan
+              </div>
+              {showAdvancedSettings ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+
+            {showAdvancedSettings && (
+              <div className="mt-4 space-y-6">
+                {/* Time Settings */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-600">Pengaturan Waktu</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="preparation" className="text-xs">Persiapan (menit)</Label>
+                      <Input
+                        id="preparation"
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={formData.preparation_minutes}
+                        onChange={(e) => setFormData({ ...formData, preparation_minutes: parseInt(e.target.value) || 0 })}
+                        className="h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="cleanup" className="text-xs">Pembersihan (menit)</Label>
+                      <Input
+                        id="cleanup"
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={formData.cleanup_minutes}
+                        onChange={(e) => setFormData({ ...formData, cleanup_minutes: parseInt(e.target.value) || 0 })}
+                        className="h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="min_booking" className="text-xs">Min Booking (jam)</Label>
+                      <Input
+                        id="min_booking"
+                        type="number"
+                        min="0"
+                        value={formData.min_advance_booking_hours}
+                        onChange={(e) => setFormData({ ...formData, min_advance_booking_hours: parseInt(e.target.value) || 0 })}
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Settings */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-600">Pengaturan Booking</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="max_advance" className="text-xs">Max Booking (hari)</Label>
+                      <Input
+                        id="max_advance"
+                        type="number"
+                        min="1"
+                        value={formData.max_advance_booking_days}
+                        onChange={(e) => setFormData({ ...formData, max_advance_booking_days: parseInt(e.target.value) || 30 })}
+                        className="h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="required_staff" className="text-xs">Staff Required</Label>
+                      <Input
+                        id="required_staff"
+                        type="number"
+                        min="0"
+                        value={formData.required_staff_count}
+                        onChange={(e) => setFormData({ ...formData, required_staff_count: parseInt(e.target.value) || 1 })}
+                        className="h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="max_parallel" className="text-xs">Max Parallel</Label>
+                      <Input
+                        id="max_parallel"
+                        type="number"
+                        min="1"
+                        value={formData.max_parallel_bookings}
+                        onChange={(e) => setFormData({ ...formData, max_parallel_bookings: parseInt(e.target.value) || 1 })}
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 pt-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="requires_staff"
+                        checked={formData.requires_staff}
+                        onCheckedChange={(checked) => setFormData({ ...formData, requires_staff: !!checked })}
+                      />
+                      <Label htmlFor="requires_staff" className="cursor-pointer text-xs">Memerlukan Staff</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="allow_parallel"
+                        checked={formData.allow_parallel_bookings}
+                        onCheckedChange={(checked) => setFormData({ ...formData, allow_parallel_bookings: !!checked })}
+                      />
+                      <Label htmlFor="allow_parallel" className="cursor-pointer text-xs">Izinkan Parallel Booking</Label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div className="space-y-2">
+                  <Label htmlFor="tags" className="text-sm font-medium text-gray-600">Tags</Label>
+                  <Input
+                    id="tags"
+                    placeholder="luxury, popular, new (pisahkan dengan koma)"
+                    value={formData.tags.join(", ")}
+                    onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(",").map(t => t.trim()).filter(t => t) })}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Action Button */}
+          <Button
+            onClick={handleAdd}
+            disabled={loading || !canAddMore}
+            className="w-full md:w-auto"
+          >
+            {loading ? (
+              "Menambahkan..."
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Tambah Layanan
+              </>
+            )}
+          </Button>
         </div>
-
-        <Button
-          onClick={handleAdd}
-          disabled={loading || !canAddMore}
-          className="mt-6 w-full md:w-auto"
-        >
-          {loading ? (
-            "Menambahkan..."
-          ) : (
-            <>
-              <Plus className="h-4 w-4 mr-2" />
-              Tambah Layanan
-            </>
-          )}
-        </Button>
       </Card>
 
       {/* Product List */}

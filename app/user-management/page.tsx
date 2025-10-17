@@ -690,12 +690,20 @@ export default function UserManagementPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+1234567890"
-                />
+                <div className="flex gap-2">
+                  <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
+                    +62
+                  </div>
+                  <Input
+                    id="phone"
+                    placeholder="81xxxxxxxxx"
+                    value={formData.phone.startsWith('+62') ? formData.phone.slice(3) : formData.phone}
+                    onChange={(e) => {
+                      const input = e.target.value.replace(/\D/g, '')
+                      setFormData({ ...formData, phone: input ? `+62${input}` : '' })
+                    }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -897,12 +905,20 @@ export default function UserManagementPage() {
             {/* Phone */}
             <div className="space-y-2">
               <Label htmlFor="edit_phone">Phone</Label>
-              <Input
-                id="edit_phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+1234567890"
-              />
+              <div className="flex gap-2">
+                <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
+                  +62
+                </div>
+                <Input
+                  id="edit_phone"
+                  placeholder="81xxxxxxxxx"
+                  value={formData.phone.startsWith('+62') ? formData.phone.slice(3) : formData.phone}
+                  onChange={(e) => {
+                    const input = e.target.value.replace(/\D/g, '')
+                    setFormData({ ...formData, phone: input ? `+62${input}` : '' })
+                  }}
+                />
+              </div>
             </div>
 
             {/* Role & Employment */}

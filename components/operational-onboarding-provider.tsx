@@ -1,11 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { OperationalOnboardingWizard } from "./operational-onboarding-wizard"
 import { OperationalOnboardingProvider as ContextProvider, useOperationalOnboarding } from "@/lib/operational-onboarding-context"
 
 function OperationalOnboardingWrapper({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const { user, isAdmin } = useAuth()
   const [showWizard, setShowWizard] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -13,6 +15,14 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     async function checkOnboardingStatus() {
+      // Skip on public pages
+      const publicPaths = ['/signin', '/signup', '/']
+      if (publicPaths.includes(pathname)) {
+        console.log('OperationalOnboardingProvider: Skipping on public page:', pathname)
+        setLoading(false)
+        return
+      }
+
       // Only check for tenant_admin
       if (!user || !isAdmin()) {
         setLoading(false)
@@ -112,7 +122,7 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
     }
 
     checkOnboardingStatus()
-  }, [user, isAdmin])
+  }, [user, isAdmin, pathname])
 
   const handleComplete = () => {
     setShowWizard(false)

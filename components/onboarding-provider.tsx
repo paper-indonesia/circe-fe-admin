@@ -1,16 +1,26 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { OnboardingWizard } from "./onboarding-wizard"
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const { user } = useAuth()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function checkOnboarding() {
+      // Skip on public pages
+      const publicPaths = ['/signin', '/signup', '/']
+      if (publicPaths.includes(pathname)) {
+        console.log('OnboardingProvider: Skipping on public page:', pathname)
+        setLoading(false)
+        return
+      }
+
       if (!user) {
         console.log('OnboardingProvider: No user found')
         setLoading(false)
@@ -41,7 +51,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
 
     checkOnboarding()
-  }, [user])
+  }, [user, pathname])
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false)

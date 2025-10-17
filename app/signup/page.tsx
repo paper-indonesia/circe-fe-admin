@@ -601,15 +601,23 @@ export default function SignUpPage() {
 
                         <div className="space-y-2">
                           <Label htmlFor="business_phone">Business Phone *</Label>
-                          <div className="relative">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <div className="flex gap-2">
+                            <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium h-11">
+                              +62
+                            </div>
                             <Input
                               id="business_phone"
                               type="tel"
-                              placeholder="+62-XXX-XXX-XXXX"
-                              value={formData.business_phone}
-                              onChange={handleChange}
-                              className="pl-10 h-11"
+                              placeholder="81xxxxxxxxx"
+                              value={formData.business_phone.startsWith('+62') ? formData.business_phone.slice(3) : formData.business_phone}
+                              onChange={(e) => {
+                                const input = e.target.value.replace(/\D/g, '')
+                                setFormData({
+                                  ...formData,
+                                  business_phone: input ? `+62${input}` : ''
+                                })
+                              }}
+                              className="h-11"
                               disabled={isLoading}
                             />
                           </div>

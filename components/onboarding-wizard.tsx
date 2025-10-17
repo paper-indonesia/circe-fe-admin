@@ -138,9 +138,10 @@ export function OnboardingWizard({ open, onComplete }: OnboardingWizardProps) {
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 gap-0 border-0 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-[1120px] max-h-[90vh] p-0 gap-0 border-0 rounded-2xl shadow-2xl bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh]">
         {/* Header with Progress */}
-        <div className="relative bg-white/80 backdrop-blur-md border-b border-purple-100 px-8 py-6">
+        <div className="flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-purple-100 px-6 py-5 rounded-t-2xl">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
@@ -169,8 +170,8 @@ export function OnboardingWizard({ open, onComplete }: OnboardingWizardProps) {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto p-8" style={{ maxHeight: 'calc(90vh - 200px)' }}>
+        {/* Content - Scrollable Body */}
+        <div className="flex-1 overflow-y-auto px-6 pt-6 pb-8 min-h-0">
           <AnimatePresence mode="wait">
             {/* Step 1: Business Type Selection */}
             {step === 1 && (
@@ -426,7 +427,7 @@ export function OnboardingWizard({ open, onComplete }: OnboardingWizardProps) {
         </div>
 
         {/* Footer */}
-        <div className="bg-white/80 backdrop-blur-md border-t border-purple-100 px-8 py-6">
+        <div className="flex-shrink-0 bg-white/80 backdrop-blur-md border-t border-purple-100 px-6 py-4 rounded-b-2xl">
           <div className="flex items-center justify-between">
             <div>
               {step > 1 && (
@@ -478,6 +479,7 @@ export function OnboardingWizard({ open, onComplete }: OnboardingWizardProps) {
               )}
             </div>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>

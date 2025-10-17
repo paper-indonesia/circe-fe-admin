@@ -37,23 +37,40 @@ export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [planLimits, setPlanLimits] = useState<{ current: number; max: number } | null>(null)
+  const [existingUsers, setExistingUsers] = useState<any[]>([])
+  const [loadingExisting, setLoadingExisting] = useState(true)
+
+  // Load existing users
+  useEffect(() => {
+    const fetchExistingUsers = async () => {
+      try {
+        const response = await fetch("/api/users")
+        if (response.ok) {
+          const data = await response.json()
+          setExistingUsers(Array.isArray(data) ? data : [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch existing users:", error)
+      } finally {
+        setLoadingExisting(false)
+      }
+    }
+
+    fetchExistingUsers()
+  }, [])
 
   // Load plan limits
   useEffect(() => {
     const fetchLimits = async () => {
       try {
-        const [subResponse, usageResponse] = await Promise.all([
-          fetch("/api/subscription"),
-          fetch("/api/subscription/usage"),
-        ])
+        const usageResponse = await fetch("/api/subscription/usage")
 
-        if (subResponse.ok && usageResponse.ok) {
-          const subData = await subResponse.json()
+        if (usageResponse.ok) {
           const usageData = await usageResponse.json()
 
           setPlanLimits({
-            current: usageData.users?.used || 0,
-            max: subData.plan?.limits?.max_users || 999,
+            current: usageData.usage_summary?.staff?.used || 0,
+            max: usageData.usage_summary?.staff?.limit || 999,
           })
         }
       } catch (error) {
@@ -66,8 +83,11 @@ export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
 
   // Update parent validation state
   useEffect(() => {
-    onValidChange(progress.users.length > 0)
-  }, [progress.users, onValidChange])
+    // Can proceed if there's at least 1 existing user OR new users have been added
+    const hasExistingUser = existingUsers.length >= 1
+    const hasNewUsers = progress.users.length > 0
+    onValidChange(hasExistingUser || hasNewUsers)
+  }, [progress.users, existingUsers, onValidChange])
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -182,7 +202,10 @@ export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
             <div className="flex-1">
               <h3 className="font-semibold text-blue-900 mb-2">Apa yang harus dilakukan</h3>
               <p className="text-sm text-blue-700">
-                Tambahkan user internal sesuai kebutuhan tim Anda. Minimal 1 user untuk membantu operasional harian.
+                {existingUsers.length >= 1
+                  ? "Anda sudah memiliki user. Langkah ini opsional - Anda bisa skip atau menambah user lain sesuai kebutuhan."
+                  : "Tambahkan user internal sesuai kebutuhan tim Anda. Minimal 1 user untuk membantu operasional harian."
+                }
               </p>
             </div>
           </div>
@@ -202,6 +225,21 @@ export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
           </div>
         </Card>
       </div>
+
+      {/* Existing User Alert */}
+      {!loadingExisting && existingUsers.length >= 1 && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-medium mb-1">Anda sudah memiliki {existingUsers.length} user terdaftar</p>
+                <p className="text-sm">Langkah ini opsional. Klik "Lanjut" untuk skip atau tambahkan user lain jika diperlukan.</p>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Plan Limits Info */}
       {planLimits && (
@@ -280,13 +318,21 @@ export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
 
           <div className="space-y-2">
             <Label htmlFor="phone">Nomor Telepon</Label>
-            <Input
-              id="phone"
-              placeholder="+62 812 3456 7890"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className={errors.phone ? "border-red-500" : ""}
-            />
+            <div className="flex gap-2">
+              <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium h-10">
+                +62
+              </div>
+              <Input
+                id="phone"
+                placeholder="81xxxxxxxxx"
+                value={formData.phone.startsWith('+62') ? formData.phone.slice(3) : formData.phone}
+                onChange={(e) => {
+                  const input = e.target.value.replace(/\D/g, '')
+                  setFormData({ ...formData, phone: input ? `+62${input}` : '' })
+                }}
+                className={errors.phone ? "border-red-500 flex-1" : "flex-1"}
+              />
+            </div>
             {errors.phone && (
               <p className="text-xs text-red-500">{errors.phone}</p>
             )}
@@ -344,11 +390,56 @@ export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
         </Button>
       </Card>
 
-      {/* User List */}
-      {progress.users.length > 0 ? (
+      {/* Existing Users List */}
+      {!loadingExisting && existingUsers.length > 0 && (
+        <Card className="p-6 bg-green-50 border-green-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-green-900">User Terdaftar</h3>
+            <Badge variant="secondary" className="bg-green-100 text-green-700">{existingUsers.length} user</Badge>
+          </div>
+
+          <div className="space-y-3">
+            {existingUsers.map((user, index) => (
+              <div
+                key={index}
+                className="flex items-start justify-between p-4 border border-green-300 rounded-lg bg-white"
+              >
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="bg-green-100 rounded-lg p-2">
+                    <Users className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900">
+                      {user.first_name} {user.last_name}
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-3 mt-2">
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Mail className="h-3 w-3" />
+                        {user.email}
+                      </div>
+                      {user.phone && (
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <Phone className="h-3 w-3" />
+                          {user.phone}
+                        </div>
+                      )}
+                      <Badge variant="outline" className="text-xs capitalize bg-green-50 border-green-300">
+                        {user.role}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Newly Added Users List (during onboarding) */}
+      {progress.users.length > 0 && (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">User yang Ditambahkan</h3>
+            <h3 className="font-semibold">User Baru Ditambahkan</h3>
             <Badge variant="secondary">{progress.users.length} user</Badge>
           </div>
 
@@ -385,15 +476,6 @@ export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
                 </div>
               </div>
             ))}
-          </div>
-        </Card>
-      ) : (
-        <Card className="p-8 border-2 border-dashed border-gray-300">
-          <div className="text-center">
-            <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">
-              Belum ada user yang ditambahkan. Tambahkan minimal 1 user untuk melanjutkan.
-            </p>
           </div>
         </Card>
       )}

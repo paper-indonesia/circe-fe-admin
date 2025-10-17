@@ -52,7 +52,7 @@ const STEPS = [
 
 export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 }: OperationalOnboardingWizardProps) {
   const { toast } = useToast()
-  const { progress, setCurrentStep, completeOnboarding } = useOperationalOnboarding()
+  const { progress, setCurrentStep, completeOnboarding, resetOnboarding } = useOperationalOnboarding()
   const [loading, setLoading] = useState(false)
   const [canProceed, setCanProceed] = useState(false)
 
@@ -100,95 +100,92 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
     }
   }
 
+  const handleClearAll = () => {
+    if (confirm("Apakah Anda yakin ingin menghapus semua progress onboarding? Tindakan ini tidak dapat dibatalkan.")) {
+      resetOnboarding()
+      toast({
+        title: "Progress Dihapus",
+        description: "Semua data onboarding telah dihapus",
+      })
+    }
+  }
+
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
     animate: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: -20 }
   }
 
-  // Check if current step requirements are met
-  useEffect(() => {
-    switch (progress.currentStep) {
-      case 1:
-        setCanProceed(progress.outlets.length > 0)
-        break
-      case 2:
-        setCanProceed(progress.users.length > 0)
-        break
-      case 3:
-        setCanProceed(progress.products.length > 0)
-        break
-      case 4:
-        setCanProceed(progress.staff.length > 0 && progress.availabilities.length > 0)
-        break
-      default:
-        setCanProceed(false)
-    }
-  }, [progress])
-
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0 gap-0 border-0">
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-[1120px] max-h-[90vh] p-0 gap-0 border-0 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="flex flex-col h-full max-h-[90vh]">
         {/* Header with Progress */}
-        <div className="bg-white border-b px-8 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
+        <div className="flex-shrink-0 bg-white border-b px-6 py-5 rounded-t-2xl">
+          <div className="flex items-start justify-between gap-6 mb-4">
+            {/* Left: Title + Subtitle */}
+            <div className="flex-shrink-0">
               <h2 className="text-2xl font-bold text-gray-900">
                 Setup Awal Sistem
               </h2>
               <p className="text-sm text-gray-600 mt-1">Lengkapi 4 langkah berikut agar siap melakukan booking</p>
             </div>
-            <Badge variant="secondary" className="text-xs px-3 py-1">
-              Langkah {progress.currentStep} dari {STEPS.length}
-            </Badge>
-          </div>
 
-          {/* Progress Steps */}
-          <div className="flex gap-4">
-            {STEPS.map((step) => {
-              const Icon = step.icon
-              const isActive = progress.currentStep === step.number
-              const isCompleted = progress.currentStep > step.number
+            {/* Center: Stepper (one line on desktop) */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex items-center gap-2">
+                {STEPS.map((step, index) => {
+                  const Icon = step.icon
+                  const isActive = progress.currentStep === step.number
+                  const isCompleted = progress.currentStep > step.number
 
-              return (
-                <div key={step.number} className="flex-1">
-                  <div className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
-                    isActive
-                      ? "border-blue-500 bg-blue-50"
-                      : isCompleted
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 bg-gray-50"
-                  }`}>
-                    <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                      isActive
-                        ? "bg-blue-500 text-white"
-                        : isCompleted
-                          ? "bg-green-500 text-white"
-                          : "bg-gray-300 text-gray-600"
-                    }`}>
-                      {isCompleted ? (
-                        <Check className="h-5 w-5" />
-                      ) : (
-                        <Icon className="h-5 w-5" />
+                  return (
+                    <div key={step.number} className="flex items-center">
+                      {/* Step Circle */}
+                      <div className="flex flex-col items-center group cursor-default">
+                        <div className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-all ${
+                          isActive
+                            ? "bg-blue-500 text-white ring-4 ring-blue-100"
+                            : isCompleted
+                              ? "bg-green-500 text-white"
+                              : "bg-gray-200 text-gray-500"
+                        }`}>
+                          {isCompleted ? (
+                            <Check className="h-5 w-5" />
+                          ) : (
+                            <span className="text-sm font-bold">{step.number}</span>
+                          )}
+                        </div>
+                        <p className={`text-xs font-medium mt-1 whitespace-nowrap ${
+                          isActive ? "text-blue-600" : isCompleted ? "text-green-600" : "text-gray-500"
+                        }`}>
+                          {step.title}
+                        </p>
+                      </div>
+
+                      {/* Connector Line */}
+                      {index < STEPS.length - 1 && (
+                        <div className={`w-12 h-0.5 mx-2 transition-colors ${
+                          isCompleted ? "bg-green-500" : "bg-gray-200"
+                        }`} />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${
-                        isActive ? "text-blue-900" : isCompleted ? "text-green-900" : "text-gray-600"
-                      }`}>
-                        {step.title}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">{step.description}</p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Right: Badge */}
+            <div className="flex-shrink-0">
+              <Badge variant="secondary" className="text-xs px-3 py-1.5 whitespace-nowrap">
+                Langkah {progress.currentStep} dari {STEPS.length}
+              </Badge>
+            </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto p-8" style={{ maxHeight: 'calc(90vh - 240px)' }}>
+        {/* Content - Scrollable Body */}
+        <div className="flex-1 overflow-y-auto px-6 pt-6 pb-8 min-h-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={progress.currentStep}
@@ -206,10 +203,20 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
         </div>
 
         {/* Footer */}
-        <div className="bg-white border-t px-8 py-6">
+        <div className="flex-shrink-0 bg-white border-t px-6 py-4 rounded-b-2xl">
           <div className="flex items-center justify-between">
-            <div>
-              {progress.currentStep > 1 && (
+            {/* Left: Clear All or Back */}
+            <div className="flex items-center gap-3">
+              {progress.currentStep === 1 && (progress.outlets.length > 0 || progress.users.length > 0 || progress.products.length > 0 || progress.staff.length > 0) ? (
+                <Button
+                  variant="ghost"
+                  onClick={handleClearAll}
+                  disabled={loading}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  Clear All
+                </Button>
+              ) : progress.currentStep > 1 ? (
                 <Button
                   variant="ghost"
                   onClick={handleBack}
@@ -219,7 +226,7 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
                   <ChevronLeft className="h-4 w-4" />
                   Kembali
                 </Button>
-              )}
+              ) : null}
             </div>
 
             <div className="flex items-center gap-3">
@@ -258,6 +265,7 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
               )}
             </div>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>
