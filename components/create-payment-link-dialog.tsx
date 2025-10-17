@@ -368,11 +368,11 @@ export default function CreatePaymentLinkDialog({
               </Label>
               <Input
                 id="due-date"
-                type="datetime-local"
+                type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 disabled={isSubmitting}
-                min={new Date().toISOString().slice(0, 16)}
+                min={new Date().toISOString().split('T')[0]}
               />
               <p className="text-xs text-gray-500">
                 Default: 7 days from now. Set a custom expiry date for the payment link.

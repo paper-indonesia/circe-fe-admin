@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { formatCurrency, cn } from "@/lib/utils"
+import { apiClient } from "@/lib/api-client"
 import { BookingDateTime } from "@/components/booking-date-time"
 import PaymentStatusDisplay from "@/components/payment-status-display"
 import RecordPaymentDialog from "@/components/record-payment-dialog"
@@ -837,6 +838,35 @@ export default function CalendarPage() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  // Refresh appointment data from API
+  const refreshAppointmentData = async (appointmentId: string) => {
+    try {
+      console.log('[Calendar] Refreshing appointment data:', appointmentId)
+      const response = await apiClient.getAppointmentById(appointmentId)
+
+      if (response) {
+        // Update selectedBooking with fresh data
+        const updatedBooking = {
+          ...selectedBooking!,
+          payment_status: response.payment_status,
+          status: response.status,
+          // Update other fields as needed
+        }
+        setSelectedBooking(updatedBooking)
+        console.log('[Calendar] Appointment data refreshed. Payment status:', response.payment_status)
+        return updatedBooking
+      }
+    } catch (error) {
+      console.error('[Calendar] Failed to refresh appointment data:', error)
+      toast({
+        title: "Failed to refresh data",
+        description: "Please close and reopen the dialog to see updated payment status",
+        variant: "destructive"
+      })
+    }
+    return null
   }
 
   const handleFinishBooking = async () => {
@@ -3011,13 +3041,33 @@ export default function CalendarPage() {
             totalAmount={completePaymentStatus.total_amount}
             paidAmount={completePaymentStatus.paid_amount}
             remainingBalance={completePaymentStatus.remaining_balance}
-            onSuccess={() => {
-              // Refresh payment status after successful payment
-              setPaymentRefreshKey((prev) => prev + 1)
+            onSuccess={async () => {
+              // Show initial success message
               toast({
                 title: "Payment recorded successfully",
-                description: "The payment has been recorded and appointment status updated."
+                description: "Refreshing appointment data..."
               })
+
+              // Wait 2 seconds to allow API to update payment_status
+              await new Promise(resolve => setTimeout(resolve, 2000))
+
+              // Refresh appointment data from API to get updated payment_status
+              const updatedBooking = await refreshAppointmentData(selectedBooking.id)
+
+              if (updatedBooking) {
+                // Refresh payment status display
+                setPaymentRefreshKey((prev) => prev + 1)
+
+                // Show success message
+                toast({
+                  title: "Payment status updated",
+                  description: updatedBooking.payment_status === 'paid'
+                    ? "Payment verified! You can now complete the appointment."
+                    : "Appointment data refreshed successfully",
+                })
+              }
+
+              // Dialog tetap terbuka, user bisa langsung klik Complete
             }}
           />
         )}
