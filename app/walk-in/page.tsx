@@ -108,6 +108,8 @@ export default function WalkInPage() {
   const [loadingCustomers, setLoadingCustomers] = useState(false)
   const [customersError, setCustomersError] = useState<string | null>(null)
   const [searchingCustomer, setSearchingCustomer] = useState(false)
+  const [customerSearchResult, setCustomerSearchResult] = useState<'not_searched' | 'found' | 'not_found'>('not_searched')
+  const [customerConfirmed, setCustomerConfirmed] = useState(false)
 
   // Ref for auto-scroll to staff section
   const staffSectionRef = useRef<HTMLDivElement>(null)
@@ -435,12 +437,15 @@ export default function WalkInPage() {
     }
 
     setSearchingCustomer(true)
+    setCustomerSearchResult('not_searched')
+    setCustomerConfirmed(false)
+
     try {
       const results = await searchCustomers(formData.phone)
 
       if (results && results.length > 0) {
         const existingCustomer = results[0]
-        // Found existing customer - auto-fill data
+        // Found existing customer - auto-fill data and auto-confirm
         setFormData({
           ...formData,
           name: `${existingCustomer.first_name} ${existingCustomer.last_name}`.trim(),
@@ -448,26 +453,40 @@ export default function WalkInPage() {
           existingClient: true,
           existingClientId: existingCustomer._id || existingCustomer.id || existingCustomer.customer_id
         })
+        setCustomerSearchResult('found')
+        setCustomerConfirmed(true) // Auto-confirm for existing customers
         toast({
           title: "Customer Found!",
           description: `${existingCustomer.first_name} ${existingCustomer.last_name} - Ready to book`,
         })
       } else {
-        // Not found - will create new customer
+        // Not found - require confirmation
+        setCustomerSearchResult('not_found')
+        setCustomerConfirmed(false)
         toast({
-          title: "New Customer",
-          description: "Phone not found. We'll create a new customer profile.",
+          title: "Customer Not Found",
+          description: "Please confirm to create a new customer profile",
         })
       }
     } catch (error: any) {
       console.error('[Walk-In] Customer search error:', error)
+      setCustomerSearchResult('not_found')
+      setCustomerConfirmed(false)
       toast({
-        title: "New Customer",
-        description: "Phone not found. We'll create a new customer profile.",
+        title: "Customer Not Found",
+        description: "Please confirm to create a new customer profile",
       })
     } finally {
       setSearchingCustomer(false)
     }
+  }
+
+  const handleConfirmNewCustomer = () => {
+    setCustomerConfirmed(true)
+    toast({
+      title: "New Customer Confirmed",
+      description: "Customer will be created when booking is completed"
+    })
   }
 
   const validateForm = () => {

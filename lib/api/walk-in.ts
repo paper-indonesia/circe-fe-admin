@@ -111,10 +111,10 @@ export async function createCustomer(customerData: {
   }
 
   const tenant = JSON.parse(tenantStr)
-  const tenantId = tenant.tenant_id
+  const tenantId = tenant.id || tenant._id
 
   if (!tenantId) {
-    throw new Error('Tenant ID not found. Please login again.')
+    throw new Error('Tenant information not found. Please login again.')
   }
 
   // Split name into first_name and last_name

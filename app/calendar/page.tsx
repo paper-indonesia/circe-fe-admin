@@ -60,6 +60,7 @@ import {
   Building2,
   Smartphone,
   Loader2,
+  UserPlus,
 } from "lucide-react"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import {
@@ -182,6 +183,8 @@ export default function CalendarPage() {
   const [loadingCustomers, setLoadingCustomers] = useState(false)
   const [customersError, setCustomersError] = useState<string | null>(null)
   const [searchingCustomer, setSearchingCustomer] = useState(false)
+  const [customerSearchResult, setCustomerSearchResult] = useState<'not_searched' | 'found' | 'not_found'>('not_searched')
+  const [customerConfirmed, setCustomerConfirmed] = useState(false)
 
   // Calculate date range based on selection
   const { startDate, endDate } = useMemo(() => {
@@ -393,6 +396,21 @@ export default function CalendarPage() {
     }
   }, [newBookingData.isNewClient, newBookingOpen])
 
+  // Reset customer confirmation state when phone changes, when switching tabs, or when dialog closes
+  useEffect(() => {
+    if (!newBookingOpen) {
+      // Reset when dialog closes
+      setCustomerSearchResult('not_searched')
+      setCustomerConfirmed(false)
+    } else {
+      // Reset when phone number changes or switching to new client tab
+      if (newBookingData.isNewClient) {
+        setCustomerSearchResult('not_searched')
+        setCustomerConfirmed(false)
+      }
+    }
+  }, [newBookingOpen, newBookingData.newClientPhone, newBookingData.isNewClient])
+
   // Customer search with debounce (for filtering)
   const handleCustomerSearchChange = useCallback(
     debounce(async (query: string) => {
@@ -450,38 +468,56 @@ export default function CalendarPage() {
     }
 
     setSearchingCustomer(true)
+    setCustomerSearchResult('not_searched')
+    setCustomerConfirmed(false)
+
     try {
       const results = await searchCustomers(newBookingData.newClientPhone)
 
       if (results && results.length > 0) {
         const existingCustomer = results[0]
-        // Found existing customer - auto-fill data and switch to existing
+        // Found existing customer - auto-fill data, switch to existing, and mark as confirmed
         setNewBookingData({
           ...newBookingData,
           newClientName: `${existingCustomer.first_name} ${existingCustomer.last_name}`.trim(),
           patientId: existingCustomer._id || existingCustomer.id || existingCustomer.customer_id,
           isNewClient: false // Switch to existing customer
         })
+        setCustomerSearchResult('found')
+        setCustomerConfirmed(true) // Auto-confirm for existing customers
         toast({
           title: "Customer Found!",
-          description: `${existingCustomer.first_name} ${existingCustomer.last_name} - Ready to book`,
+          description: `${existingCustomer.first_name} ${existingCustomer.last_name} - Ready to proceed`,
         })
       } else {
-        // Not found - will create new customer
+        // Not found - show confirmation button
+        setCustomerSearchResult('not_found')
+        setCustomerConfirmed(false)
         toast({
-          title: "New Customer",
-          description: "Phone not found. We'll create a new customer profile.",
+          title: "Customer Not Found",
+          description: "Please confirm to create a new customer profile",
         })
       }
     } catch (error: any) {
       console.error('[Calendar] Customer search error:', error)
+      setCustomerSearchResult('not_found')
+      setCustomerConfirmed(false)
       toast({
-        title: "New Customer",
-        description: "Phone not found. We'll create a new customer profile.",
+        title: "Customer Not Found",
+        description: "Please confirm to create a new customer profile",
       })
     } finally {
       setSearchingCustomer(false)
     }
+  }
+
+  // Confirm creating new customer
+  const handleConfirmNewCustomer = () => {
+    setCustomerConfirmed(true)
+    toast({
+      title: "New Customer Confirmed",
+      description: "Customer will be created when booking is completed",
+    })
   }
 
   const getStatusColor = (status: string) => {
@@ -1601,7 +1637,7 @@ export default function CalendarPage() {
 
         {/* Booking Detail Dialog */}
         <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-          <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="min-w-[960px] max-w-[1200px] w-[90vw] h-[90vh] flex flex-col overflow-hidden p-0">
             {selectedBooking && (() => {
               // Use customer data directly from booking (already populated in context)
               const customerData = selectedBooking.customer
@@ -1621,9 +1657,9 @@ export default function CalendarPage() {
               const staffMember = staff.find(s => s.id === selectedBooking.staffId)
 
               return (
-                <div className="space-y-0">
+                <div className="flex-1 flex flex-col overflow-hidden">
                   {/* Header */}
-                  <div className="sticky top-0 bg-white z-10 pb-3 border-b border-gray-100">
+                  <div className="sticky top-0 bg-white z-10 pb-3 pt-6 px-6 border-b border-gray-100">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <CalendarIcon className="h-4 w-4 text-gray-400" />
@@ -1692,7 +1728,7 @@ export default function CalendarPage() {
                     </Select>
                   </div>
 
-                  <div className="py-4 space-y-5">
+                  <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
                     {/* Patient Info Card */}
                     <div className="bg-gradient-to-br from-[#FFD6FF]/10 to-[#E7C6FF]/10 rounded-xl p-4 border border-[#FFD6FF]/30">
                       <div className="flex items-start gap-3">
@@ -1838,7 +1874,7 @@ export default function CalendarPage() {
                   </div>
 
                   {/* Footer Actions */}
-                  <div className="sticky bottom-0 bg-white pt-3 border-t border-gray-100 flex items-center gap-3">
+                  <div className="sticky bottom-0 bg-white z-10 pt-3 pb-6 px-6 border-t border-gray-100 flex items-center gap-3">
                     {isEditMode ? (
                       <>
                         <Button
@@ -1904,8 +1940,8 @@ export default function CalendarPage() {
 
         {/* New Booking Dialog */}
         <Dialog open={newBookingOpen} onOpenChange={setNewBookingOpen}>
-          <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-y-auto bg-gradient-to-br from-gray-50 to-white">
-            <DialogHeader className="border-b-2 border-gray-200 pb-5">
+          <DialogContent className="min-w-[960px] max-w-[1200px] w-[90vw] h-[90vh] flex flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-white p-0">
+            <DialogHeader className="sticky top-0 z-10 bg-gradient-to-br from-gray-50 to-white border-b-2 border-gray-200 pb-5 pt-6 px-6">
               <div className="flex items-center justify-between">
                 <DialogTitle className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
                   Book Appointment
@@ -1945,7 +1981,7 @@ export default function CalendarPage() {
               </div>
             </DialogHeader>
 
-            <div className="py-6">
+            <div className="flex-1 overflow-y-auto px-6 py-6">
               {/* Step 1: Treatment Selection with Search & Pagination */}
               {newBookingStep === 1 && (() => {
                 const filteredTreatments = treatments.filter(t =>
@@ -2300,9 +2336,33 @@ export default function CalendarPage() {
                                   </>
                                 )}
                               </Button>
+
+                              {/* Confirmation Button - Show when customer not found and not yet confirmed */}
+                              {customerSearchResult === 'not_found' && !customerConfirmed && (
+                                <Button
+                                  type="button"
+                                  variant="default"
+                                  onClick={handleConfirmNewCustomer}
+                                  className="shrink-0 bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                  <UserPlus className="h-4 w-4 mr-2" />
+                                  Create New
+                                </Button>
+                              )}
+
+                              {/* Success Indicator - Show when confirmed */}
+                              {customerConfirmed && customerSearchResult === 'not_found' && (
+                                <div className="shrink-0 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md">
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                  <span className="text-sm text-green-700 font-medium">Confirmed</span>
+                                </div>
+                              )}
                             </div>
                             <p className="text-xs text-gray-500 mt-1">
-                              Enter phone number and click Search to check if customer exists.
+                              {customerSearchResult === 'not_searched' && 'Enter phone number and click Search to check if customer exists.'}
+                              {customerSearchResult === 'found' && 'Customer found and confirmed. Proceed to next step.'}
+                              {customerSearchResult === 'not_found' && !customerConfirmed && 'Customer not found. Click "Create New" to confirm creating a new customer profile.'}
+                              {customerSearchResult === 'not_found' && customerConfirmed && 'New customer confirmed. Will be created when booking is completed.'}
                             </p>
                           </div>
                         </div>
@@ -2473,7 +2533,7 @@ export default function CalendarPage() {
             </div>
 
             {/* Footer Actions */}
-            <div className="border-t border-gray-100 pt-4 flex items-center gap-3">
+            <div className="sticky bottom-0 z-10 bg-gradient-to-br from-gray-50 to-white border-t border-gray-100 pt-4 pb-4 px-6 flex items-center gap-3">
               {newBookingStep > 1 && (
                 <Button
                   variant="outline"
@@ -2489,7 +2549,7 @@ export default function CalendarPage() {
                   disabled={
                     (newBookingStep === 1 && !newBookingData.treatmentId) ||
                     (newBookingStep === 2 && !newBookingData.staffId) ||
-                    (newBookingStep === 3 && (!newBookingData.date || !newBookingData.time || (!newBookingData.patientId && !newBookingData.isNewClient) || (newBookingData.isNewClient && (!newBookingData.newClientName || !newBookingData.newClientPhone)))) ||
+                    (newBookingStep === 3 && (!newBookingData.date || !newBookingData.time || (!newBookingData.patientId && !newBookingData.isNewClient) || (newBookingData.isNewClient && (!newBookingData.newClientName || !newBookingData.newClientPhone || !customerConfirmed)))) ||
                     (newBookingStep === 4 && !newBookingData.paymentMethod)
                   }
                   className="flex-1 bg-gradient-to-r from-[#C8B6FF] to-[#B8A6EF] hover:from-[#B8A6EF] hover:to-[#A896DF] text-white font-bold shadow-md"
@@ -2549,6 +2609,8 @@ export default function CalendarPage() {
                       toast({ title: "Appointment created successfully!" })
                       setNewBookingOpen(false)
                       setNewBookingStep(1)
+                      setCustomerSearchResult('not_searched')
+                      setCustomerConfirmed(false)
                       setNewBookingData({
                         treatmentId: "",
                         patientId: "",
