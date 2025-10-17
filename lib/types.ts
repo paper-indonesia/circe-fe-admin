@@ -103,9 +103,11 @@ export interface Treatment {
 
 export interface Booking {
   id: string
-  tenantId: string
+  tenantId?: string
   patientId: string
   patientName?: string
+  patientPhone?: string
+  patientEmail?: string
   staffId: string
   staffName?: string
   treatmentId: string
@@ -113,9 +115,19 @@ export interface Booking {
   endAt: string
   status: "available" | "pending" | "confirmed" | "cancelled" | "completed" | "no-show"
   source: "walk-in" | "online"
-  paymentStatus: "unpaid" | "deposit" | "paid"
+  paymentStatus: "unpaid" | "deposit" | "paid" | "pending" | "partially_paid" | "refunded"
+  payment_status?: "unpaid" | "deposit" | "paid" | "pending" | "partially_paid" | "refunded" // snake_case alias for API consistency
   notes?: string
-  createdAt: string
+  queueNumber?: string
+  createdAt: Date | string
+  // New fields from appointments API
+  appointment_date?: string
+  start_time?: string
+  end_time?: string
+  services?: any[]
+  total_price?: string
+  fee_breakdown?: any
+  customer?: any // Customer details from lookup
 }
 
 export interface Payment {

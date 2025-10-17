@@ -5,6 +5,7 @@ import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -548,6 +549,55 @@ export default function CalendarPage() {
     }
   }
 
+  const getPaymentStatusBadge = (paymentStatus?: string) => {
+    if (!paymentStatus) {
+      return (
+        <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Unknown
+        </Badge>
+      )
+    }
+
+    switch (paymentStatus) {
+      case "paid":
+        return (
+          <Badge className="text-xs bg-green-100 text-green-700 border-green-200">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Paid
+          </Badge>
+        )
+      case "partially_paid":
+        return (
+          <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-200">
+            <Clock className="h-3 w-3 mr-1" />
+            Partial
+          </Badge>
+        )
+      case "pending":
+        return (
+          <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-200">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        )
+      case "refunded":
+        return (
+          <Badge className="text-xs bg-red-100 text-red-700 border-red-200">
+            <XCircle className="h-3 w-3 mr-1" />
+            Refunded
+          </Badge>
+        )
+      default:
+        return (
+          <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            {paymentStatus}
+          </Badge>
+        )
+    }
+  }
+
   const handleDateClick = (date: Date) => {
     setSelectedDate(date)
     setSlideOpen(true)
@@ -851,6 +901,7 @@ export default function CalendarPage() {
         const updatedBooking = {
           ...selectedBooking!,
           payment_status: response.payment_status,
+          paymentStatus: response.payment_status, // Keep both fields in sync
           status: response.status,
           // Update other fields as needed
         }
@@ -1299,6 +1350,7 @@ export default function CalendarPage() {
                       <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Date & Time</th>
                       <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Staff</th>
                       <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Status</th>
+                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Payment</th>
                       <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Amount</th>
                       <th className="text-right text-sm font-semibold text-gray-600 py-3 px-4">Actions</th>
                     </tr>
@@ -1357,6 +1409,9 @@ export default function CalendarPage() {
                             <Badge className={cn("text-xs", getStatusColor(booking.status))}>
                               {booking.status}
                             </Badge>
+                          </td>
+                          <td className="py-3 px-4">
+                            {getPaymentStatusBadge((booking as any).payment_status)}
                           </td>
                           <td className="py-3 px-4 text-sm font-medium">{formatCurrency(treatment?.price || 0)}</td>
                           <td className="py-3 px-4 text-right">
@@ -1602,9 +1657,12 @@ export default function CalendarPage() {
                                           </h4>
                                           <p className="text-xs text-gray-400 truncate">{patient?.email || "No email"}</p>
                                         </div>
-                                        <Badge className={cn("text-[10px] px-2 py-0.5 font-medium", getStatusColor(booking.status))}>
-                                          {booking.status}
-                                        </Badge>
+                                        <div className="flex flex-col gap-1 items-end">
+                                          <Badge className={cn("text-[10px] px-2 py-0.5 font-medium", getStatusColor(booking.status))}>
+                                            {booking.status}
+                                          </Badge>
+                                          {getPaymentStatusBadge((booking as any).payment_status)}
+                                        </div>
                                       </div>
 
                                       {/* Details Grid */}
@@ -2900,7 +2958,7 @@ export default function CalendarPage() {
                             disabled={isCompleting}
                           >
                             <DollarSign className="h-4 w-4 mr-2" />
-                            Add Payment
+                            Manual Payment
                           </Button>
                           <Button
                             type="button"
@@ -2910,7 +2968,7 @@ export default function CalendarPage() {
                             disabled={isCompleting}
                           >
                             <Smartphone className="h-4 w-4 mr-2" />
-                            Send Link
+                            Payment Digital via Paper
                           </Button>
                         </div>
                       )}

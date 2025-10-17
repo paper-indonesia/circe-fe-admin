@@ -210,6 +210,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             status: b.status || 'confirmed',
             source: b.source || b.appointment_type || 'online',
             paymentStatus: b.paymentStatus || b.payment_status || 'unpaid',
+            payment_status: b.payment_status || b.paymentStatus || 'unpaid', // Add snake_case alias for API consistency
             notes: b.notes || '',
             queueNumber: b.queueNumber || b.queue_number,
             createdAt: new Date(b.createdAt || b.created_at || Date.now()),
@@ -463,10 +464,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Update booking in state with completed status
       setBookings(prev => prev.map(b => {
         if (b.id === id) {
+          const newPaymentStatus = updatedAppointment.payment_status || b.paymentStatus
           return {
             ...b,
             status: 'completed',
-            paymentStatus: updatedAppointment.payment_status || b.paymentStatus,
+            paymentStatus: newPaymentStatus,
+            payment_status: newPaymentStatus, // Keep both fields in sync
             notes: updatedAppointment.notes || b.notes,
           }
         }
