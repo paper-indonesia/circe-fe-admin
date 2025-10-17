@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
     if (!body.phone || body.phone.trim().length < 10) {
       return NextResponse.json(
-        { error: 'Nomor telepon wajib diisi dengan minimal 10 karakter (contoh: +628123456789 atau 08123456789)' },
+        { error: 'Nomor telepon wajib diisi dengan minimal 10 karakter (contoh: +6281xxxxxxxxx atau 081xxxxxxxxx)' },
         { status: 400 }
       )
     }

@@ -8,10 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
+import { useAuth } from "@/lib/auth-context"
 import { format, isToday } from "date-fns"
 import { useRouter } from "next/navigation"
 import { formatCurrency, cn } from "@/lib/utils"
 import LiquidLoading from "@/components/ui/liquid-loader"
+import { OnboardingResumeBanner } from "@/components/onboarding-resume-banner"
+import { OperationalOnboardingWizard } from "@/components/operational-onboarding-wizard"
+import { OperationalOnboardingProvider as OnboardingContext, useOperationalOnboarding } from "@/lib/operational-onboarding-context"
 import {
   Calendar,
   DollarSign,
@@ -64,9 +68,10 @@ const formatResourceName = (key: string) => {
   return labels[key] || key.replace(/_/g, ' ')
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user: authUser, isAdmin } = useAuth()
 
   const { bookings = [], loading: bookingsLoading } = useBookings()
   const { patients = [], loading: patientsLoading } = usePatients()
@@ -76,6 +81,7 @@ export default function DashboardPage() {
   const isLoading = bookingsLoading || patientsLoading || staffLoading || treatmentsLoading
 
   const [user, setUser] = useState<any>(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [tenant, setTenant] = useState<any>(null)
   const [greeting, setGreeting] = useState("Good morning")
   const [transactionPage, setTransactionPage] = useState(0)
@@ -299,6 +305,22 @@ export default function DashboardPage() {
             {format(new Date(), "MMM dd, yyyy")}
           </Button>
         </div>
+
+        {/* Operational Onboarding Banner - Only for tenant_admin */}
+        {authUser && isAdmin() && (
+          <OnboardingResumeBanner onResume={() => setShowOnboarding(true)} />
+        )}
+
+        {/* Operational Onboarding Wizard */}
+        {showOnboarding && (
+          <OperationalOnboardingWizard
+            open={showOnboarding}
+            onComplete={() => {
+              setShowOnboarding(false)
+              window.location.reload()
+            }}
+          />
+        )}
 
         {/* Subscription Card - Only for tenant_admin */}
         {subscription && user?.role === 'tenant_admin' && (
@@ -864,4 +886,8 @@ export default function DashboardPage() {
       </div>
     </MainLayout>
   )
+}
+
+export default function DashboardPage() {
+  return <DashboardContent />
 }

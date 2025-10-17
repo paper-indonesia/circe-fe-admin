@@ -250,7 +250,7 @@ formatCurrency(150000)  // "Rp 150.000"
 
 // Validate phone
 validatePhoneNumber("+62812345678")  // true
-validatePhoneNumber("08123456789")   // true
+validatePhoneNumber("081xxxxxxxxx")   // true
 validatePhoneNumber("12345")         // false
 
 // Validate email

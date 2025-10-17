@@ -230,7 +230,7 @@ export default function ClientsPage() {
     if (!clientForm.phone.trim()) {
       errors.phone = "Phone number is required"
     } else if (!validatePhone(clientForm.phone)) {
-      errors.phone = "Phone must start with 8 and have 8-12 digits (e.g., 8123456789)"
+      errors.phone = "Phone must start with 8 and have 8-12 digits (e.g., 81xxxxxxxxx)"
     }
 
     if (clientForm.email && !validateEmail(clientForm.email)) {
@@ -947,7 +947,7 @@ export default function ClientsPage() {
                   </div>
                   <Input
                     id="phone"
-                    placeholder="8123456789"
+                    placeholder="81xxxxxxxxx"
                     value={clientForm.phone.startsWith('+62') ? clientForm.phone.slice(3) : clientForm.phone}
                     onChange={(e) => {
                       const input = e.target.value.replace(/\D/g, '') // Only allow digits
@@ -1004,7 +1004,7 @@ export default function ClientsPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-800 font-medium mb-1">Format Guidelines:</p>
                 <ul className="text-xs text-blue-700 space-y-0.5">
-                  <li>• Phone: Start with 8 followed by 7-11 digits (e.g., 8123456789)</li>
+                  <li>• Phone: Start with 8 followed by 7-11 digits (e.g., 81xxxxxxxxx)</li>
                   <li>• Email: example@email.com (optional)</li>
                   <li>• Last name is optional</li>
                 </ul>
@@ -1103,7 +1103,7 @@ export default function ClientsPage() {
                         </div>
                         <Input
                           id="edit-phone"
-                          placeholder="8123456789"
+                          placeholder="81xxxxxxxxx"
                           value={clientForm.phone.startsWith('+62') ? clientForm.phone.slice(3) : clientForm.phone}
                           onChange={(e) => {
                             const input = e.target.value.replace(/\D/g, '') // Only allow digits
@@ -1160,7 +1160,7 @@ export default function ClientsPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-xs text-blue-800 font-medium mb-1">Format Guidelines:</p>
                       <ul className="text-xs text-blue-700 space-y-0.5">
-                        <li>• Phone: Start with 8 followed by 7-11 digits (e.g., 8123456789)</li>
+                        <li>• Phone: Start with 8 followed by 7-11 digits (e.g., 81xxxxxxxxx)</li>
                         <li>• Email: example@email.com (optional)</li>
                         <li>• Last name is optional</li>
                       </ul>

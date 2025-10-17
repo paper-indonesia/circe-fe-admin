@@ -2337,7 +2337,7 @@ export default function CalendarPage() {
                             +62
                           </div>
                           <Input
-                            placeholder="8123456789"
+                            placeholder="81xxxxxxxxx"
                             value={(newBookingData.newClientPhone || '').startsWith('+62') ? (newBookingData.newClientPhone || '').slice(3) : (newBookingData.newClientPhone || '')}
                             onChange={(e) => {
                               const input = e.target.value.replace(/\D/g, '') // Only allow digits

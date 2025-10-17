@@ -818,7 +818,7 @@ export default function StaffPage() {
     if (!newStaffForm.phone || newStaffForm.phone.trim().length < 10) {
       toast({
         title: "Error",
-        description: "Nomor telepon wajib diisi dengan minimal 10 karakter (contoh: +628123456789 atau 08123456789)",
+        description: "Nomor telepon wajib diisi dengan minimal 10 karakter (contoh: +6281xxxxxxxxx atau 081xxxxxxxxx)",
         variant: "destructive",
       })
       return
@@ -2594,7 +2594,7 @@ export default function StaffPage() {
                     type="tel"
                     value={newStaffForm.phone}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+628123456789 atau 08123456789"
+                    placeholder="+6281xxxxxxxxx atau 081xxxxxxxxx"
                     className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
                     required
                     minLength={10}

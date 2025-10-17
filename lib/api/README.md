@@ -324,7 +324,7 @@ import { validatePhoneNumber, validateEmail } from '@/lib/api/walk-in'
 describe('Validation', () => {
   test('validates phone numbers', () => {
     expect(validatePhoneNumber('+62812345678')).toBe(true)
-    expect(validatePhoneNumber('08123456789')).toBe(true)
+    expect(validatePhoneNumber('081xxxxxxxxx')).toBe(true)
     expect(validatePhoneNumber('invalid')).toBe(false)
   })
 

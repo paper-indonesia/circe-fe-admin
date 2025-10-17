@@ -25,16 +25,16 @@ const generateDummyData = () => {
 
   // Generate patients
   const patients = [
-    { name: 'Siti Nurhaliza', phone: '081234567890', email: 'siti@gmail.com', notes: 'Prefers morning appointments' },
-    { name: 'Rina Susanti', phone: '081234567891', email: 'rina@gmail.com', notes: 'Allergic to certain products' },
-    { name: 'Maya Putri', phone: '081234567892', email: 'maya@gmail.com', notes: 'VIP customer' },
-    { name: 'Dewi Lestari', phone: '081234567893', email: 'dewi@gmail.com', notes: 'Regular facial treatment' },
-    { name: 'Anita Rahayu', phone: '081234567894', email: 'anita@gmail.com', notes: 'Sensitive skin' },
-    { name: 'Bunga Citra', phone: '081234567895', email: 'bunga@gmail.com', notes: 'Prefers weekend appointments' },
-    { name: 'Indah Permata', phone: '081234567896', email: 'indah@gmail.com', notes: 'New customer' },
-    { name: 'Sarah Abdullah', phone: '081234567897', email: 'sarah@gmail.com', notes: 'Prefers female staff' },
-    { name: 'Fitri Handayani', phone: '081234567898', email: 'fitri@gmail.com', notes: 'Regular massage client' },
-    { name: 'Novi Anggraini', phone: '081234567899', email: 'novi@gmail.com', notes: 'Birthday discount member' },
+    { name: 'Siti Nurhaliza', phone: '081xxxxxxxxx0', email: 'siti@gmail.com', notes: 'Prefers morning appointments' },
+    { name: 'Rina Susanti', phone: '081xxxxxxxxx1', email: 'rina@gmail.com', notes: 'Allergic to certain products' },
+    { name: 'Maya Putri', phone: '081xxxxxxxxx2', email: 'maya@gmail.com', notes: 'VIP customer' },
+    { name: 'Dewi Lestari', phone: '081xxxxxxxxx3', email: 'dewi@gmail.com', notes: 'Regular facial treatment' },
+    { name: 'Anita Rahayu', phone: '081xxxxxxxxx4', email: 'anita@gmail.com', notes: 'Sensitive skin' },
+    { name: 'Bunga Citra', phone: '081xxxxxxxxx5', email: 'bunga@gmail.com', notes: 'Prefers weekend appointments' },
+    { name: 'Indah Permata', phone: '081xxxxxxxxx6', email: 'indah@gmail.com', notes: 'New customer' },
+    { name: 'Sarah Abdullah', phone: '081xxxxxxxxx7', email: 'sarah@gmail.com', notes: 'Prefers female staff' },
+    { name: 'Fitri Handayani', phone: '081xxxxxxxxx8', email: 'fitri@gmail.com', notes: 'Regular massage client' },
+    { name: 'Novi Anggraini', phone: '081xxxxxxxxx9', email: 'novi@gmail.com', notes: 'Birthday discount member' },
   ];
 
   // Generate staff

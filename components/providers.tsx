@@ -5,14 +5,20 @@ import { AppProvider } from "@/lib/context"
 import { AuthProvider } from "@/lib/auth-context"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/lib/theme-context"
+import { OnboardingProvider } from "@/components/onboarding-provider"
+import { OperationalOnboardingProvider } from "@/components/operational-onboarding-provider"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <AppProvider>
         <ThemeProvider>
-          {children}
-          <Toaster />
+          <OnboardingProvider>
+            <OperationalOnboardingProvider>
+              {children}
+              <Toaster />
+            </OperationalOnboardingProvider>
+          </OnboardingProvider>
         </ThemeProvider>
       </AppProvider>
     </AuthProvider>

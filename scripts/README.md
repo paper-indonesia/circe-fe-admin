@@ -181,7 +181,7 @@ npm run seed:full
 {
   ownerId: '...',              // Links to User
   name: 'Budi Santoso',
-  phone: '081234567890',
+  phone: '081xxxxxxxxx0',
   email: 'budi.santoso@gmail.com',
   notes: 'Regular customer',
   totalVisits: 15,

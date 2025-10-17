@@ -41,7 +41,7 @@ export interface Customer {
  * Search existing customers
  *
  * For phone number searches, strips the '+' prefix to avoid MongoDB regex errors.
- * Backend will search by phone digits (e.g., "628123456789" instead of "+628123456789")
+ * Backend will search by phone digits (e.g., "6281xxxxxxxxx" instead of "+6281xxxxxxxxx")
  */
 export async function searchCustomers(query: string): Promise<Customer[]> {
   try {

@@ -565,7 +565,7 @@ export default function WalkInPage() {
     if (!formData.phone.trim()) newErrors.phone = "Phone number is required"
     // Strict validation: must start with +628 and have 8-12 total digits after +62
     if (!formData.phone.match(/^\+628\d{7,11}$/)) {
-      newErrors.phone = "Phone must start with 8 and have 8-12 digits (e.g., 8123456789)"
+      newErrors.phone = "Phone must start with 8 and have 8-12 digits (e.g., 81xxxxxxxxx)"
     }
     if (formData.email && !formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
       newErrors.email = "Invalid email format"
@@ -979,7 +979,7 @@ export default function WalkInPage() {
                         </div>
                         <Input
                           id="phone"
-                          placeholder="8123456789"
+                          placeholder="81xxxxxxxxx"
                           value={(formData.phone || '').startsWith('+62') ? (formData.phone || '').slice(3) : (formData.phone || '')}
                           onChange={(e) => {
                             const input = e.target.value.replace(/\D/g, '') // Only allow digits
