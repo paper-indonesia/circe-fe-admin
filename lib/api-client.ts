@@ -36,6 +36,17 @@ class ApiClient {
       },
     })
 
+    // Handle 401 Unauthorized - Auto logout and redirect
+    if (response.status === 401) {
+      this.handleUnauthorized()
+      throw new ApiError(
+        'Session expired',
+        'Your session has expired. Please log in again.',
+        401,
+        'Sesi Anda telah berakhir. Silakan login kembali.'
+      )
+    }
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
 
@@ -131,6 +142,31 @@ class ApiClient {
     }
 
     return response.json()
+  }
+
+  /**
+   * Handle 401 Unauthorized error
+   * - Clear auth data
+   * - Redirect to login
+   */
+  private handleUnauthorized(): void {
+    // Clear localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user')
+      localStorage.removeItem('tenant')
+      localStorage.removeItem('operational-onboarding-progress')
+
+      // Store current path for redirect after login
+      const currentPath = window.location.pathname
+      if (currentPath !== '/signin' && currentPath !== '/signup') {
+        sessionStorage.setItem('redirectAfterLogin', currentPath)
+      }
+
+      // Redirect to login after a short delay
+      setTimeout(() => {
+        window.location.href = '/signin'
+      }, 1500)
+    }
   }
 
   // Generic method for any endpoint

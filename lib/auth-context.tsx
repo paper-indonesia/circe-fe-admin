@@ -83,8 +83,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('tenant', JSON.stringify(data.tenant))
     }
 
-    // Always redirect to dashboard
-    router.push('/dashboard')
+    // Check if there's a redirect path from previous 401 error
+    const redirectPath = sessionStorage.getItem('redirectAfterLogin')
+    if (redirectPath) {
+      sessionStorage.removeItem('redirectAfterLogin')
+      router.push(redirectPath)
+    } else {
+      // Default redirect to dashboard
+      router.push('/dashboard')
+    }
   }
 
   const signup = async (name: string, email: string, password: string) => {
@@ -109,10 +116,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = '/dashboard'
   }
 
-  const signout = () => {
+  const signout = async () => {
+    // Call backend signout endpoint
+    try {
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+      })
+    } catch (error) {
+      console.error('Failed to signout on backend:', error)
+    }
+
+    // Clear local state
     setUser(null)
     localStorage.removeItem('user')
     localStorage.removeItem('tenant')
+    localStorage.removeItem('operational-onboarding-progress')
+
+    // Clear any pending redirects
+    sessionStorage.removeItem('redirectAfterLogin')
+    sessionStorage.removeItem('onboarding-banner-dismissed')
+
     router.push('/signin')
   }
 
