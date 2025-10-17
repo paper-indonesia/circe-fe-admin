@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building, Shield, Save, Briefcase, Crown, Calendar, AlertCircle, Link2, FileText, Mail, Phone, Globe, Palette, Clock, Users, Tag, X, Plus } from "lucide-react"
+import { Building, Shield, Save, Briefcase, Crown, Calendar, AlertCircle, Link2, FileText, Mail, Phone, Globe, Palette, Clock, Users, Tag, X, Plus, CreditCard, Eye, EyeOff, CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
 import LiquidLoading from "@/components/ui/liquid-loader"
@@ -43,6 +43,11 @@ interface TenantInfo {
     staff_position_templates?: string[]
     service_category_templates?: string[]
   }
+  paper_id_config?: {
+    enabled: boolean
+    client_id: string
+    client_secret: string
+  }
   client_partner_id?: string
   created_at: string
   updated_at: string
@@ -68,6 +73,8 @@ export default function SettingsPage() {
   const { user, isAdmin } = useAuth()
   const [loading, setLoading] = useState(true)
   const [savingTenant, setSavingTenant] = useState(false)
+  const [savingPaperId, setSavingPaperId] = useState(false)
+  const [showClientSecret, setShowClientSecret] = useState(false)
   const [newStaffPosition, setNewStaffPosition] = useState("")
   const [newServiceCategory, setNewServiceCategory] = useState("")
 
@@ -123,6 +130,16 @@ export default function SettingsPage() {
     passwordExpiry: "90"
   })
 
+  const [paperIdForm, setPaperIdForm] = useState<{
+    enabled: boolean
+    client_id: string
+    client_secret: string
+  }>({
+    enabled: false,
+    client_id: "",
+    client_secret: ""
+  })
+
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -149,6 +166,13 @@ export default function SettingsPage() {
                 staff_position_templates: tenantData.settings?.staff_position_templates || [],
                 service_category_templates: tenantData.settings?.service_category_templates || []
               }
+            })
+
+            // Load Paper.id configuration
+            setPaperIdForm({
+              enabled: tenantData.paper_id_config?.enabled || false,
+              client_id: tenantData.paper_id_config?.client_id || "",
+              client_secret: tenantData.paper_id_config?.client_secret || ""
             })
           }
         }
@@ -249,6 +273,43 @@ export default function SettingsPage() {
         description: "Failed to save security settings",
         variant: "destructive"
       })
+    }
+  }
+
+  const handleSavePaperId = async () => {
+    try {
+      setSavingPaperId(true)
+      const response = await fetch('/api/tenants/current', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paper_id_config: {
+            enabled: paperIdForm.enabled,
+            client_id: paperIdForm.client_id,
+            client_secret: paperIdForm.client_secret
+          }
+        })
+      })
+
+      if (response.ok) {
+        const updatedData = await response.json()
+        setTenantInfo(updatedData)
+        toast({
+          title: "Success",
+          description: "Paper.id configuration saved successfully"
+        })
+      } else {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to update')
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save Paper.id configuration",
+        variant: "destructive"
+      })
+    } finally {
+      setSavingPaperId(false)
     }
   }
 
@@ -874,6 +935,161 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Paper.id Payment Gateway Configuration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-indigo-600" />
+                    Paper.id Payment Gateway
+                  </CardTitle>
+                  <CardDescription>
+                    Configure Paper.id credentials for online payment links
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Enable/Disable Toggle */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50">
+                    <div>
+                      <div className="font-medium text-gray-900">Enable Paper.id Integration</div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Allow customers to pay via Paper.id payment links
+                      </p>
+                    </div>
+                    <Switch
+                      checked={paperIdForm.enabled}
+                      onCheckedChange={(checked) => setPaperIdForm(prev => ({ ...prev, enabled: checked }))}
+                    />
+                  </div>
+
+                  {/* Configuration Status */}
+                  {paperIdForm.enabled && (
+                    <Alert className={paperIdForm.client_id && paperIdForm.client_secret ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}>
+                      {paperIdForm.client_id && paperIdForm.client_secret ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <AlertDescription className="text-green-800">
+                            <span className="font-medium">Configured:</span> Paper.id integration is active and ready to use
+                          </AlertDescription>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-4 w-4 text-yellow-600" />
+                          <AlertDescription className="text-yellow-800">
+                            <span className="font-medium">Incomplete:</span> Please enter your Paper.id credentials below to enable payment links
+                          </AlertDescription>
+                        </>
+                      )}
+                    </Alert>
+                  )}
+
+                  {/* Credentials Form */}
+                  {paperIdForm.enabled && (
+                    <div className="space-y-4 pt-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="paperClientId" className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-indigo-600" />
+                          Client ID *
+                        </Label>
+                        <Input
+                          id="paperClientId"
+                          value={paperIdForm.client_id}
+                          onChange={(e) => setPaperIdForm(prev => ({ ...prev, client_id: e.target.value }))}
+                          placeholder="your-paper-id-client-id"
+                          className="font-mono"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Get this from your Paper.id dashboard → Settings → API Keys
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="paperClientSecret" className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-indigo-600" />
+                          Client Secret *
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="paperClientSecret"
+                            type={showClientSecret ? "text" : "password"}
+                            value={paperIdForm.client_secret}
+                            onChange={(e) => setPaperIdForm(prev => ({ ...prev, client_secret: e.target.value }))}
+                            placeholder="••••••••••••••••••••"
+                            className="font-mono pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                            onClick={() => setShowClientSecret(!showClientSecret)}
+                          >
+                            {showClientSecret ? (
+                              <EyeOff className="h-4 w-4 text-gray-400" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-400" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Keep this secret secure. Never share it publicly.
+                        </p>
+                      </div>
+
+                      {/* Platform Fee Information */}
+                      <div className="p-4 border rounded-lg bg-blue-50">
+                        <h4 className="text-sm font-semibold text-blue-900 mb-2">Platform Fees by Plan</h4>
+                        <div className="space-y-1 text-xs text-blue-800">
+                          <div className="flex justify-between">
+                            <span>FREE Plan:</span>
+                            <span className="font-medium">8% platform fee</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>PRO Plan:</span>
+                            <span className="font-medium">5% platform fee</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>ENTERPRISE Plan:</span>
+                            <span className="font-medium">3% platform fee</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-2 italic">
+                          Platform fees are automatically calculated and added to payment links
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Info Alert */}
+                  {!paperIdForm.enabled && (
+                    <Alert className="bg-gray-50 border-gray-200">
+                      <AlertCircle className="h-4 w-4 text-gray-600" />
+                      <AlertDescription className="text-gray-700 text-sm">
+                        <span className="font-medium">Paper.id Integration Disabled</span><br />
+                        Enable this integration to allow customers to pay via online payment links with email, WhatsApp, and SMS notifications.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Save Button */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      onClick={handleSavePaperId}
+                      disabled={savingPaperId || (paperIdForm.enabled && (!paperIdForm.client_id || !paperIdForm.client_secret))}
+                      size="lg"
+                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {savingPaperId ? 'Saving...' : 'Save Paper.id Configuration'}
+                    </Button>
+                    {paperIdForm.enabled && (!paperIdForm.client_id || !paperIdForm.client_secret) && (
+                      <p className="text-sm text-red-600">
+                        Both Client ID and Client Secret are required
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </>
           )}
 
