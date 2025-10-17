@@ -39,11 +39,22 @@ export interface Customer {
 
 /**
  * Search existing customers
+ *
+ * For phone number searches, strips the '+' prefix to avoid MongoDB regex errors.
+ * Backend will search by phone digits (e.g., "628123456789" instead of "+628123456789")
  */
 export async function searchCustomers(query: string): Promise<Customer[]> {
   try {
+    // For phone number search, remove + prefix to avoid regex special character issues
+    // Backend regex will match digits in phone field
+    let searchQuery = query
+    if (query.startsWith('+')) {
+      // Strip '+' from phone number search
+      searchQuery = query.slice(1) // "+628123" -> "628123"
+    }
+
     const params = new URLSearchParams({
-      search: query,
+      search: searchQuery,
       size: '50',
     })
 
@@ -93,21 +104,65 @@ export async function createCustomer(customerData: {
   gender?: string
   notes?: string
 }): Promise<Customer> {
+  // Get tenant_id from localStorage (saved during login)
+  const tenantStr = typeof window !== 'undefined' ? localStorage.getItem('tenant') : null
+  if (!tenantStr) {
+    throw new Error('Session expired. Please login again.')
+  }
+
+  const tenant = JSON.parse(tenantStr)
+  const tenantId = tenant.tenant_id
+
+  if (!tenantId) {
+    throw new Error('Tenant ID not found. Please login again.')
+  }
+
+  // Split name into first_name and last_name
+  const nameParts = customerData.name.trim().split(' ')
+  const firstName = nameParts[0] || ''
+  const lastName = nameParts.slice(1).join(' ') || firstName // Use firstName as fallback if no last name
+
+  // Build request body with required API fields
+  const requestBody: any = {
+    first_name: firstName,
+    last_name: lastName,
+    phone: customerData.phone,
+    tenant_id: tenantId,
+    registration_source: 'staff_portal',
+  }
+
+  // Only include email if it's valid
+  if (customerData.email && customerData.email.includes('@')) {
+    requestBody.email = customerData.email
+  }
+
+  // Optional fields
+  if (customerData.date_of_birth) {
+    requestBody.date_of_birth = customerData.date_of_birth
+  }
+  if (customerData.gender) {
+    requestBody.gender = customerData.gender
+  }
+  if (customerData.notes) {
+    requestBody.notes = customerData.notes
+  }
+
+  console.log('[createCustomer] Sending request:', JSON.stringify(requestBody, null, 2))
+
   const response = await fetch('/api/customers', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      ...customerData,
-      registration_source: 'staff_portal',
-    }),
+    body: JSON.stringify(requestBody),
   })
 
   if (!response.ok) {
     const error = await response.json()
+    console.error('[createCustomer] Error response:', error)
     throw new Error(error.error || 'Failed to create customer')
   }
 
   const data = await response.json()
+  console.log('[createCustomer] Success:', data.customer_id || data._id || data.id)
   return data
 }
 

@@ -59,6 +59,7 @@ import {
   CreditCard,
   Building2,
   Smartphone,
+  Loader2,
 } from "lucide-react"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import {
@@ -180,6 +181,7 @@ export default function CalendarPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loadingCustomers, setLoadingCustomers] = useState(false)
   const [customersError, setCustomersError] = useState<string | null>(null)
+  const [searchingCustomer, setSearchingCustomer] = useState(false)
 
   // Calculate date range based on selection
   const { startDate, endDate } = useMemo(() => {
@@ -420,6 +422,66 @@ export default function CalendarPage() {
   const handleCustomerSearch = (query: string) => {
     setClientSearch(query)
     handleCustomerSearchChange(query)
+  }
+
+  // Manual search customer by phone (for New Customer flow)
+  const handleSearchCustomerByPhone = async () => {
+    if (!newBookingData.newClientPhone) {
+      toast({
+        title: "Phone Required",
+        description: "Please enter phone number first",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validate phone format
+    const phoneDigits = newBookingData.newClientPhone.startsWith('+62')
+      ? newBookingData.newClientPhone.slice(3)
+      : newBookingData.newClientPhone
+
+    if (phoneDigits.length < 8 || !phoneDigits.startsWith('8')) {
+      toast({
+        title: "Invalid Phone",
+        description: "Phone must start with 8 and have at least 8 digits",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setSearchingCustomer(true)
+    try {
+      const results = await searchCustomers(newBookingData.newClientPhone)
+
+      if (results && results.length > 0) {
+        const existingCustomer = results[0]
+        // Found existing customer - auto-fill data and switch to existing
+        setNewBookingData({
+          ...newBookingData,
+          newClientName: `${existingCustomer.first_name} ${existingCustomer.last_name}`.trim(),
+          patientId: existingCustomer._id || existingCustomer.id || existingCustomer.customer_id,
+          isNewClient: false // Switch to existing customer
+        })
+        toast({
+          title: "Customer Found!",
+          description: `${existingCustomer.first_name} ${existingCustomer.last_name} - Ready to book`,
+        })
+      } else {
+        // Not found - will create new customer
+        toast({
+          title: "New Customer",
+          description: "Phone not found. We'll create a new customer profile.",
+        })
+      }
+    } catch (error: any) {
+      console.error('[Calendar] Customer search error:', error)
+      toast({
+        title: "New Customer",
+        description: "Phone not found. We'll create a new customer profile.",
+      })
+    } finally {
+      setSearchingCustomer(false)
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -2206,11 +2268,42 @@ export default function CalendarPage() {
                           </div>
                           <div>
                             <Label>Phone Number *</Label>
-                            <Input
-                              placeholder="+62 xxx xxx xxxx"
-                              value={newBookingData.newClientPhone}
-                              onChange={(e) => setNewBookingData({ ...newBookingData, newClientPhone: e.target.value })}
-                            />
+                            <div className="flex gap-2">
+                              <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
+                                +62
+                              </div>
+                              <Input
+                                placeholder="8123456789"
+                                value={(newBookingData.newClientPhone || '').startsWith('+62') ? (newBookingData.newClientPhone || '').slice(3) : (newBookingData.newClientPhone || '')}
+                                onChange={(e) => {
+                                  const input = e.target.value.replace(/\D/g, '') // Only allow digits
+                                  const fullPhone = input ? `+62${input}` : ''
+                                  setNewBookingData({ ...newBookingData, newClientPhone: fullPhone })
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleSearchCustomerByPhone}
+                                disabled={searchingCustomer || !newBookingData.newClientPhone || newBookingData.newClientPhone.length < 11}
+                                className="shrink-0"
+                              >
+                                {searchingCustomer ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Searching...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Search className="h-4 w-4 mr-2" />
+                                    Search
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Enter phone number and click Search to check if customer exists.
+                            </p>
                           </div>
                         </div>
                       )}

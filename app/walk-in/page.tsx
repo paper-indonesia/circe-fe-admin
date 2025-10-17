@@ -17,7 +17,7 @@ import {
   Check, AlertCircle, Users, Calendar,
   ChevronRight, X, Printer, Mail, MessageSquare,
   TrendingUp, Star, Activity, Search, Sparkles, Syringe, Zap, Heart,
-  Percent, DollarSign, ChevronDown
+  Percent, DollarSign, ChevronDown, Loader2
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { usePatients, useStaff, useTreatments, useBookings } from "@/lib/context"
@@ -107,6 +107,7 @@ export default function WalkInPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loadingCustomers, setLoadingCustomers] = useState(false)
   const [customersError, setCustomersError] = useState<string | null>(null)
+  const [searchingCustomer, setSearchingCustomer] = useState(false)
 
   // Ref for auto-scroll to staff section
   const staffSectionRef = useRef<HTMLDivElement>(null)
@@ -408,13 +409,75 @@ export default function WalkInPage() {
     []
   )
 
+  // Manual search customer by phone
+  const handleSearchCustomerByPhone = async () => {
+    if (!formData.phone) {
+      toast({
+        title: "Phone Required",
+        description: "Please enter phone number first",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Validate phone format
+    const phoneDigits = formData.phone.startsWith('+62')
+      ? formData.phone.slice(3)
+      : formData.phone
+
+    if (phoneDigits.length < 8 || !phoneDigits.startsWith('8')) {
+      toast({
+        title: "Invalid Phone",
+        description: "Phone must start with 8 and have at least 8 digits",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setSearchingCustomer(true)
+    try {
+      const results = await searchCustomers(formData.phone)
+
+      if (results && results.length > 0) {
+        const existingCustomer = results[0]
+        // Found existing customer - auto-fill data
+        setFormData({
+          ...formData,
+          name: `${existingCustomer.first_name} ${existingCustomer.last_name}`.trim(),
+          email: existingCustomer.email || '',
+          existingClient: true,
+          existingClientId: existingCustomer._id || existingCustomer.id || existingCustomer.customer_id
+        })
+        toast({
+          title: "Customer Found!",
+          description: `${existingCustomer.first_name} ${existingCustomer.last_name} - Ready to book`,
+        })
+      } else {
+        // Not found - will create new customer
+        toast({
+          title: "New Customer",
+          description: "Phone not found. We'll create a new customer profile.",
+        })
+      }
+    } catch (error: any) {
+      console.error('[Walk-In] Customer search error:', error)
+      toast({
+        title: "New Customer",
+        description: "Phone not found. We'll create a new customer profile.",
+      })
+    } finally {
+      setSearchingCustomer(false)
+    }
+  }
+
   const validateForm = () => {
     const newErrors: any = {}
 
     if (!formData.name.trim()) newErrors.name = "Name is required"
     if (!formData.phone.trim()) newErrors.phone = "Phone number is required"
-    if (!formData.phone.match(/^(\+62|0)[0-9]{9,13}$/)) {
-      newErrors.phone = "Invalid phone number format"
+    // Strict validation: must start with +628 and have 8-12 total digits after +62
+    if (!formData.phone.match(/^\+628\d{7,11}$/)) {
+      newErrors.phone = "Phone must start with 8 and have 8-12 digits (e.g., 8123456789)"
     }
     if (formData.email && !formData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
       newErrors.email = "Invalid email format"
@@ -820,14 +883,45 @@ export default function WalkInPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number *</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="+62 812 345 6789"
-                        className={errors.phone ? "border-red-500" : ""}
-                        required
-                      />
+                      <div className="flex gap-2">
+                        <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
+                          +62
+                        </div>
+                        <Input
+                          id="phone"
+                          placeholder="8123456789"
+                          value={(formData.phone || '').startsWith('+62') ? (formData.phone || '').slice(3) : (formData.phone || '')}
+                          onChange={(e) => {
+                            const input = e.target.value.replace(/\D/g, '') // Only allow digits
+                            const fullPhone = input ? `+62${input}` : ''
+                            setFormData({ ...formData, phone: fullPhone })
+                          }}
+                          className={errors.phone ? "border-red-500" : ""}
+                          required
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleSearchCustomerByPhone}
+                          disabled={searchingCustomer || !formData.phone || formData.phone.length < 11}
+                          className="shrink-0"
+                        >
+                          {searchingCustomer ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Searching...
+                            </>
+                          ) : (
+                            <>
+                              <Search className="h-4 w-4 mr-2" />
+                              Search
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Enter phone number and click Search to check if customer exists.
+                      </p>
                       {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
                     </div>
                   </div>

@@ -216,10 +216,8 @@ export default function ClientsPage() {
 
   const validatePhone = (phone: string): boolean => {
     if (!phone) return false
-    // Remove spaces and special characters for validation
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '')
-    // Check if it has at least 10 digits
-    return /^\+?\d{10,15}$/.test(cleanPhone)
+    // Must start with +628 and have 8-12 total digits after +62
+    return /^\+628\d{7,11}$/.test(phone)
   }
 
   const validateForm = (): boolean => {
@@ -232,7 +230,7 @@ export default function ClientsPage() {
     if (!clientForm.phone.trim()) {
       errors.phone = "Phone number is required"
     } else if (!validatePhone(clientForm.phone)) {
-      errors.phone = "Invalid phone format. Use format: +62 xxx xxxx xxxx or 08xx xxxx xxxx"
+      errors.phone = "Phone must start with 8 and have 8-12 digits (e.g., 8123456789)"
     }
 
     if (clientForm.email && !validateEmail(clientForm.email)) {
@@ -943,18 +941,24 @@ export default function ClientsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
-                <Input
-                  id="phone"
-                  placeholder="+62 812 345 6789 or 08123456789"
-                  value={clientForm.phone}
-                  onChange={(e) => {
-                    setClientForm((prev) => ({ ...prev, phone: e.target.value }))
-                    if (formErrors.phone) {
-                      setFormErrors((prev) => ({ ...prev, phone: "" }))
-                    }
-                  }}
-                  className={formErrors.phone ? "border-red-500 focus-visible:ring-red-500" : ""}
-                />
+                <div className="flex gap-2">
+                  <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
+                    +62
+                  </div>
+                  <Input
+                    id="phone"
+                    placeholder="8123456789"
+                    value={clientForm.phone.startsWith('+62') ? clientForm.phone.slice(3) : clientForm.phone}
+                    onChange={(e) => {
+                      const input = e.target.value.replace(/\D/g, '') // Only allow digits
+                      setClientForm((prev) => ({ ...prev, phone: input ? `+62${input}` : '' }))
+                      if (formErrors.phone) {
+                        setFormErrors((prev) => ({ ...prev, phone: "" }))
+                      }
+                    }}
+                    className={formErrors.phone ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  />
+                </div>
                 {formErrors.phone && (
                   <p className="text-sm text-red-600 mt-1">{formErrors.phone}</p>
                 )}
@@ -1000,7 +1004,7 @@ export default function ClientsPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-800 font-medium mb-1">Format Guidelines:</p>
                 <ul className="text-xs text-blue-700 space-y-0.5">
-                  <li>• Phone: +62 xxx xxxx xxxx or 08xx xxxx xxxx</li>
+                  <li>• Phone: Start with 8 followed by 7-11 digits (e.g., 8123456789)</li>
                   <li>• Email: example@email.com (optional)</li>
                   <li>• Last name is optional</li>
                 </ul>
@@ -1093,18 +1097,24 @@ export default function ClientsPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="edit-phone">Phone *</Label>
-                      <Input
-                        id="edit-phone"
-                        placeholder="+62 812 345 6789 or 08123456789"
-                        value={clientForm.phone}
-                        onChange={(e) => {
-                          setClientForm((prev) => ({ ...prev, phone: e.target.value }))
-                          if (formErrors.phone) {
-                            setFormErrors((prev) => ({ ...prev, phone: "" }))
-                          }
-                        }}
-                        className={formErrors.phone ? "border-red-500 focus-visible:ring-red-500" : ""}
-                      />
+                      <div className="flex gap-2">
+                        <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
+                          +62
+                        </div>
+                        <Input
+                          id="edit-phone"
+                          placeholder="8123456789"
+                          value={clientForm.phone.startsWith('+62') ? clientForm.phone.slice(3) : clientForm.phone}
+                          onChange={(e) => {
+                            const input = e.target.value.replace(/\D/g, '') // Only allow digits
+                            setClientForm((prev) => ({ ...prev, phone: input ? `+62${input}` : '' }))
+                            if (formErrors.phone) {
+                              setFormErrors((prev) => ({ ...prev, phone: "" }))
+                            }
+                          }}
+                          className={formErrors.phone ? "border-red-500 focus-visible:ring-red-500" : ""}
+                        />
+                      </div>
                       {formErrors.phone && (
                         <p className="text-sm text-red-600 mt-1">{formErrors.phone}</p>
                       )}
@@ -1150,7 +1160,7 @@ export default function ClientsPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-xs text-blue-800 font-medium mb-1">Format Guidelines:</p>
                       <ul className="text-xs text-blue-700 space-y-0.5">
-                        <li>• Phone: +62 xxx xxxx xxxx or 08xx xxxx xxxx</li>
+                        <li>• Phone: Start with 8 followed by 7-11 digits (e.g., 8123456789)</li>
                         <li>• Email: example@email.com (optional)</li>
                         <li>• Last name is optional</li>
                       </ul>
