@@ -30,16 +30,17 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
       }
 
       try {
-        // Check if operational onboarding is already marked as completed
-        const onboardingResponse = await fetch('/api/settings/operational-onboarding')
-
-        if (onboardingResponse.ok) {
-          const onboardingData = await onboardingResponse.json()
-
-          // If already completed, no need to show wizard
-          if (onboardingData.operationalOnboardingCompleted) {
-            setLoading(false)
-            return
+        // Check if operational onboarding is already marked as completed in localStorage
+        const completionData = localStorage.getItem('operational-onboarding-completed')
+        if (completionData) {
+          try {
+            const parsed = JSON.parse(completionData)
+            if (parsed.completed) {
+              setLoading(false)
+              return
+            }
+          } catch (e) {
+            // Invalid data, continue with check
           }
         }
 
@@ -93,15 +94,11 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
                         // Has everything, mark as completed and no wizard needed
                         needsOnboarding = false
 
-                        // Auto-mark as completed if all data exists
-                        await fetch('/api/settings/operational-onboarding', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            operationalOnboardingCompleted: true,
-                            completedAt: new Date().toISOString()
-                          })
-                        })
+                        // Auto-mark as completed if all data exists in localStorage
+                        localStorage.setItem('operational-onboarding-completed', JSON.stringify({
+                          completed: true,
+                          completedAt: new Date().toISOString()
+                        }))
                       }
                     }
                   }

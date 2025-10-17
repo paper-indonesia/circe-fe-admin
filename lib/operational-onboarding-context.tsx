@@ -74,6 +74,7 @@ interface OnboardingContextType {
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined)
 
 const STORAGE_KEY = "operational-onboarding-progress"
+const COMPLETION_KEY = "operational-onboarding-completed"
 
 export function OperationalOnboardingProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<OnboardingProgress>({
@@ -148,25 +149,18 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
 
   const completeOnboarding = async () => {
     try {
-      // Mark operational onboarding as complete
-      const response = await fetch("/api/settings/operational-onboarding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          operationalOnboardingCompleted: true,
-          completedAt: new Date().toISOString()
-        }),
-      })
+      // Mark operational onboarding as complete in localStorage
+      localStorage.setItem(COMPLETION_KEY, JSON.stringify({
+        completed: true,
+        completedAt: new Date().toISOString()
+      }))
 
-      if (response.ok) {
-        setProgress((prev) => ({
-          ...prev,
-          isCompleted: true,
-        }))
-        localStorage.removeItem(STORAGE_KEY) // Clear temporary progress
-      } else {
-        throw new Error("Failed to save onboarding completion status")
-      }
+      setProgress((prev) => ({
+        ...prev,
+        isCompleted: true,
+      }))
+
+      localStorage.removeItem(STORAGE_KEY) // Clear temporary progress
     } catch (error) {
       console.error("Failed to complete onboarding:", error)
       throw error
@@ -184,14 +178,16 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
       isCompleted: false,
     })
     localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(COMPLETION_KEY)
   }
 
   const loadProgress = async () => {
     try {
-      const response = await fetch("/api/settings/operational-onboarding")
-      if (response.ok) {
-        const data = await response.json()
-        if (data.operationalOnboardingCompleted) {
+      // Check completion status from localStorage
+      const completionData = localStorage.getItem(COMPLETION_KEY)
+      if (completionData) {
+        const parsed = JSON.parse(completionData)
+        if (parsed.completed) {
           setProgress((prev) => ({
             ...prev,
             isCompleted: true,
