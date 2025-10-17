@@ -63,6 +63,7 @@ import {
   Smartphone,
   Loader2,
   UserPlus,
+  RefreshCw,
 } from "lucide-react"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import {
@@ -85,7 +86,7 @@ type DateRange = "week" | "month" | "2weeks"
 export default function CalendarPage() {
   const { toast } = useToast()
 
-  const { bookings = [], loading, updateBooking, deleteBooking, rescheduleBooking, completeBooking, markNoShowBooking } = useBookings()
+  const { bookings = [], loading, updateBooking, deleteBooking, rescheduleBooking, completeBooking, markNoShowBooking, reloadBookings } = useBookings()
   const { patients = [] } = usePatients()
   const { staff = [] } = useStaff()
   const { treatments = [] } = useTreatments()
@@ -157,6 +158,8 @@ export default function CalendarPage() {
 
   const [newBookingOpen, setNewBookingOpen] = useState(false)
   const [newBookingStep, setNewBookingStep] = useState(1)
+  const [isCreatingAppointment, setIsCreatingAppointment] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [newBookingData, setNewBookingData] = useState<any>({
     treatmentId: "",
     patientId: "",
@@ -1031,6 +1034,26 @@ export default function CalendarPage() {
     }
   }
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await reloadBookings()
+      toast({
+        title: "Refreshed successfully",
+        description: "Appointment list has been updated"
+      })
+    } catch (error: any) {
+      console.error('Failed to refresh bookings:', error)
+      toast({
+        title: "Failed to refresh",
+        description: error.message || "Please try again",
+        variant: "destructive"
+      })
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   if (loading) {
     return (
       <MainLayout>
@@ -1050,13 +1073,24 @@ export default function CalendarPage() {
             <h1 className="text-3xl font-bold text-gray-900">Calendar</h1>
             <p className="text-gray-500 mt-1">Manage your bookings and schedule</p>
           </div>
-          <Button
-            onClick={handleNewBookingFromButton}
-            className="bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Booking
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              variant="outline"
+              className="border-gray-300"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button
+              onClick={handleNewBookingFromButton}
+              className="bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Booking
+            </Button>
+          </div>
         </div>
 
         {/* Controls */}
@@ -1751,7 +1785,7 @@ export default function CalendarPage() {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <CalendarIcon className="h-4 w-4 text-gray-400" />
-                        <span className="text-xs text-gray-500 font-medium">Booking ID #{selectedBooking.id.slice(0, 8).toUpperCase()}</span>
+                        <span className="text-xs text-gray-500 font-medium">Booking ID #{selectedBooking.id?.slice(0, 8).toUpperCase() || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {!isEditMode && !['completed', 'cancelled'].includes(selectedBooking.status) && (
@@ -2042,10 +2076,10 @@ export default function CalendarPage() {
               {/* Progress Steps */}
               <div className="flex items-center gap-1 mt-4">
                 {[
-                  { num: 1, label: 'Treatment', icon: Star },
-                  { num: 2, label: 'Staff', icon: User },
-                  { num: 3, label: 'Schedule', icon: Clock },
-                  { num: 4, label: 'Payment', icon: DollarSign },
+                  { num: 1, label: 'Customer', icon: User },
+                  { num: 2, label: 'Product', icon: Star },
+                  { num: 3, label: 'Staff', icon: User },
+                  { num: 4, label: 'Schedule', icon: Clock },
                   { num: 5, label: 'Review', icon: CheckCircle }
                 ].map((step, idx) => (
                   <>
@@ -2070,8 +2104,203 @@ export default function CalendarPage() {
             </DialogHeader>
 
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              {/* Step 1: Treatment Selection with Search & Pagination */}
-              {newBookingStep === 1 && (() => {
+              {/* Step 1: Customer Selection */}
+              {newBookingStep === 1 && (
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
+                      <User className="h-4 w-4 text-[#C8B6FF]" />
+                    </div>
+                    Customer Information
+                  </h3>
+
+                  {/* New or Existing Customer Toggle */}
+                  <div className="flex gap-3 mb-4">
+                    <Button
+                      type="button"
+                      variant={!newBookingData.isNewClient ? "default" : "outline"}
+                      onClick={() => setNewBookingData({ ...newBookingData, isNewClient: false, patientId: "", newClientName: "", newClientPhone: "" })}
+                      className="flex-1"
+                    >
+                      Existing Customer
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={newBookingData.isNewClient ? "default" : "outline"}
+                      onClick={() => setNewBookingData({ ...newBookingData, isNewClient: true, patientId: "" })}
+                      className="flex-1"
+                    >
+                      New Customer
+                    </Button>
+                  </div>
+
+                  {/* Existing Customer Search */}
+                  {!newBookingData.isNewClient && (
+                    <div className="space-y-3">
+                      <Label>Search Customer</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Filter by name or phone..."
+                          value={clientSearch}
+                          onChange={(e) => handleCustomerSearch(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+
+                      {/* Customer List */}
+                      <div className="border rounded-lg max-h-80 overflow-y-auto">
+                        {loadingCustomers ? (
+                          <div className="p-4 text-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                            <p className="text-sm text-muted-foreground">Loading customers...</p>
+                          </div>
+                        ) : customersError ? (
+                          <div className="p-4 text-center">
+                            <p className="text-sm text-red-500 mb-2">{customersError}</p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={loadInitialCustomers}
+                            >
+                              Retry
+                            </Button>
+                          </div>
+                        ) : customers.length > 0 ? (
+                          <div className="divide-y">
+                            {customers.map((customer) => {
+                              const customerId = customer._id || customer.id || ""
+                              const isSelected = newBookingData.patientId === customerId
+
+                              return (
+                                <button
+                                  key={customerId}
+                                  type="button"
+                                  onClick={() => {
+                                    setNewBookingData({
+                                      ...newBookingData,
+                                      patientId: customerId,
+                                      newClientName: `${customer.first_name} ${customer.last_name}`.trim(),
+                                      newClientPhone: customer.phone
+                                    })
+                                  }}
+                                  className={cn(
+                                    "w-full p-3 text-left transition-colors relative",
+                                    isSelected
+                                      ? "bg-primary/10 border-l-4 border-l-primary"
+                                      : "hover:bg-muted/50"
+                                  )}
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-medium truncate">{customer.first_name} {customer.last_name}</p>
+                                      <p className="text-sm text-muted-foreground">{customer.phone}</p>
+                                      {customer.email && (
+                                        <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
+                                      )}
+                                    </div>
+                                    {isSelected && (
+                                      <Badge className="bg-primary text-white shrink-0">
+                                        Selected
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center text-muted-foreground">
+                            <p className="text-sm mb-2">No customers found</p>
+                            <p className="text-xs">Try adjusting your search</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Customer Form */}
+                  {newBookingData.isNewClient && (
+                    <div className="space-y-3">
+                      <div>
+                        <Label>Customer Name *</Label>
+                        <Input
+                          placeholder="Full name"
+                          value={newBookingData.newClientName}
+                          onChange={(e) => setNewBookingData({ ...newBookingData, newClientName: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Phone Number *</Label>
+                        <div className="flex gap-2">
+                          <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
+                            +62
+                          </div>
+                          <Input
+                            placeholder="8123456789"
+                            value={(newBookingData.newClientPhone || '').startsWith('+62') ? (newBookingData.newClientPhone || '').slice(3) : (newBookingData.newClientPhone || '')}
+                            onChange={(e) => {
+                              const input = e.target.value.replace(/\D/g, '') // Only allow digits
+                              const fullPhone = input ? `+62${input}` : ''
+                              setNewBookingData({ ...newBookingData, newClientPhone: fullPhone })
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleSearchCustomerByPhone}
+                            disabled={searchingCustomer || !newBookingData.newClientPhone || newBookingData.newClientPhone.length < 11}
+                            className="shrink-0"
+                          >
+                            {searchingCustomer ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Searching...
+                              </>
+                            ) : (
+                              <>
+                                <Search className="h-4 w-4 mr-2" />
+                                Search
+                              </>
+                            )}
+                          </Button>
+
+                          {/* Confirmation Button - Show when customer not found and not yet confirmed */}
+                          {customerSearchResult === 'not_found' && !customerConfirmed && (
+                            <Button
+                              type="button"
+                              variant="default"
+                              onClick={handleConfirmNewCustomer}
+                              className="shrink-0 bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Create New
+                            </Button>
+                          )}
+
+                          {/* Success Indicator - Show when confirmed */}
+                          {customerConfirmed && customerSearchResult === 'not_found' && (
+                            <div className="shrink-0 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md">
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              <span className="text-sm text-green-700 font-medium">Confirmed</span>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {customerSearchResult === 'not_searched' && 'Enter phone number and click Search to check if customer exists.'}
+                          {customerSearchResult === 'found' && 'Customer found and confirmed. Proceed to next step.'}
+                          {customerSearchResult === 'not_found' && !customerConfirmed && 'Customer not found. Click "Create New" to confirm creating a new customer profile.'}
+                          {customerSearchResult === 'not_found' && customerConfirmed && 'New customer confirmed. Will be created when booking is completed.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Product Selection with Search & Pagination */}
+              {newBookingStep === 2 && (() => {
                 const filteredTreatments = treatments.filter(t =>
                   t.name.toLowerCase().includes(treatmentSearch.toLowerCase()) ||
                   t.category.toLowerCase().includes(treatmentSearch.toLowerCase())
@@ -2085,13 +2314,13 @@ export default function CalendarPage() {
                 return (
                   <div className="space-y-4">
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Select Treatment</h3>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-3">Select Product</h3>
 
                       {/* Search */}
                       <div className="relative mb-4">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
-                          placeholder="Search treatment..."
+                          placeholder="Search product..."
                           value={treatmentSearch}
                           onChange={(e) => {
                             setTreatmentSearch(e.target.value)
@@ -2159,8 +2388,8 @@ export default function CalendarPage() {
                 )
               })()}
 
-              {/* Step 2: Staff Selection (filtered by selected treatment) */}
-              {newBookingStep === 2 && (() => {
+              {/* Step 3: Staff Selection (filtered by selected product) */}
+              {newBookingStep === 3 && (() => {
                 const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
 
                 // Use staffIds from treatment (from include_staff=true API)
@@ -2180,7 +2409,7 @@ export default function CalendarPage() {
                     <div>
                       <h3 className="text-sm font-semibold text-gray-900 mb-3">Select Available Staff</h3>
                       <p className="text-xs text-gray-500 mb-4">
-                        {availableStaff.length} staff member(s) available for {selectedTreatment?.name}
+                        {availableStaff.length} staff member(s) available for this product
                       </p>
                       <div className="grid grid-cols-2 gap-3">
                         {availableStaff.map((staffMember) => (
@@ -2211,8 +2440,8 @@ export default function CalendarPage() {
                 )
               })()}
 
-              {/* Step 3: Schedule (Date & Time) + Customer Selection */}
-              {newBookingStep === 3 && (() => {
+              {/* Step 4: Schedule (Date & Time) */}
+              {newBookingStep === 4 && (() => {
                 const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
                 const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
 
@@ -2259,361 +2488,145 @@ export default function CalendarPage() {
                     ) : (
                       <div className="p-4 bg-muted/50 rounded-lg border border-dashed">
                         <p className="text-sm text-muted-foreground text-center">
-                          Please select a treatment and staff member to view available time slots
+                          Please select a product and staff member to view available time slots
                         </p>
                       </div>
                     )}
-
-                    {/* Customer Selection */}
-                    <div>
-                      <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
-                          <User className="h-4 w-4 text-[#C8B6FF]" />
-                        </div>
-                        Customer Information
-                      </h3>
-
-                      {/* New or Existing Customer Toggle */}
-                      <div className="flex gap-3 mb-4">
-                        <Button
-                          type="button"
-                          variant={!newBookingData.isNewClient ? "default" : "outline"}
-                          onClick={() => setNewBookingData({ ...newBookingData, isNewClient: false, patientId: "", newClientName: "", newClientPhone: "" })}
-                          className="flex-1"
-                        >
-                          Existing Customer
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={newBookingData.isNewClient ? "default" : "outline"}
-                          onClick={() => setNewBookingData({ ...newBookingData, isNewClient: true, patientId: "" })}
-                          className="flex-1"
-                        >
-                          New Customer
-                        </Button>
-                      </div>
-
-                      {/* Existing Customer Search */}
-                      {!newBookingData.isNewClient && (
-                        <div className="space-y-3">
-                          <Label>Search Customer</Label>
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="Filter by name or phone..."
-                              value={clientSearch}
-                              onChange={(e) => handleCustomerSearch(e.target.value)}
-                              className="pl-10"
-                            />
-                          </div>
-
-                          {/* Customer List */}
-                          <div className="border rounded-lg max-h-80 overflow-y-auto">
-                            {loadingCustomers ? (
-                              <div className="p-4 text-center">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
-                                <p className="text-sm text-muted-foreground">Loading customers...</p>
-                              </div>
-                            ) : customersError ? (
-                              <div className="p-4 text-center">
-                                <p className="text-sm text-red-500 mb-2">{customersError}</p>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={loadInitialCustomers}
-                                >
-                                  Retry
-                                </Button>
-                              </div>
-                            ) : customers.length > 0 ? (
-                              <div className="divide-y">
-                                {customers.map((customer) => {
-                                  const customerId = customer._id || customer.id || ""
-                                  const isSelected = newBookingData.patientId === customerId
-
-                                  return (
-                                    <button
-                                      key={customerId}
-                                      type="button"
-                                      onClick={() => {
-                                        setNewBookingData({
-                                          ...newBookingData,
-                                          patientId: customerId,
-                                          newClientName: `${customer.first_name} ${customer.last_name}`.trim(),
-                                          newClientPhone: customer.phone
-                                        })
-                                      }}
-                                      className={cn(
-                                        "w-full p-3 text-left transition-colors relative",
-                                        isSelected
-                                          ? "bg-primary/10 border-l-4 border-l-primary"
-                                          : "hover:bg-muted/50"
-                                      )}
-                                    >
-                                      <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1 min-w-0">
-                                          <p className="font-medium truncate">{customer.first_name} {customer.last_name}</p>
-                                          <p className="text-sm text-muted-foreground">{customer.phone}</p>
-                                          {customer.email && (
-                                            <p className="text-xs text-muted-foreground truncate">{customer.email}</p>
-                                          )}
-                                        </div>
-                                        {isSelected && (
-                                          <Badge className="bg-primary text-white shrink-0">
-                                            Selected
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            ) : (
-                              <div className="p-8 text-center text-muted-foreground">
-                                <p className="text-sm mb-2">No customers found</p>
-                                <p className="text-xs">Try adjusting your search</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* New Customer Form */}
-                      {newBookingData.isNewClient && (
-                        <div className="space-y-3">
-                          <div>
-                            <Label>Customer Name *</Label>
-                            <Input
-                              placeholder="Full name"
-                              value={newBookingData.newClientName}
-                              onChange={(e) => setNewBookingData({ ...newBookingData, newClientName: e.target.value })}
-                            />
-                          </div>
-                          <div>
-                            <Label>Phone Number *</Label>
-                            <div className="flex gap-2">
-                              <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
-                                +62
-                              </div>
-                              <Input
-                                placeholder="8123456789"
-                                value={(newBookingData.newClientPhone || '').startsWith('+62') ? (newBookingData.newClientPhone || '').slice(3) : (newBookingData.newClientPhone || '')}
-                                onChange={(e) => {
-                                  const input = e.target.value.replace(/\D/g, '') // Only allow digits
-                                  const fullPhone = input ? `+62${input}` : ''
-                                  setNewBookingData({ ...newBookingData, newClientPhone: fullPhone })
-                                }}
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={handleSearchCustomerByPhone}
-                                disabled={searchingCustomer || !newBookingData.newClientPhone || newBookingData.newClientPhone.length < 11}
-                                className="shrink-0"
-                              >
-                                {searchingCustomer ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Searching...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Search className="h-4 w-4 mr-2" />
-                                    Search
-                                  </>
-                                )}
-                              </Button>
-
-                              {/* Confirmation Button - Show when customer not found and not yet confirmed */}
-                              {customerSearchResult === 'not_found' && !customerConfirmed && (
-                                <Button
-                                  type="button"
-                                  variant="default"
-                                  onClick={handleConfirmNewCustomer}
-                                  className="shrink-0 bg-green-600 hover:bg-green-700 text-white"
-                                >
-                                  <UserPlus className="h-4 w-4 mr-2" />
-                                  Create New
-                                </Button>
-                              )}
-
-                              {/* Success Indicator - Show when confirmed */}
-                              {customerConfirmed && customerSearchResult === 'not_found' && (
-                                <div className="shrink-0 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md">
-                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                  <span className="text-sm text-green-700 font-medium">Confirmed</span>
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {customerSearchResult === 'not_searched' && 'Enter phone number and click Search to check if customer exists.'}
-                              {customerSearchResult === 'found' && 'Customer found and confirmed. Proceed to next step.'}
-                              {customerSearchResult === 'not_found' && !customerConfirmed && 'Customer not found. Click "Create New" to confirm creating a new customer profile.'}
-                              {customerSearchResult === 'not_found' && customerConfirmed && 'New customer confirmed. Will be created when booking is completed.'}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 )
               })()}
-
-              {/* Step 4: Payment Method */}
-              {newBookingStep === 4 && (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
-                        <DollarSign className="h-4 w-4 text-[#C8B6FF]" />
-                      </div>
-                      Select Payment Method
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      {[
-                        { value: 'cash', label: 'Cash', icon: Banknote, iconBg: 'bg-gradient-to-br from-green-400 to-emerald-500', iconColor: 'text-white' },
-                        { value: 'card', label: 'Debit/Credit Card', icon: CreditCard, iconBg: 'bg-gradient-to-br from-blue-400 to-cyan-500', iconColor: 'text-white' },
-                        { value: 'transfer', label: 'Bank Transfer', icon: Building2, iconBg: 'bg-gradient-to-br from-purple-400 to-violet-500', iconColor: 'text-white' },
-                        { value: 'ewallet', label: 'E-Wallet', icon: Smartphone, iconBg: 'bg-gradient-to-br from-orange-400 to-amber-500', iconColor: 'text-white' }
-                      ].map((method) => (
-                        <button
-                          key={method.value}
-                          onClick={() => setNewBookingData({ ...newBookingData, paymentMethod: method.value })}
-                          className={cn(
-                            "p-5 rounded-2xl border-2 text-left transition-all hover:shadow-lg hover:scale-105",
-                            newBookingData.paymentMethod === method.value
-                              ? "border-[#C8B6FF] bg-gradient-to-br from-[#FFD6FF]/30 to-[#E7C6FF]/30 shadow-lg scale-105"
-                              : "border-gray-200 bg-white hover:border-gray-300"
-                          )}
-                          style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                        >
-                          <div className="flex flex-col items-center gap-3 text-center">
-                            <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center shadow-md", method.iconBg)}>
-                              <method.icon className={cn("h-8 w-8", method.iconColor)} />
-                            </div>
-                            <p className="font-bold text-gray-900 text-sm">{method.label}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-gray-600 font-bold mb-2 block uppercase tracking-wide" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Notes (Optional)</label>
-                    <textarea
-                      value={newBookingData.notes}
-                      onChange={(e) => setNewBookingData({ ...newBookingData, notes: e.target.value })}
-                      placeholder="Add any special requests or notes..."
-                      className="w-full h-28 p-4 border-2 border-gray-200 rounded-xl text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#C8B6FF] font-medium text-gray-900"
-                      style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
-                    />
-                  </div>
-                </div>
-              )}
 
               {/* Step 5: Booking Summary */}
               {newBookingStep === 5 && (() => {
                 const selectedTreatment = treatments.find(t => t.id === newBookingData.treatmentId)
                 const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
-                const selectedPatient = patients.find(p => p.id === newBookingData.patientId)
+                const selectedCustomer = customers.find(c => (c._id || c.id) === newBookingData.patientId)
+
+                // Get customer data - prioritize newBookingData for consistency
+                const customerName = newBookingData.isNewClient
+                  ? newBookingData.newClientName
+                  : newBookingData.newClientName || `${selectedCustomer?.first_name || ''} ${selectedCustomer?.last_name || ''}`.trim()
+
+                const customerPhone = newBookingData.isNewClient
+                  ? newBookingData.newClientPhone
+                  : newBookingData.newClientPhone || selectedCustomer?.phone
+
+                const customerEmail = selectedCustomer?.email
 
                 return (
                   <div className="space-y-6">
-                    {/* Confirmation Header */}
-                    <div className="text-center py-6">
-                      <div className="w-20 h-20 bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <CheckCircle className="h-10 w-10 text-white" />
+                    {/* Modern Header */}
+                    <div className="text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-4">
+                        <CheckCircle className="h-9 w-9 text-white" />
                       </div>
-                      <h3 className="text-2xl font-bold text-gray-900 mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Review Your Booking</h3>
-                      <p className="text-gray-600 font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Please confirm all details before creating the booking</p>
+                      <h3 className="text-3xl font-bold text-gray-900 mb-2">Review Booking</h3>
+                      <p className="text-gray-500 text-sm">Please verify all information before confirming</p>
                     </div>
 
-                    {/* Booking Summary */}
-                    <div className="bg-gradient-to-br from-[#FFD6FF]/30 to-[#E7C6FF]/30 rounded-2xl p-6 border-2 border-[#E7C6FF] shadow-lg">
-                      <div className="space-y-4">
-                        {/* Treatment */}
-                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center flex-shrink-0 shadow-md">
-                            <Star className="h-7 w-7 text-[#C8B6FF]" />
+                    {/* Clean Grid Layout */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Customer Card - Full Width */}
+                      <div className="col-span-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+                              <User className="h-8 w-8 text-white" />
+                            </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Treatment</p>
-                            <p className="font-bold text-gray-900 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedTreatment?.name}</p>
-                            <p className="text-sm text-gray-700 font-semibold mt-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{formatCurrency(selectedTreatment?.price || 0)} • {selectedTreatment?.durationMin} minutes</p>
+                            <div className="flex items-center gap-2 mb-2">
+                              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Customer</p>
+                              {newBookingData.isNewClient && (
+                                <Badge className="bg-green-500 text-white text-xs px-2 py-0.5">New Customer</Badge>
+                              )}
+                            </div>
+                            <p className="text-xl font-bold text-gray-900 mb-1">{customerName}</p>
+                            <div className="flex flex-col gap-1">
+                              {customerPhone && (
+                                <p className="text-sm text-gray-600 flex items-center gap-1">
+                                  <span className="font-medium">📱</span> {customerPhone}
+                                </p>
+                              )}
+                              {customerEmail && (
+                                <p className="text-sm text-gray-600 flex items-center gap-1">
+                                  <span className="font-medium">✉️</span> {customerEmail}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
+                      </div>
 
-                        {/* Staff */}
-                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#C8B6FF] to-[#B8A6EF] flex items-center justify-center flex-shrink-0 text-white font-bold text-xl shadow-md">
+                      {/* Product Card */}
+                      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                            <Star className="h-6 w-6 text-purple-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Product</p>
+                            <p className="font-bold text-gray-900 truncate">{selectedTreatment?.name}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-gray-600 pt-3 border-t border-gray-100">
+                          <span className="font-semibold text-gray-900">{formatCurrency(selectedTreatment?.price || 0)}</span>
+                          <span>•</span>
+                          <span>{selectedTreatment?.durationMin} min</span>
+                        </div>
+                      </div>
+
+                      {/* Staff Card */}
+                      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
                             {selectedStaff?.name?.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Staff Member</p>
-                            <p className="font-bold text-gray-900 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedStaff?.name}</p>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Staff</p>
+                            <p className="font-bold text-gray-900 truncate">{selectedStaff?.name}</p>
                           </div>
                         </div>
+                        <div className="text-sm text-gray-600 pt-3 border-t border-gray-100">
+                          <span className="text-xs text-gray-500">{selectedStaff?.email}</span>
+                        </div>
+                      </div>
 
-                        {/* Date & Time */}
-                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-md">
-                            <Clock className="h-7 w-7 text-white" />
+                      {/* Date & Time Card - Full Width */}
+                      <div className="col-span-2 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-6 border border-cyan-100">
+                        <div className="flex items-center gap-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-md">
+                              <CalendarIcon className="h-8 w-8 text-white" />
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Appointment</p>
-                            <p className="font-bold text-gray-900 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-cyan-600 uppercase tracking-wider mb-2">Appointment</p>
+                            <p className="text-xl font-bold text-gray-900 mb-1">
                               {format(new Date(newBookingData.date), 'EEEE, MMMM d, yyyy')}
                             </p>
-                            <p className="text-sm text-gray-700 font-semibold mt-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{newBookingData.time}</p>
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-gray-500" />
+                              <span className="text-base font-semibold text-gray-700">{newBookingData.time}</span>
+                            </div>
                           </div>
                         </div>
-
-                        {/* Customer */}
-                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center flex-shrink-0 shadow-md">
-                            <User className="h-7 w-7 text-[#C8B6FF]" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Customer</p>
-                            {newBookingData.isNewClient ? (
-                              <>
-                                <p className="font-bold text-gray-900 text-lg flex items-center gap-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                                  {newBookingData.newClientName}
-                                  <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold">New</Badge>
-                                </p>
-                                <p className="text-sm text-gray-700 font-semibold mt-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{newBookingData.newClientPhone}</p>
-                              </>
-                            ) : (
-                              <>
-                                <p className="font-bold text-gray-900 text-lg" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedPatient?.name}</p>
-                                <p className="text-sm text-gray-700 font-semibold mt-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedPatient?.phone}</p>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Payment */}
-                        <div className="flex items-start gap-4 bg-white rounded-xl p-4 shadow-sm">
-                          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-md">
-                            <DollarSign className="h-7 w-7 text-white" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-1" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Payment Method</p>
-                            <p className="font-bold text-gray-900 text-lg capitalize" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-                              {newBookingData.paymentMethod === 'ewallet' ? 'E-Wallet' : newBookingData.paymentMethod === 'card' ? 'Debit/Credit Card' : newBookingData.paymentMethod === 'transfer' ? 'Bank Transfer' : 'Cash'}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Notes */}
-                        {newBookingData.notes && (
-                          <div className="bg-white rounded-xl p-4 shadow-sm">
-                            <p className="text-xs text-gray-600 font-bold uppercase tracking-wide mb-2" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>Additional Notes</p>
-                            <p className="text-sm text-gray-700 font-medium" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>{newBookingData.notes}</p>
-                          </div>
-                        )}
                       </div>
+
+                      {/* Notes Card - Full Width (if exists) */}
+                      {newBookingData.notes && (
+                        <div className="col-span-2 bg-amber-50 rounded-2xl p-5 border border-amber-100">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xl">📝</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2">Additional Notes</p>
+                              <p className="text-sm text-gray-700 leading-relaxed">{newBookingData.notes}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -2635,10 +2648,10 @@ export default function CalendarPage() {
                 <Button
                   onClick={() => setNewBookingStep(newBookingStep + 1)}
                   disabled={
-                    (newBookingStep === 1 && !newBookingData.treatmentId) ||
-                    (newBookingStep === 2 && !newBookingData.staffId) ||
-                    (newBookingStep === 3 && (!newBookingData.date || !newBookingData.time || (!newBookingData.patientId && !newBookingData.isNewClient) || (newBookingData.isNewClient && (!newBookingData.newClientName || !newBookingData.newClientPhone || !customerConfirmed)))) ||
-                    (newBookingStep === 4 && !newBookingData.paymentMethod)
+                    (newBookingStep === 1 && (!newBookingData.patientId && !newBookingData.isNewClient) || (newBookingData.isNewClient && (!newBookingData.newClientName || !newBookingData.newClientPhone || !customerConfirmed))) ||
+                    (newBookingStep === 2 && !newBookingData.treatmentId) ||
+                    (newBookingStep === 3 && !newBookingData.staffId) ||
+                    (newBookingStep === 4 && (!newBookingData.date || !newBookingData.time))
                   }
                   className="flex-1 bg-gradient-to-r from-[#C8B6FF] to-[#B8A6EF] hover:from-[#B8A6EF] hover:to-[#A896DF] text-white font-bold shadow-md"
                 >
@@ -2647,16 +2660,18 @@ export default function CalendarPage() {
               ) : (
                 <Button
                   onClick={async () => {
+                    setIsCreatingAppointment(true)
                     try {
                       if (!outletId) {
                         toast({ title: "Outlet not found", variant: "destructive" })
+                        setIsCreatingAppointment(false)
                         return
                       }
 
                       const treatment = treatments.find(t => t.id === newBookingData.treatmentId)
                       const selectedCustomer = customers.find(c => (c._id || c.id) === newBookingData.patientId)
 
-                      // Prepare booking data for appointments API
+                      // Prepare booking data for appointments API (without payment)
                       const bookingData: any = {
                         service_id: newBookingData.treatmentId,
                         staff_id: newBookingData.staffId,
@@ -2664,9 +2679,10 @@ export default function CalendarPage() {
                         appointment_date: newBookingData.date,
                         start_time: newBookingData.time,
                         notes: newBookingData.notes || '',
-                        payment_method: newBookingData.paymentMethod,
+                        // Payment will be handled separately after appointment creation
+                        payment_method: 'cash', // Default value required by API
                         payment_type: 'full',
-                        payment_amount: treatment?.price || 0,
+                        payment_amount: 0, // Will be updated when payment is recorded
                       }
 
                       // Handle customer
@@ -2690,12 +2706,58 @@ export default function CalendarPage() {
                       // Use the same completeWalkInBooking function as Walk-In
                       const result = await completeWalkInBooking(bookingData)
 
+                      console.log('[Calendar] Create appointment result:', result)
+
                       if (!result.success) {
                         throw new Error(result.error || 'Failed to create appointment')
                       }
 
-                      toast({ title: "Appointment created successfully!" })
+                      // Extract appointment ID from result - try multiple possible fields
+                      const appointmentId = result.appointment?.appointment_id ||
+                                          result.appointment?.id ||
+                                          result.appointment?._id ||
+                                          result.appointment_id ||
+                                          result.id ||
+                                          result._id
+
+                      console.log('[Calendar] Extracted appointment ID:', appointmentId)
+
+                      if (!appointmentId) {
+                        console.error('[Calendar] Failed to extract appointment ID from result:', result)
+                        throw new Error('Failed to get appointment ID from server response')
+                      }
+
+                      toast({
+                        title: "Appointment created successfully!",
+                        description: "Now proceeding to payment..."
+                      })
+
+                      // Close new booking dialog
                       setNewBookingOpen(false)
+
+                      // Open payment dialog with the newly created appointment
+                      setSelectedBooking({
+                        id: appointmentId,
+                        patientId: result.customer?.customer_id || newBookingData.patientId,
+                        patientName: newBookingData.isNewClient ? newBookingData.newClientName : `${selectedCustomer?.first_name || ''} ${selectedCustomer?.last_name || ''}`.trim(),
+                        patientPhone: newBookingData.isNewClient ? newBookingData.newClientPhone : selectedCustomer?.phone,
+                        patientEmail: selectedCustomer?.email || '',
+                        staffId: newBookingData.staffId,
+                        treatmentId: newBookingData.treatmentId,
+                        startAt: `${newBookingData.date}T${newBookingData.time}`,
+                        endAt: `${newBookingData.date}T${newBookingData.time}`,
+                        status: 'confirmed',
+                        source: 'online',
+                        paymentStatus: 'unpaid',
+                        payment_status: 'unpaid',
+                        notes: newBookingData.notes || '',
+                        createdAt: new Date()
+                      })
+
+                      // Open record payment dialog
+                      setRecordPaymentDialogOpen(true)
+
+                      // Reset booking form
                       setNewBookingStep(1)
                       setCustomerSearchResult('not_searched')
                       setCustomerConfirmed(false)
@@ -2712,8 +2774,8 @@ export default function CalendarPage() {
                         notes: ""
                       })
 
-                      // Reload page to refresh appointments
-                      window.location.reload()
+                      // Reset loading state
+                      setIsCreatingAppointment(false)
                     } catch (error: any) {
                       console.error('[Calendar] Error creating appointment:', error)
                       toast({
@@ -2721,12 +2783,20 @@ export default function CalendarPage() {
                         description: error.message,
                         variant: "destructive"
                       })
+                      setIsCreatingAppointment(false)
                     }
                   }}
-                  disabled={!newBookingData.paymentMethod}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                  disabled={isCreatingAppointment}
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Create Appointment
+                  {isCreatingAppointment ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Creating Appointment...
+                    </>
+                  ) : (
+                    'Create Appointment'
+                  )}
                 </Button>
               )}
             </div>
@@ -3124,6 +3194,9 @@ export default function CalendarPage() {
                     : "Appointment data refreshed successfully",
                 })
               }
+
+              // Reload all bookings to reflect payment changes in the list
+              await reloadBookings()
 
               // Dialog tetap terbuka, user bisa langsung klik Complete
             }}

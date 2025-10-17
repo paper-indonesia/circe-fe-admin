@@ -30,6 +30,7 @@ interface AppContextType {
   rescheduleBooking: (id: string, data: { new_date: string; new_time: string; reason?: string }) => Promise<void>
   completeBooking: (id: string, completionNotes?: string) => Promise<void>
   markNoShowBooking: (id: string, reason?: string) => Promise<void>
+  reloadBookings: () => Promise<void>
 
   addTreatment: (treatment: Omit<Treatment, "id">) => Promise<void>
   updateTreatment: (id: string, updates: Partial<Treatment>) => Promise<void>
@@ -502,6 +503,82 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const reloadBookings = async () => {
+    try {
+      console.log('[Context] Reloading bookings...')
+
+      const mongoBookings = await apiClient.getAppointments({ size: 100 }).catch(err => {
+        console.warn('[Context] Failed to reload appointments:', err)
+        return { items: [] }
+      })
+
+      const bookingsArray = Array.isArray(mongoBookings)
+        ? mongoBookings
+        : (mongoBookings.items || [])
+
+      // Collect unique customer IDs for lookup
+      const customerIds = [...new Set(bookingsArray.map((b: any) => b.customer_id).filter(Boolean))]
+
+      // Fetch customer details for all appointments
+      const customerDetailsMap: Record<string, any> = {}
+      if (customerIds.length > 0) {
+        await Promise.all(
+          customerIds.map(async (customerId) => {
+            try {
+              const response = await fetch(`/api/customers/${customerId}`)
+              if (response.ok) {
+                const customerData = await response.json()
+                customerDetailsMap[customerId] = customerData
+              }
+            } catch (error) {
+              console.warn(`[Context] Failed to fetch customer ${customerId}:`, error)
+            }
+          })
+        )
+      }
+
+      const bookings = bookingsArray.map((b: any) => {
+        const firstService = b.services && b.services.length > 0 ? b.services[0] : null
+        const customer = customerDetailsMap[b.customer_id]
+        const customerName = customer
+          ? `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown'
+          : b.customer_name || 'Unknown'
+
+        return {
+          id: b._id || b.id,
+          patientId: b.patientId || b.customer_id,
+          patientName: customerName,
+          patientPhone: customer?.phone || b.customer_phone,
+          patientEmail: customer?.email || b.customer_email,
+          staffId: b.staffId || firstService?.staff_id || b.staff_id,
+          treatmentId: b.treatmentId || firstService?.service_id || b.service_id,
+          startAt: b.startAt || (b.appointment_date && b.start_time ? `${b.appointment_date}T${b.start_time}` : b.start_at),
+          endAt: b.endAt || (b.appointment_date && b.end_time ? `${b.appointment_date}T${b.end_time}` : b.end_at),
+          status: b.status || 'confirmed',
+          source: b.source || b.appointment_type || 'online',
+          paymentStatus: b.paymentStatus || b.payment_status || 'unpaid',
+          payment_status: b.payment_status || b.paymentStatus || 'unpaid',
+          notes: b.notes || '',
+          queueNumber: b.queueNumber || b.queue_number,
+          createdAt: new Date(b.createdAt || b.created_at || Date.now()),
+          appointment_date: b.appointment_date,
+          start_time: b.start_time,
+          end_time: b.end_time,
+          services: b.services || [],
+          total_price: b.total_price,
+          fee_breakdown: b.fee_breakdown,
+          customer: customer || null,
+        }
+      })
+
+      setBookings(bookings)
+      console.log('[Context] Bookings reloaded successfully!', bookings.length, 'bookings')
+    } catch (error) {
+      console.error('[Context] Failed to reload bookings:', error)
+      throw error
+    }
+  }
+
   const addTreatment = async (treatment: Omit<Treatment, "id">) => {
     try {
       const newTreatment = await apiClient.createTreatment({
@@ -609,6 +686,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         rescheduleBooking,
         completeBooking,
         markNoShowBooking,
+        reloadBookings,
         addTreatment,
         updateTreatment,
         deleteTreatment,
@@ -676,6 +754,7 @@ export function useBookings() {
     rescheduleBooking: context.rescheduleBooking,
     completeBooking: context.completeBooking,
     markNoShowBooking: context.markNoShowBooking,
+    reloadBookings: context.reloadBookings,
   }
 }
 

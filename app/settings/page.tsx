@@ -48,6 +48,8 @@ interface TenantInfo {
     client_id: string
     client_secret: string
   }
+  paper_id_api_key?: string | null
+  paper_id_secret_key?: string | null
   client_partner_id?: string
   created_at: string
   updated_at: string
@@ -169,10 +171,14 @@ export default function SettingsPage() {
             })
 
             // Load Paper.id configuration
+            // Check both new fields (paper_id_api_key, paper_id_secret_key) and old structure (paper_id_config)
+            const hasNewFormat = tenantData.paper_id_api_key || tenantData.paper_id_secret_key
+            const hasOldFormat = tenantData.paper_id_config?.client_id || tenantData.paper_id_config?.client_secret
+
             setPaperIdForm({
-              enabled: tenantData.paper_id_config?.enabled || false,
-              client_id: tenantData.paper_id_config?.client_id || "",
-              client_secret: tenantData.paper_id_config?.client_secret || ""
+              enabled: hasNewFormat || hasOldFormat || tenantData.paper_id_config?.enabled || false,
+              client_id: tenantData.paper_id_api_key || tenantData.paper_id_config?.client_id || "",
+              client_secret: tenantData.paper_id_secret_key || tenantData.paper_id_config?.client_secret || ""
             })
           }
         }
@@ -279,15 +285,14 @@ export default function SettingsPage() {
   const handleSavePaperId = async () => {
     try {
       setSavingPaperId(true)
+
+      // Save to new field names: paper_id_api_key and paper_id_secret_key
       const response = await fetch('/api/tenants/current', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          paper_id_config: {
-            enabled: paperIdForm.enabled,
-            client_id: paperIdForm.client_id,
-            client_secret: paperIdForm.client_secret
-          }
+          paper_id_api_key: paperIdForm.enabled ? paperIdForm.client_id : null,
+          paper_id_secret_key: paperIdForm.enabled ? paperIdForm.client_secret : null
         })
       })
 

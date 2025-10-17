@@ -17,7 +17,7 @@ import {
   Check, AlertCircle, Users, Calendar,
   ChevronRight, X, Printer, Mail, MessageSquare,
   TrendingUp, Star, Activity, Search, Sparkles, Syringe, Zap, Heart,
-  Percent, DollarSign, ChevronDown, Loader2
+  Percent, DollarSign, ChevronDown, Loader2, CheckCircle2
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { usePatients, useStaff, useTreatments, useBookings } from "@/lib/context"
@@ -81,8 +81,16 @@ export default function WalkInPage() {
 
   const loading = patientsLoading || staffLoading || treatmentsLoading || bookingsLoading
 
+  // Filter walk-in appointments from API bookings
+  const walkInBookings = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd')
+    return bookings.filter(b =>
+      b.source === 'walk-in' &&
+      b.appointment_date === today
+    )
+  }, [bookings])
+
   const [currentQueue, setCurrentQueue] = useState(1)
-  const [todayBookings, setTodayBookings] = useState<Booking[]>([])
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [lastBooking, setLastBooking] = useState<Booking | null>(null)
@@ -208,27 +216,20 @@ export default function WalkInPage() {
     }
   }, [staff])
 
-  // Load today's bookings
+  // Update queue number based on walkInBookings from API
   useEffect(() => {
-    // Use local storage for walk-in bookings
-    const storageKey = `walkInBookings`
-    const savedBookings = localStorage.getItem(storageKey)
+    if (walkInBookings.length > 0) {
+      // Find the highest queue number from existing walk-in bookings
+      const existingQueueNumbers = walkInBookings
+        .map(b => parseInt(b.queueNumber || '0'))
+        .filter(n => !isNaN(n))
 
-    if (savedBookings) {
-      const bookings = JSON.parse(savedBookings)
-      const today = new Date().toDateString()
-      const todayBookingsList = bookings.filter((b: Booking) =>
-        new Date(b.createdAt).toDateString() === today
-      )
-      setTodayBookings(todayBookingsList)
-
-      // Set queue number
-      if (todayBookingsList.length > 0) {
-        const maxQueue = Math.max(...todayBookingsList.map((b: Booking) => b.queueNumber))
+      if (existingQueueNumbers.length > 0) {
+        const maxQueue = Math.max(...existingQueueNumbers)
         setCurrentQueue(maxQueue + 1)
       }
     }
-  }, [])
+  }, [walkInBookings])
 
   // API Integration - Load customers when search dialog is opened
   useEffect(() => {
@@ -489,6 +490,69 @@ export default function WalkInPage() {
     })
   }
 
+  // Payment status badge helper function
+  const getPaymentStatusBadge = (paymentStatus?: string) => {
+    if (!paymentStatus) {
+      return (
+        <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          Unknown
+        </Badge>
+      )
+    }
+
+    switch (paymentStatus) {
+      case "paid":
+        return (
+          <Badge className="text-xs bg-green-100 text-green-700 border-green-200">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            Paid
+          </Badge>
+        )
+      case "partially_paid":
+        return (
+          <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-200">
+            <Clock className="h-3 w-3 mr-1" />
+            Partial
+          </Badge>
+        )
+      case "pending":
+        return (
+          <Badge className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        )
+      case "unpaid":
+        return (
+          <Badge className="text-xs bg-red-100 text-red-700 border-red-200">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Unpaid
+          </Badge>
+        )
+      case "deposit":
+        return (
+          <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-200">
+            <DollarSign className="h-3 w-3 mr-1" />
+            Deposit
+          </Badge>
+        )
+      case "refunded":
+        return (
+          <Badge className="text-xs bg-purple-100 text-purple-700 border-purple-200">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Refunded
+          </Badge>
+        )
+      default:
+        return (
+          <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
+            {paymentStatus}
+          </Badge>
+        )
+    }
+  }
+
   const validateForm = () => {
     const newErrors: any = {}
 
@@ -607,6 +671,11 @@ export default function WalkInPage() {
       // Success! Create local booking object
       // Handle both appointment_id and id from response
       const appointmentId = result.appointment.appointment_id || result.appointment.id
+
+      // Map the payment_status from API response
+      const paymentStatus = result.payment?.status || result.appointment?.payment_status ||
+        (formData.paymentType === "deposit" ? "deposit" : "paid")
+
       const booking: Booking = {
         id: appointmentId,
         name: formData.name,
@@ -624,16 +693,10 @@ export default function WalkInPage() {
       }
 
       console.log('[Walk-In] Booking created:', booking)
+      console.log('[Walk-In] Payment status:', paymentStatus)
 
       setLastBooking(booking)
-      setTodayBookings([...todayBookings, booking])
       setCurrentQueue(currentQueue + 1)
-
-      // Save to localStorage as backup
-      const storageKey = `walkInBookings`
-      const existingBookings = JSON.parse(localStorage.getItem(storageKey) || "[]")
-      existingBookings.push(booking)
-      localStorage.setItem(storageKey, JSON.stringify(existingBookings))
 
       toast({
         title: "Success!",
@@ -645,6 +708,9 @@ export default function WalkInPage() {
 
       // Refresh availability
       await fetchAvailabilityGrid(formData.treatmentId, formData.staffId, formData.bookingDate)
+
+      // Trigger context refresh by calling the loadBookings function
+      // The context should automatically refresh when we close the success dialog
 
       // Reset form
       resetForm()
@@ -760,9 +826,9 @@ export default function WalkInPage() {
   }, [filteredClients.length]) // Trigger when filtered clients change
 
   const getQueueStatus = () => {
-    const waiting = todayBookings.filter(b => b.status === "waiting").length
-    const inProgress = todayBookings.filter(b => b.status === "in-progress").length
-    const completed = todayBookings.filter(b => b.status === "completed").length
+    const waiting = walkInBookings.filter(b => b.status === "waiting").length
+    const inProgress = walkInBookings.filter(b => b.status === "in-progress").length
+    const completed = walkInBookings.filter(b => b.status === "completed").length
 
     return { waiting, inProgress, completed }
   }
@@ -1312,10 +1378,10 @@ export default function WalkInPage() {
                           avatarUrl: selectedStaff?.photoUrl
                         }}
                         selectedStaffId={formData.staffId}
-                        existingBookings={todayBookings.map(b => ({
-                          bookingDate: b.bookingDate,
-                          timeSlot: b.timeSlot,
-                          staffId: b.staffId || b.staff
+                        existingBookings={walkInBookings.map(b => ({
+                          bookingDate: b.appointment_date || b.startAt?.split('T')[0] || '',
+                          timeSlot: b.start_time || b.startAt?.split('T')[1]?.substring(0, 5) || '',
+                          staffId: b.staffId
                         }))}
                         availabilityGrid={availabilityGrid}
                         onSelectDateTime={(date, time) => {
@@ -1716,25 +1782,30 @@ export default function WalkInPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    {todayBookings.slice(-3).map((booking) => (
-                      <div key={booking.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm">#{booking.queueNumber.toString().padStart(3, '0')}</span>
-                          <div>
-                            <p className="text-sm">{booking.name}</p>
-                            <p className="text-xs text-muted-foreground">{booking.treatment}</p>
+                    {walkInBookings.slice(-3).map((booking) => (
+                      <div key={booking.id} className="flex flex-col gap-2 p-2 rounded-lg bg-muted/50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm">#{(booking.queueNumber || '0').toString().padStart(3, '0')}</span>
+                            <div>
+                              <p className="text-sm">{booking.patientName}</p>
+                              <p className="text-xs text-muted-foreground">{booking.treatmentId}</p>
+                            </div>
                           </div>
+                          <Badge variant={
+                            booking.status === "waiting" || booking.status === "pending" ? "secondary" :
+                            booking.status === "confirmed" ? "default" :
+                            booking.status === "completed" ? "outline" : "destructive"
+                          }>
+                            {booking.status}
+                          </Badge>
                         </div>
-                        <Badge variant={
-                          booking.status === "waiting" ? "secondary" :
-                          booking.status === "in-progress" ? "default" :
-                          booking.status === "completed" ? "outline" : "destructive"
-                        }>
-                          {booking.status}
-                        </Badge>
+                        <div className="flex items-center justify-end">
+                          {getPaymentStatusBadge(booking.payment_status || booking.paymentStatus)}
+                        </div>
                       </div>
                     ))}
-                    {todayBookings.length === 0 && (
+                    {walkInBookings.length === 0 && (
                       <p className="text-sm text-muted-foreground text-center py-4">No bookings yet today</p>
                     )}
                   </div>
