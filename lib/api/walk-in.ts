@@ -660,6 +660,104 @@ export interface Payment {
   receipt_url?: string
 }
 
+export interface PaymentHistory {
+  id: string
+  amount: number
+  method: 'cash' | 'credit_card' | 'debit_card' | 'ewallet' | 'bank_transfer' | 'qris'
+  provider: string
+  status: 'pending' | 'completed' | 'failed' | 'refunded'
+  recorded_by: string
+  recorded_at: string
+  notes?: string
+  receipt_number?: string
+}
+
+export interface PendingInvoice {
+  payment_link_id: string
+  payment_url: string
+  qr_code_url?: string
+  amount: number
+  expires_at: string
+  status: string
+}
+
+export interface PaymentStatusResponse {
+  appointment_id: string
+  payment_status: 'pending' | 'paid' | 'partially_paid' | 'refunded'
+  total_amount: number
+  paid_amount: number
+  remaining_balance: number
+  platform_fee: number
+  platform_fee_percentage: number
+  payment_history: PaymentHistory[]
+  pending_invoice: PendingInvoice | null
+  can_complete: boolean
+}
+
+export interface RecordPaymentRequest {
+  amount: number
+  payment_method: 'cash' | 'pos_terminal' | 'bank_transfer'
+  notes?: string
+  receipt_number?: string
+}
+
+export interface RecordPaymentResponse {
+  status: 'success' | 'error'
+  message: string
+  payment: {
+    id: string
+    amount: number
+    method: string
+    status: string
+    recorded_by: string
+    recorded_at: string
+    receipt_number?: string
+  }
+  appointment: {
+    payment_status: 'pending' | 'paid' | 'partially_paid' | 'refunded'
+    paid_amount: number
+    remaining_balance: number
+  }
+}
+
+export interface CreatePaymentLinkRequest {
+  send_email?: boolean
+  send_whatsapp?: boolean
+  send_sms?: boolean
+  notes?: string
+  due_date?: string
+}
+
+export interface CreatePaymentLinkResponse {
+  status: 'payment_link_created'
+  message: string
+  invoice: {
+    id: string
+    invoice_number: string
+    amount: number
+    subtotal: number
+    platform_fee: number
+    platform_fee_percentage: number
+    currency: string
+    due_date: string
+    paper_invoice_id: string
+    paper_payment_url: string
+    paper_pdf_url: string
+  }
+  payment_link: {
+    url: string
+    short_url: string
+    expires_at: string
+    sent_via: string[]
+  }
+  payment: {
+    id: string
+    status: string
+    awaiting_customer_payment: boolean
+  }
+  next_steps: string[]
+}
+
 /**
  * Process payment for appointment (walk-in)
  */
@@ -713,6 +811,128 @@ export async function createPaymentLink(params: {
 
   const data = await response.json()
   return data
+}
+
+/**
+ * Get payment status for an appointment
+ *
+ * Retrieves complete payment status including:
+ * - Current payment status and amounts
+ * - Payment history with audit trail
+ * - Pending invoices/payment links
+ * - Completion eligibility check
+ */
+export async function getPaymentStatus(appointmentId: string): Promise<PaymentStatusResponse> {
+  try {
+    console.log('[getPaymentStatus] Fetching payment status for:', appointmentId)
+
+    const response = await fetch(`/api/appointments/${appointmentId}/payment-status`)
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to get payment status')
+    }
+
+    const data = await response.json()
+    console.log('[getPaymentStatus] Success')
+    return data
+  } catch (error: any) {
+    console.error('[getPaymentStatus] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Record manual offline payment
+ *
+ * Records manual payments (cash, POS terminal, bank transfer) for an appointment.
+ * Staff only operation with automatic audit trail.
+ *
+ * Business Rules:
+ * - Payment method must be offline type only
+ * - Amount must not exceed appointment total
+ * - Immediate status: Payment marked as COMPLETED
+ * - Duplicate prevention: Only one completed payment per appointment
+ * - Updates appointment payment_status automatically
+ */
+export async function recordManualPayment(
+  appointmentId: string,
+  paymentData: RecordPaymentRequest
+): Promise<RecordPaymentResponse> {
+  try {
+    console.log('[recordManualPayment] Recording payment for:', appointmentId, paymentData)
+
+    const response = await fetch(`/api/appointments/${appointmentId}/record-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(paymentData),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to record payment')
+    }
+
+    const data = await response.json()
+    console.log('[recordManualPayment] Success:', data.appointment?.payment_status)
+    return data
+  } catch (error: any) {
+    console.error('[recordManualPayment] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Create Paper.id payment link for online payment
+ *
+ * Creates a payment link via Paper.id for remaining appointment balance.
+ * Customer receives link via email/WhatsApp/SMS to pay online.
+ *
+ * Business Rules:
+ * - Only creates link for remaining unpaid balance
+ * - Cannot create multiple pending links (prevents duplicate payments)
+ * - Link expires after 7 days by default (configurable via due_date)
+ * - Supports multiple notification channels
+ * - Includes platform fee
+ * - Payment status updates via Paper.id webhook
+ *
+ * Flow:
+ * 1. API creates invoice in Paper.id
+ * 2. Generates payment link with QR code
+ * 3. Sends link to customer via selected channels
+ * 4. Creates pending payment record in database
+ * 5. Customer pays online via Paper.id
+ * 6. Webhook updates payment and appointment status
+ */
+export async function createPaperPaymentLink(
+  appointmentId: string,
+  requestData: CreatePaymentLinkRequest
+): Promise<CreatePaymentLinkResponse> {
+  try {
+    console.log('[createPaperPaymentLink] Creating payment link for:', appointmentId, requestData)
+
+    const response = await fetch(`/api/appointments/${appointmentId}/create-payment-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestData),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to create payment link')
+    }
+
+    const data = await response.json()
+    console.log('[createPaperPaymentLink] Success:', {
+      invoice_id: data.invoice?.id,
+      payment_url: data.payment_link?.url,
+      sent_via: data.payment_link?.sent_via
+    })
+    return data
+  } catch (error: any) {
+    console.error('[createPaperPaymentLink] Error:', error)
+    throw error
+  }
 }
 
 // ==================== WALK-IN COMPLETE FLOW ====================

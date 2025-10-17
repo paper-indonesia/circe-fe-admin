@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,10 @@ import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { formatCurrency, cn } from "@/lib/utils"
 import { BookingDateTime } from "@/components/booking-date-time"
-import { searchCustomers, createCustomer, type Customer, completeWalkInBooking } from '@/lib/api/walk-in'
+import PaymentStatusDisplay from "@/components/payment-status-display"
+import RecordPaymentDialog from "@/components/record-payment-dialog"
+import CreatePaymentLinkDialog from "@/components/create-payment-link-dialog"
+import { searchCustomers, createCustomer, type Customer, completeWalkInBooking, type PaymentStatusResponse } from '@/lib/api/walk-in'
 import { debounce } from 'lodash'
 import {
   format,
@@ -119,6 +122,20 @@ export default function CalendarPage() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false)
   const [completionNotes, setCompletionNotes] = useState("")
   const [isCompleting, setIsCompleting] = useState(false)
+  const [completePaymentStatus, setCompletePaymentStatus] = useState<PaymentStatusResponse | null>(null)
+
+  // Record payment state
+  const [recordPaymentDialogOpen, setRecordPaymentDialogOpen] = useState(false)
+  const [paymentRefreshKey, setPaymentRefreshKey] = useState(0)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Payment link state
+  const [paymentLinkDialogOpen, setPaymentLinkDialogOpen] = useState(false)
+
+  // Fix hydration error - only render after client mount
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // No-show appointment state
   const [noShowDialogOpen, setNoShowDialogOpen] = useState(false)
@@ -412,6 +429,23 @@ export default function CalendarPage() {
       case "cancelled": return "bg-red-100 text-red-800"
       case "no-show": return "bg-gray-100 text-gray-800"
       default: return "bg-yellow-100 text-yellow-800"
+    }
+  }
+
+  const getPaymentStatusIcon = (paymentStatus?: string) => {
+    if (!paymentStatus) return null
+
+    switch (paymentStatus) {
+      case "paid":
+        return <CheckCircle2 className="h-3 w-3 text-green-600" />
+      case "partially_paid":
+        return <Clock className="h-3 w-3 text-yellow-600" />
+      case "pending":
+        return <AlertCircle className="h-3 w-3 text-gray-400" />
+      case "refunded":
+        return <XCircle className="h-3 w-3 text-red-600" />
+      default:
+        return null
     }
   }
 
@@ -740,11 +774,26 @@ export default function CalendarPage() {
       setCompletionNotes("")
     } catch (error: any) {
       console.error('Failed to complete appointment:', error)
+
+      // Check if error is related to payment verification
+      const errorMessage = error?.message || "An error occurred while completing the appointment"
+      const isPaymentError = errorMessage.toLowerCase().includes('payment') ||
+                             errorMessage.toLowerCase().includes('verified')
+
       toast({
         title: "Failed to complete appointment",
-        description: error?.message || "An error occurred while completing the appointment",
-        variant: "destructive"
+        description: isPaymentError
+          ? "Payment verification required. Please record the payment first before completing this appointment."
+          : errorMessage,
+        variant: "destructive",
+        duration: 5000
       })
+
+      // If payment error, suggest opening payment dialog
+      if (isPaymentError && selectedBooking?.payment_status !== 'paid') {
+        // Refresh payment status to show current state
+        setPaymentRefreshKey((prev) => prev + 1)
+      }
     } finally {
       setIsCompleting(false)
     }
@@ -1022,8 +1071,11 @@ export default function CalendarPage() {
                                     getStatusColor(booking.status)
                                   )}
                                 >
-                                  <div className="font-semibold truncate">
-                                    {format(new Date(booking.startAt), "HH:mm")}
+                                  <div className="flex items-center justify-between gap-1">
+                                    <div className="font-semibold truncate">
+                                      {format(new Date(booking.startAt), "HH:mm")}
+                                    </div>
+                                    {getPaymentStatusIcon((booking as any).payment_status)}
                                   </div>
                                   <div className="text-[10px] truncate opacity-90">
                                     {booking.patientName || "Unknown"}
@@ -2618,7 +2670,7 @@ export default function CalendarPage() {
 
         {/* Complete Dialog */}
         <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-green-600">
                 <CheckCircle2 className="h-5 w-5" />
@@ -2627,8 +2679,60 @@ export default function CalendarPage() {
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <p className="text-sm text-gray-600">
-                Mark this appointment as completed. The payment status will be verified and updated.
+                Mark this appointment as completed.
               </p>
+
+              {/* Only render payment status after client mount to avoid hydration errors */}
+              {isMounted && selectedBooking && (
+                <>
+                  {/* Payment Status - Simple Badge if Already Paid */}
+                  {selectedBooking.payment_status === 'paid' ? (
+                    <Alert className="bg-green-50 border-green-200">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-800">
+                        <span className="font-medium">Payment Verified:</span> This appointment has been fully paid and is ready to be completed.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <>
+                      {/* Payment Status Display - Only if Not Paid */}
+                      <PaymentStatusDisplay
+                        key={`payment-status-${paymentRefreshKey}`}
+                        appointmentId={selectedBooking.id}
+                        compact={true}
+                        showHistory={false}
+                        onStatusLoaded={(status) => setCompletePaymentStatus(status)}
+                      />
+
+                      {/* Payment Action Buttons - Show if there's remaining balance */}
+                      {completePaymentStatus && completePaymentStatus.remaining_balance > 0 && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                            onClick={() => setRecordPaymentDialogOpen(true)}
+                            disabled={isCompleting}
+                          >
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            Add Payment
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                            onClick={() => setPaymentLinkDialogOpen(true)}
+                            disabled={isCompleting}
+                          >
+                            <Smartphone className="h-4 w-4 mr-2" />
+                            Send Link
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
 
               {/* Completion Notes */}
               <div className="space-y-2">
@@ -2649,18 +2753,13 @@ export default function CalendarPage() {
                 </p>
               </div>
 
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-xs text-green-800">
-                  <span className="font-medium">Note:</span> This will mark the appointment as completed and verify the payment status.
-                </p>
-              </div>
-
               <div className="flex gap-3 pt-2">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setCompleteDialogOpen(false)
                     setCompletionNotes("")
+                    setCompletePaymentStatus(null)
                   }}
                   disabled={isCompleting}
                   className="flex-1"
@@ -2668,9 +2767,15 @@ export default function CalendarPage() {
                   Cancel
                 </Button>
                 <Button
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleConfirmComplete}
-                  disabled={isCompleting}
+                  disabled={
+                    isCompleting ||
+                    // Only check payment status if not already paid
+                    (selectedBooking?.payment_status !== 'paid' &&
+                     completePaymentStatus &&
+                     !completePaymentStatus.can_complete)
+                  }
                 >
                   {isCompleting ? "Completing..." : "Complete Appointment"}
                 </Button>
@@ -2741,6 +2846,47 @@ export default function CalendarPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Record Payment Dialog */}
+        {selectedBooking && completePaymentStatus && (
+          <RecordPaymentDialog
+            open={recordPaymentDialogOpen}
+            onOpenChange={setRecordPaymentDialogOpen}
+            appointmentId={selectedBooking.id}
+            totalAmount={completePaymentStatus.total_amount}
+            paidAmount={completePaymentStatus.paid_amount}
+            remainingBalance={completePaymentStatus.remaining_balance}
+            onSuccess={() => {
+              // Refresh payment status after successful payment
+              setPaymentRefreshKey((prev) => prev + 1)
+              toast({
+                title: "Payment recorded successfully",
+                description: "The payment has been recorded and appointment status updated."
+              })
+            }}
+          />
+        )}
+
+        {/* Create Payment Link Dialog */}
+        {selectedBooking && completePaymentStatus && (
+          <CreatePaymentLinkDialog
+            open={paymentLinkDialogOpen}
+            onOpenChange={setPaymentLinkDialogOpen}
+            appointmentId={selectedBooking.id}
+            remainingBalance={completePaymentStatus.remaining_balance}
+            customerEmail={selectedBooking.patientEmail}
+            customerPhone={selectedBooking.patientPhone}
+            onSuccess={(response) => {
+              // Refresh payment status after payment link created
+              setPaymentRefreshKey((prev) => prev + 1)
+              toast({
+                title: "Payment link created",
+                description: `Payment link sent via ${response.payment_link.sent_via.join(', ')}. Customer can now pay online.`,
+                duration: 5000
+              })
+            }}
+          />
+        )}
       </div>
     </MainLayout>
   )
