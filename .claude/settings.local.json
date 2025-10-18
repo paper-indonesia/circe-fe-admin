@@ -40,7 +40,11 @@
       "mcp__ide__getDiagnostics",
       "Bash(timeout:*)",
       "Bash(del \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\components\\ftue-provider.tsx\")",
-      "Bash(for file in app/api/auth/signout/route.ts app/api/outlets/route.ts \"app/api/outlets/[id]/route.ts\" app/api/tenants/current/route.ts app/api/tenants/paper-id-config/route.ts)"
+      "Bash(for file in app/api/auth/signout/route.ts app/api/outlets/route.ts \"app/api/outlets/[id]/route.ts\" app/api/tenants/current/route.ts app/api/tenants/paper-id-config/route.ts)",
+      "Bash(git commit --allow-empty -m \"force rebuild: clear vercel cache\")",
+      "Bash(git push)",
+      "Bash(git add app/api/auth/signout/route.ts)",
+      "Bash(git commit -m \"fix: await cookies() in signout route\")"
     ],
     "deny": [],
     "ask": []
