@@ -37,6 +37,7 @@ export default function RecordPaymentDialog({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
 
   // Fix hydration - only render after mount
@@ -53,6 +54,7 @@ export default function RecordPaymentDialog({
       setReceiptNumber("")
       setError(null)
       setSuccess(false)
+      setIsVerifying(false)
     }
   }, [open, remainingBalance])
 
@@ -134,19 +136,24 @@ export default function RecordPaymentDialog({
 
       if (response.status === 'success') {
         setSuccess(true)
+        setIsSubmitting(false)
 
-        // Wait a bit to show success message
-        setTimeout(() => {
-          onSuccess?.()
-          onOpenChange(false)
-        }, 1500)
+        // Show verifying state and call onSuccess for payment verification
+        setIsVerifying(true)
+
+        if (onSuccess) {
+          await onSuccess()
+        }
+
+        // Close dialog after verification complete
+        onOpenChange(false)
       } else {
         setError(response.message || 'Failed to record payment')
+        setIsSubmitting(false)
       }
     } catch (err: any) {
       console.error('Failed to record payment:', err)
       setError(err.message || 'Failed to record payment')
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -161,12 +168,25 @@ export default function RecordPaymentDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* Success State */}
+        {/* Success/Verifying State */}
         {success ? (
           <div className="py-8 text-center">
-            <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Recorded!</h3>
-            <p className="text-gray-600">Payment has been recorded successfully.</p>
+            {isVerifying ? (
+              <>
+                <div className="h-16 w-16 mx-auto mb-4 relative">
+                  <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
+                  <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Verifying Payment...</h3>
+                <p className="text-gray-600">Please wait while we verify your payment status.</p>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Recorded!</h3>
+                <p className="text-gray-600">Payment has been recorded successfully.</p>
+              </>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 pt-4">

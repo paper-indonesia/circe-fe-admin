@@ -87,24 +87,24 @@ export function Sidebar() {
       {
         label: 'Main',
         items: [
-          { name: 'Dashboard', href: '/dashboard', icon: Home, tourId: 'sidebar-dashboard' },
-          { name: 'Calendar', href: '/calendar', icon: Calendar, tourId: 'sidebar-calendar' },
-          { name: 'Customers', href: '/clients', icon: Users, tourId: 'sidebar-clients' },
-          { name: 'Staff', href: '/staff', icon: Users, tourId: 'sidebar-staff' },
-          { name: 'Walk-in', href: '/calendar?action=create&source=walk-in', icon: UserPlus, tourId: 'sidebar-walkin' },
+          { name: 'Dashboard', href: '/dashboard', icon: Home },
+          { name: 'Calendar', href: '/calendar', icon: Calendar },
+          { name: 'Customers', href: '/clients', icon: Users },
+          { name: 'Staff', href: '/staff', icon: Users },
+          { name: 'Walk-in', href: '/calendar?action=create&source=walk-in', icon: UserPlus },
         ]
       },
       {
         label: 'Business',
         items: [
-          { name: 'Products', href: '/products', icon: Star, tourId: 'sidebar-products' },
-          { name: 'Reports', href: '/reports', icon: BarChart3, tourId: 'sidebar-reports' },
+          { name: 'Products', href: '/products', icon: Star },
+          { name: 'Reports', href: '/reports', icon: BarChart3 },
         ]
       },
       {
         label: 'System',
         items: [
-          { name: 'Settings', href: '/settings', icon: Settings, tourId: 'sidebar-settings' },
+          { name: 'Settings', href: '/settings', icon: Settings },
         ]
       }
     ]
@@ -115,14 +115,12 @@ export function Sidebar() {
         {
           name: 'User Management',
           href: '/user-management',
-          icon: Shield,
-          tourId: 'sidebar-user-management'
+          icon: Shield
         },
         {
           name: 'Outlet Management',
           href: '/outlet-management',
-          icon: Building,
-          tourId: 'sidebar-outlet-management'
+          icon: Building
         }
       )
     }
@@ -247,7 +245,6 @@ export function Sidebar() {
                         key={item.name}
                         href={item.href}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        data-tour={(item as any).tourId}
                         className={cn(
                           "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 group relative",
                           isActive

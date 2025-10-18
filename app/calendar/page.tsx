@@ -3406,14 +3406,11 @@ export default function CalendarPage() {
             paidAmount={completePaymentStatus.paid_amount}
             remainingBalance={completePaymentStatus.remaining_balance}
             onSuccess={async () => {
-              // Show initial success message
+              // Show verifying message
               toast({
                 title: "Payment recorded successfully",
-                description: "Refreshing appointment data..."
+                description: "Verifying payment status..."
               })
-
-              // Wait 2 seconds to allow API to update payment_status
-              await new Promise(resolve => setTimeout(resolve, 2000))
 
               // Refresh appointment data from API to get updated payment_status
               const updatedBooking = await refreshAppointmentData(selectedBooking.id)
@@ -3424,10 +3421,10 @@ export default function CalendarPage() {
 
                 // Show success message
                 toast({
-                  title: "Payment status updated",
+                  title: "Payment verified",
                   description: updatedBooking.payment_status === 'paid'
-                    ? "Payment verified! You can now complete the appointment."
-                    : "Appointment data refreshed successfully",
+                    ? "Payment completed! You can now complete the appointment."
+                    : "Payment status updated successfully",
                 })
               }
 

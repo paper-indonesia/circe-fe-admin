@@ -38,7 +38,8 @@
       "Bash(findstr:*)",
       "Bash(dir:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(del \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\components\\ftue-provider.tsx\")"
     ],
     "deny": [],
     "ask": []
