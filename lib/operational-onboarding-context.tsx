@@ -77,6 +77,7 @@ const STORAGE_KEY = "operational-onboarding-progress"
 const COMPLETION_KEY = "operational-onboarding-completed"
 
 export function OperationalOnboardingProvider({ children }: { children: ReactNode }) {
+  const [isMounted, setIsMounted] = useState(false)
   const [progress, setProgress] = useState<OnboardingProgress>({
     outlets: [],
     users: [],
@@ -87,23 +88,36 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
     isCompleted: false,
   })
 
-  // Load progress from localStorage on mount
+  // Set mounted state (client-side only)
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        setProgress(parsed)
-      } catch (error) {
-        console.error("Failed to load onboarding progress:", error)
-      }
-    }
+    setIsMounted(true)
   }, [])
 
-  // Save progress to localStorage whenever it changes
+  // Load progress from localStorage on mount (client-side only)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
-  }, [progress])
+    if (!isMounted) return
+
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        setProgress(parsed)
+      }
+    } catch (error) {
+      console.error("Failed to load onboarding progress:", error)
+    }
+  }, [isMounted])
+
+  // Save progress to localStorage whenever it changes (client-side only)
+  useEffect(() => {
+    if (!isMounted) return
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
+    } catch (error) {
+      console.error("Failed to save onboarding progress:", error)
+    }
+  }, [progress, isMounted])
 
   const addOutlet = (outlet: OutletData) => {
     setProgress((prev) => ({
@@ -148,6 +162,9 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
   }
 
   const completeOnboarding = async () => {
+    // Skip if not mounted (SSR)
+    if (typeof window === 'undefined') return
+
     try {
       // Mark operational onboarding as complete in localStorage
       localStorage.setItem(COMPLETION_KEY, JSON.stringify({
@@ -177,11 +194,22 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
       currentStep: 1,
       isCompleted: false,
     })
-    localStorage.removeItem(STORAGE_KEY)
-    localStorage.removeItem(COMPLETION_KEY)
+
+    // Skip localStorage if not mounted (SSR)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem(STORAGE_KEY)
+        localStorage.removeItem(COMPLETION_KEY)
+      } catch (error) {
+        console.error("Failed to reset onboarding in localStorage:", error)
+      }
+    }
   }
 
   const loadProgress = async () => {
+    // Skip if not mounted (SSR)
+    if (typeof window === 'undefined') return
+
     try {
       // Check completion status from localStorage
       const completionData = localStorage.getItem(COMPLETION_KEY)

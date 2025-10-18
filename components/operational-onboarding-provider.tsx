@@ -9,12 +9,21 @@ import { OperationalOnboardingProvider as ContextProvider, useOperationalOnboard
 function OperationalOnboardingWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { user, isAdmin } = useAuth()
+  const [isMounted, setIsMounted] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
   const [loading, setLoading] = useState(true)
   const [initialStep, setInitialStep] = useState(1)
 
+  // Set mounted state (client-side only)
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   useEffect(() => {
     async function checkOnboardingStatus() {
+      // Skip if not mounted yet (SSR)
+      if (!isMounted) return
+
       // Skip on public pages
       const publicPaths = ['/signin', '/signup', '/']
       if (publicPaths.includes(pathname)) {
@@ -31,16 +40,18 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
 
       try {
         // Check if operational onboarding is already marked as completed in localStorage
-        const completionData = localStorage.getItem('operational-onboarding-completed')
-        if (completionData) {
-          try {
-            const parsed = JSON.parse(completionData)
-            if (parsed.completed) {
-              setLoading(false)
-              return
+        if (typeof window !== 'undefined') {
+          const completionData = localStorage.getItem('operational-onboarding-completed')
+          if (completionData) {
+            try {
+              const parsed = JSON.parse(completionData)
+              if (parsed.completed) {
+                setLoading(false)
+                return
+              }
+            } catch (e) {
+              // Invalid data, continue with check
             }
-          } catch (e) {
-            // Invalid data, continue with check
           }
         }
 
@@ -95,10 +106,12 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
                         needsOnboarding = false
 
                         // Auto-mark as completed if all data exists in localStorage
-                        localStorage.setItem('operational-onboarding-completed', JSON.stringify({
-                          completed: true,
-                          completedAt: new Date().toISOString()
-                        }))
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('operational-onboarding-completed', JSON.stringify({
+                            completed: true,
+                            completedAt: new Date().toISOString()
+                          }))
+                        }
                       }
                     }
                   }
@@ -119,7 +132,7 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
     }
 
     checkOnboardingStatus()
-  }, [user, isAdmin, pathname])
+  }, [user, isAdmin, pathname, isMounted])
 
   const handleComplete = () => {
     setShowWizard(false)
