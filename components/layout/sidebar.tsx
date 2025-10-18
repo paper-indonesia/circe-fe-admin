@@ -194,17 +194,17 @@ export function Sidebar() {
       {/* Sidebar */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-100 shadow-sm transform transition-all duration-300 lg:translate-x-0 overflow-hidden",
+          "fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-100 shadow-sm transform transition-all duration-300 lg:translate-x-0 overflow-x-hidden overflow-y-hidden",
           isCollapsed ? "w-20" : "w-64",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full overflow-x-hidden overflow-y-hidden">
           {/* Logo Section */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={cn(
-              "flex items-center gap-3 px-6 py-5 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer w-full",
+              "flex items-center gap-3 px-6 py-5 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer w-full overflow-hidden",
               isCollapsed && "justify-center px-4"
             )}
           >
@@ -224,7 +224,7 @@ export function Sidebar() {
           </button>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-6 overflow-y-auto">
+          <nav className="flex-1 px-4 py-4 space-y-6 overflow-y-auto overflow-x-hidden">
             {menuGroups.map((group, groupIndex) => (
               <div key={group.label}>
                 {/* Group Label */}
@@ -283,9 +283,9 @@ export function Sidebar() {
           </nav>
 
           {/* User Profile Section - Moved to Bottom */}
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-4 border-t border-gray-100 overflow-hidden">
             {/* User Info */}
-            <div className={cn("flex items-center gap-3 mb-3", isCollapsed && "justify-center")}>
+            <div className={cn("flex items-center gap-3 mb-3 overflow-hidden", isCollapsed && "justify-center")}>
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center shadow-sm flex-shrink-0">
                 <span className="text-xs font-semibold bg-gradient-to-br from-[#C8B6FF] to-[#B8C0FF] bg-clip-text text-transparent">
                   {getInitials()}
@@ -334,7 +334,7 @@ export function Sidebar() {
               <button
                 onClick={() => router.push('/subscription/upgrade')}
                 className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 shadow-md hover:shadow-lg mb-2",
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 shadow-md hover:shadow-lg mb-2 overflow-hidden",
                   isCollapsed && "justify-center"
                 )}
                 title="Upgrade Plan"
@@ -348,7 +348,7 @@ export function Sidebar() {
             <button
               onClick={handleLogout}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900 transition-all duration-200 shadow-sm hover:shadow-md",
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900 transition-all duration-200 shadow-sm hover:shadow-md overflow-hidden",
                 isCollapsed && "justify-center"
               )}
               title="Sign Out"
