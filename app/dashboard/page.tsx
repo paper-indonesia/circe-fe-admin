@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { useAuth } from "@/lib/auth-context"
-import { format, isToday } from "date-fns"
+import { format, isToday, subDays, startOfDay, endOfDay, isWithinInterval, isSameDay, startOfWeek } from "date-fns"
 import { useRouter } from "next/navigation"
 import { formatCurrency, cn } from "@/lib/utils"
 import LiquidLoading from "@/components/ui/liquid-loader"
@@ -34,8 +34,9 @@ import {
   Shield,
   AlertTriangle,
   BarChart3,
+  XCircle,
 } from "lucide-react"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line } from 'recharts'
 
 // Color palette from palete.pdf
 const COLORS = ['#FFD6FF', '#E7C6FF', '#C8B6FF', '#B8C0FF', '#BBD0FF']
@@ -199,10 +200,34 @@ function DashboardContent() {
     return user.email?.split('@')[0] || 'Admin'
   }
 
+  // Utility: Calculate percentage change
+  const calculateChange = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0
+    return ((current - previous) / previous) * 100
+  }
+
+  // Utility: Get change indicator styling
+  const getChangeIndicator = (change: number) => {
+    if (change > 0) return { icon: ArrowUpRight, color: 'text-green-600', bg: 'bg-green-50' }
+    if (change < 0) return { icon: ArrowDownRight, color: 'text-red-600', bg: 'bg-red-50' }
+    return { icon: ArrowRight, color: 'text-gray-600', bg: 'bg-gray-50' }
+  }
+
   // Calculate metrics
   const todaysBookings = useMemo(() =>
     bookings?.filter((booking) => isToday(new Date(booking.startAt))) || []
   , [bookings])
+
+  // Yesterday's bookings for comparison
+  const yesterdayBookings = useMemo(() => {
+    const yesterday = subDays(new Date(), 1)
+    return bookings?.filter((booking) =>
+      isWithinInterval(new Date(booking.startAt), {
+        start: startOfDay(yesterday),
+        end: endOfDay(yesterday)
+      })
+    ) || []
+  }, [bookings])
 
   const completedBookings = useMemo(() =>
     todaysBookings.filter((b) => b.status === "completed")
@@ -215,16 +240,96 @@ function DashboardContent() {
     }, 0)
   , [completedBookings, treatments])
 
-  const pendingPayments = useMemo(() =>
-    todaysBookings.filter((b) => b.paymentStatus === "unpaid").reduce((total, booking) => {
-      const treatment = treatments?.find((t) => t.id === booking.treatmentId)
-      return total + (treatment?.price || 0)
-    }, 0)
-  , [todaysBookings, treatments])
-
   const newCustomersToday = useMemo(() =>
     patients?.filter((p) => isToday(new Date(p.createdAt || new Date()))).length || 0
   , [patients])
+
+  // Yesterday's metrics for comparison
+  const yesterdayCompleted = useMemo(() =>
+    yesterdayBookings.filter((b) => b.status === "completed")
+  , [yesterdayBookings])
+
+  const yesterdayRevenue = useMemo(() =>
+    yesterdayCompleted.reduce((total, booking) => {
+      const treatment = treatments?.find((t) => t.id === booking.treatmentId)
+      return total + (treatment?.price || 0)
+    }, 0)
+  , [yesterdayCompleted, treatments])
+
+  const yesterdayNewCustomers = useMemo(() => {
+    const yesterday = subDays(new Date(), 1)
+    return patients?.filter((p) =>
+      isWithinInterval(new Date(p.createdAt || new Date()), {
+        start: startOfDay(yesterday),
+        end: endOfDay(yesterday)
+      })
+    ).length || 0
+  }, [patients])
+
+  // Last 7 days data for sparklines
+  const last7DaysData = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = subDays(new Date(), 6 - i)
+      const dayBookings = bookings?.filter((booking) =>
+        isSameDay(new Date(booking.startAt), date)
+      ) || []
+
+      const dayCompleted = dayBookings.filter(b => b.status === "completed")
+      const dayRevenue = dayCompleted.reduce((sum, b) => {
+        const treatment = treatments?.find(t => t.id === b.treatmentId)
+        return sum + (treatment?.price || 0)
+      }, 0)
+
+      const dayNewCustomers = patients?.filter((p) =>
+        isSameDay(new Date(p.createdAt || new Date()), date)
+      ).length || 0
+
+      return {
+        date: format(date, 'MMM d'),
+        bookings: dayBookings.length,
+        revenue: dayRevenue,
+        newCustomers: dayNewCustomers
+      }
+    })
+  }, [bookings, treatments, patients])
+
+  // Weekly no-shows
+  const weeklyNoShows = useMemo(() => {
+    const weekStart = startOfWeek(new Date())
+    return bookings?.filter((booking) =>
+      booking.status === 'no_show' &&
+      isWithinInterval(new Date(booking.startAt), {
+        start: weekStart,
+        end: new Date()
+      })
+    ).length || 0
+  }, [bookings])
+
+  // Pending confirmations
+  const pendingConfirmations = useMemo(() =>
+    bookings?.filter((booking) => booking.status === 'pending').length || 0
+  , [bookings])
+
+  // Pending payments (unpaid bookings)
+  const pendingPayments = useMemo(() =>
+    bookings?.filter((booking) =>
+      booking.status === 'completed' && booking.paymentStatus === 'pending'
+    ) || []
+  , [bookings])
+
+  const pendingPaymentsCount = pendingPayments.length
+
+  const pendingPaymentsAmount = useMemo(() =>
+    pendingPayments.reduce((total, booking) => {
+      const treatment = treatments?.find((t) => t.id === booking.treatmentId)
+      return total + (treatment?.price || 0)
+    }, 0)
+  , [pendingPayments, treatments])
+
+  // Comparison calculations
+  const bookingsChange = calculateChange(todaysBookings.length, yesterdayBookings.length)
+  const revenueChange = calculateChange(todaysRevenue, yesterdayRevenue)
+  const newCustomersChange = calculateChange(newCustomersToday, yesterdayNewCustomers)
 
   // Upcoming appointments (next 5 today)
   const upcomingAppointments = useMemo(() => {
@@ -588,10 +693,25 @@ function DashboardContent() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex-1">
                   <p className="text-sm font-medium text-gray-500">Today's Bookings</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{todaysBookings.length}</p>
+
+                  {/* Comparison indicator */}
+                  {(() => {
+                    const indicator = getChangeIndicator(bookingsChange)
+                    const ChangeIcon = indicator.icon
+                    return (
+                      <div className="flex items-center gap-1 mt-1">
+                        <ChangeIcon className={cn("h-3 w-3", indicator.color)} />
+                        <span className={cn("text-xs font-medium", indicator.color)}>
+                          {Math.abs(bookingsChange).toFixed(1)}% vs yesterday
+                        </span>
+                      </div>
+                    )
+                  })()}
+
                   <p className="text-xs text-green-600 mt-1 flex items-center">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     {completedBookings.length} completed
@@ -601,20 +721,65 @@ function DashboardContent() {
                   <Calendar className="h-6 w-6 text-[#B8C0FF]" />
                 </div>
               </div>
+
+              {/* Mini sparkline */}
+              <div className="h-[40px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={last7DaysData}>
+                    <Line
+                      type="monotone"
+                      dataKey="bookings"
+                      stroke="#B8C0FF"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex-1">
                   <p className="text-sm font-medium text-gray-500">Today's Revenue</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(todaysRevenue)}</p>
+
+                  {/* Comparison indicator */}
+                  {(() => {
+                    const indicator = getChangeIndicator(revenueChange)
+                    const ChangeIcon = indicator.icon
+                    return (
+                      <div className="flex items-center gap-1 mt-1">
+                        <ChangeIcon className={cn("h-3 w-3", indicator.color)} />
+                        <span className={cn("text-xs font-medium", indicator.color)}>
+                          {Math.abs(revenueChange).toFixed(1)}% vs yesterday
+                        </span>
+                      </div>
+                    )
+                  })()}
+
                   <p className="text-xs text-gray-500 mt-1">From {completedBookings.length} bookings</p>
                 </div>
                 <div className="p-3 bg-[#E7C6FF]/30 rounded-lg">
                   <DollarSign className="h-6 w-6 text-[#C8B6FF]" />
                 </div>
+              </div>
+
+              {/* Mini sparkline */}
+              <div className="h-[40px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={last7DaysData}>
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#C8B6FF"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
@@ -624,7 +789,7 @@ function DashboardContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Pending Payments</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(pendingPayments)}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(pendingPaymentsAmount)}</p>
                   <p className="text-xs text-orange-600 mt-1">Needs collection</p>
                 </div>
                 <div className="p-3 bg-[#FFD6FF]/30 rounded-lg">
@@ -636,15 +801,45 @@ function DashboardContent() {
 
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex-1">
                   <p className="text-sm font-medium text-gray-500">New Clients</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{newCustomersToday}</p>
+
+                  {/* Comparison indicator */}
+                  {(() => {
+                    const indicator = getChangeIndicator(newCustomersChange)
+                    const ChangeIcon = indicator.icon
+                    return (
+                      <div className="flex items-center gap-1 mt-1">
+                        <ChangeIcon className={cn("h-3 w-3", indicator.color)} />
+                        <span className={cn("text-xs font-medium", indicator.color)}>
+                          {Math.abs(newCustomersChange).toFixed(1)}% vs yesterday
+                        </span>
+                      </div>
+                    )
+                  })()}
+
                   <p className="text-xs text-purple-600 mt-1">Today</p>
                 </div>
                 <div className="p-3 bg-[#C8B6FF]/30 rounded-lg">
                   <Users className="h-6 w-6 text-[#B8C0FF]" />
                 </div>
+              </div>
+
+              {/* Mini sparkline */}
+              <div className="h-[40px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={last7DaysData}>
+                    <Line
+                      type="monotone"
+                      dataKey="newCustomers"
+                      stroke="#B8C0FF"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
@@ -660,9 +855,15 @@ function DashboardContent() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Recent Transactions</CardTitle>
                   {allTransactions.length > 0 && (
-                    <div className="text-sm text-gray-500">
-                      {allTransactions.length} total
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => router.push('/reports')}
+                      className="text-sm text-primary hover:text-primary/80"
+                    >
+                      View All in Reports
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
                   )}
                 </div>
               </CardHeader>
@@ -671,75 +872,46 @@ function DashboardContent() {
                   {allTransactions.length === 0 ? (
                     <p className="text-center text-gray-500 py-8">No transactions yet</p>
                   ) : (
-                    <>
-                      <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b border-gray-100">
-                              <th className="text-left text-xs font-medium text-gray-500 pb-3">Date</th>
-                              <th className="text-left text-xs font-medium text-gray-500 pb-3">Client</th>
-                              <th className="text-left text-xs font-medium text-gray-500 pb-3">Service</th>
-                              <th className="text-right text-xs font-medium text-gray-500 pb-3">Amount</th>
-                              <th className="text-right text-xs font-medium text-gray-500 pb-3">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {paginatedTransactions.map((transaction) => {
-                              const treatment = treatments.find(t => t.id === transaction.treatmentId)
-                              const patient = patients.find(p => p.id === transaction.patientId)
-                              return (
-                                <tr key={transaction.id} className="border-b border-gray-50 hover:bg-gray-50">
-                                  <td className="py-3 text-sm text-gray-600">
-                                    {format(new Date(transaction.createdAt), "MMM dd")}
-                                  </td>
-                                  <td className="py-3 text-sm font-medium text-gray-900">
-                                    {patient?.name || transaction.patientName}
-                                  </td>
-                                  <td className="py-3 text-sm text-gray-600">
-                                    {treatment?.name || "Unknown"}
-                                  </td>
-                                  <td className="py-3 text-sm font-medium text-gray-900 text-right">
-                                    {formatCurrency(treatment?.price || 0)}
-                                  </td>
-                                  <td className="py-3 text-right">
-                                    <Badge variant={transaction.paymentStatus === "paid" ? "default" : "secondary"} className="text-xs">
-                                      {transaction.paymentStatus}
-                                    </Badge>
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-
-                      {/* Pagination */}
-                      {totalTransactionPages > 1 && (
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                          <div className="text-sm text-gray-500">
-                            Page {transactionPage + 1} of {totalTransactionPages}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setTransactionPage(prev => Math.max(0, prev - 1))}
-                              disabled={transactionPage === 0}
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setTransactionPage(prev => Math.min(totalTransactionPages - 1, prev + 1))}
-                              disabled={transactionPage === totalTransactionPages - 1}
-                            >
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            <th className="text-left text-xs font-medium text-gray-500 pb-3">Date</th>
+                            <th className="text-left text-xs font-medium text-gray-500 pb-3">Client</th>
+                            <th className="text-left text-xs font-medium text-gray-500 pb-3">Service</th>
+                            <th className="text-right text-xs font-medium text-gray-500 pb-3">Amount</th>
+                            <th className="text-right text-xs font-medium text-gray-500 pb-3">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allTransactions.slice(0, 5).map((transaction) => {
+                            const treatment = treatments.find(t => t.id === transaction.treatmentId)
+                            const patient = patients.find(p => p.id === transaction.patientId)
+                            return (
+                              <tr key={transaction.id} className="border-b border-gray-50 hover:bg-gray-50">
+                                <td className="py-3 text-sm text-gray-600">
+                                  {format(new Date(transaction.createdAt), "MMM dd")}
+                                </td>
+                                <td className="py-3 text-sm font-medium text-gray-900">
+                                  {patient?.name || transaction.patientName}
+                                </td>
+                                <td className="py-3 text-sm text-gray-600">
+                                  {treatment?.name || "Unknown"}
+                                </td>
+                                <td className="py-3 text-sm font-medium text-gray-900 text-right">
+                                  {formatCurrency(treatment?.price || 0)}
+                                </td>
+                                <td className="py-3 text-right">
+                                  <Badge variant={transaction.paymentStatus === "paid" ? "default" : "secondary"} className="text-xs">
+                                    {transaction.paymentStatus}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -748,6 +920,57 @@ function DashboardContent() {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
+            {/* Quick Alerts */}
+            {(pendingPaymentsCount > 0 || pendingConfirmations > 0 || weeklyNoShows > 0) && (
+              <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-amber-50/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-orange-600" />
+                    Quick Alerts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {pendingPaymentsCount > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-red-100 rounded-lg hover:bg-red-200 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-red-700" />
+                          <span className="text-sm font-medium text-red-900">{pendingPaymentsCount} Unpaid Invoice{pendingPaymentsCount > 1 ? 's' : ''}</span>
+                        </div>
+                        <Badge variant="destructive" className="text-xs">
+                          {formatCurrency(pendingPaymentsAmount)}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {pendingConfirmations > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-orange-700" />
+                          <span className="text-sm font-medium text-orange-900">{pendingConfirmations} Pending Confirmation{pendingConfirmations > 1 ? 's' : ''}</span>
+                        </div>
+                        <Badge className="bg-orange-500 hover:bg-orange-600 text-xs text-white">
+                          Action Required
+                        </Badge>
+                      </div>
+                    )}
+
+                    {weeklyNoShows > 0 && (
+                      <div className="flex items-center justify-between p-3 bg-yellow-100 rounded-lg hover:bg-yellow-200 transition-colors cursor-pointer">
+                        <div className="flex items-center gap-2">
+                          <XCircle className="h-4 w-4 text-yellow-700" />
+                          <span className="text-sm font-medium text-yellow-900">{weeklyNoShows} No-Show{weeklyNoShows > 1 ? 's' : ''} This Week</span>
+                        </div>
+                        <Badge className="bg-yellow-500 hover:bg-yellow-600 text-xs text-white">
+                          Review
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Upcoming Appointments */}
             <Card>
               <CardHeader className="pb-3">
@@ -832,53 +1055,6 @@ function DashboardContent() {
                   View All Staff
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Revenue by Service */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                  Revenue by Service
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {revenueByService.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-8">No revenue data yet</p>
-                ) : (
-                  <>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <PieChart>
-                        <Pie
-                          data={revenueByService}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {revenueByService.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: any) => formatCurrency(value)} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="space-y-2 mt-4">
-                      {revenueByService.slice(0, 5).map((service, idx) => (
-                        <div key={service.name} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                            <span className="text-xs text-gray-600">{service.name}</span>
-                          </div>
-                          <span className="text-xs font-medium text-gray-900">{formatCurrency(service.value)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
               </CardContent>
             </Card>
           </div>

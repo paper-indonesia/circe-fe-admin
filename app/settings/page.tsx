@@ -172,21 +172,13 @@ export default function SettingsPage() {
               }
             })
 
-            // Load Paper.id configuration from dedicated endpoint
-            try {
-              const paperIdResponse = await fetch('/api/tenants/paper-id-config')
-              if (paperIdResponse.ok) {
-                const paperIdData = await paperIdResponse.json()
-                setPaperIdForm({
-                  enabled: paperIdData.enabled || false,
-                  client_id: paperIdData.client_id || "",
-                  client_secret: "", // Never returned by API for security
-                  is_production: paperIdData.is_production || false
-                })
-              }
-            } catch (error) {
-              console.error('Failed to load Paper.id config:', error)
-            }
+            // Load Paper.id configuration from tenant data
+            setPaperIdForm({
+              enabled: !!(tenantData.paper_id_api_key && tenantData.paper_id_secret_key),
+              client_id: tenantData.paper_id_api_key || "",
+              client_secret: tenantData.paper_id_secret_key || "",
+              is_production: false // Default to sandbox, can be adjusted later
+            })
           }
         }
 
@@ -307,14 +299,22 @@ export default function SettingsPage() {
 
       if (response.ok) {
         const updatedData = await response.json()
-        // Update form with response (client_secret won't be returned)
-        setPaperIdForm(prev => ({
-          ...prev,
-          client_id: updatedData.client_id || prev.client_id,
-          client_secret: "", // Clear for security (not returned by API)
-          is_production: updatedData.is_production,
-          enabled: updatedData.enabled
-        }))
+
+        // Reload tenant data to get updated paper_id_api_key and paper_id_secret_key
+        const tenantResponse = await fetch('/api/tenants/current')
+        if (tenantResponse.ok) {
+          const tenantData = await tenantResponse.json()
+          setTenantInfo(tenantData)
+
+          // Update form with latest data from tenant
+          setPaperIdForm(prev => ({
+            ...prev,
+            client_id: tenantData.paper_id_api_key || "",
+            client_secret: tenantData.paper_id_secret_key || "",
+            enabled: !!(tenantData.paper_id_api_key && tenantData.paper_id_secret_key)
+          }))
+        }
+
         toast({
           title: "Success",
           description: "Paper.id configuration saved successfully"
