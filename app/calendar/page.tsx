@@ -208,7 +208,7 @@ export default function CalendarPage() {
   const [availabilityGrid, setAvailabilityGrid] = useState<any>(null)
   const [loadingNewBookingAvailability, setLoadingNewBookingAvailability] = useState(false)
   const [outletId, setOutletId] = useState<string | null>(null)
-  const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [weekStart, setWeekStart] = useState(startOfDay(new Date()))
 
   // Customer API state (for booking flow)
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -344,6 +344,10 @@ export default function CalendarPage() {
   const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string) => {
     if (!serviceId || !staffId || !outletId) return
 
+    // Get selected treatment to use its duration
+    const selectedTreatment = treatments.find(t => t.id === serviceId)
+    const slotInterval = selectedTreatment?.durationMin || (selectedTreatment as any)?.duration_minutes || 30
+
     setLoadingNewBookingAvailability(true)
     try {
       const response = await fetch(
@@ -353,7 +357,7 @@ export default function CalendarPage() {
         `outlet_id=${outletId}&` +
         `start_date=${startDate}&` +
         `num_days=7&` +
-        `slot_interval_minutes=30`
+        `slot_interval_minutes=${slotInterval}`
       )
 
       if (!response.ok) {
@@ -770,6 +774,10 @@ export default function CalendarPage() {
     const treatmentId = selectedBooking.treatmentId
 
     if (staffId && treatmentId && outletId) {
+      // Get selected treatment to use its duration
+      const selectedTreatment = treatments.find(t => t.id === treatmentId)
+      const slotInterval = selectedTreatment?.durationMin || (selectedTreatment as any)?.duration_minutes || 30
+
       setLoadingRescheduleAvailability(true)
       try {
         const startDate = format(rescheduleWeekStart, 'yyyy-MM-dd')
@@ -781,7 +789,7 @@ export default function CalendarPage() {
           `outlet_id=${outletId}&` +
           `start_date=${startDate}&` +
           `num_days=7&` +
-          `slot_interval_minutes=30`
+          `slot_interval_minutes=${slotInterval}`
         )
 
         if (response.ok) {
@@ -818,6 +826,10 @@ export default function CalendarPage() {
 
     if (!staffId || !treatmentId) return
 
+    // Get selected treatment to use its duration
+    const selectedTreatment = treatments.find(t => t.id === treatmentId)
+    const slotInterval = selectedTreatment?.durationMin || (selectedTreatment as any)?.duration_minutes || 30
+
     setLoadingRescheduleAvailability(true)
     try {
       const startDate = format(newWeekStart, 'yyyy-MM-dd')
@@ -829,7 +841,7 @@ export default function CalendarPage() {
         `outlet_id=${outletId}&` +
         `start_date=${startDate}&` +
         `num_days=7&` +
-        `slot_interval_minutes=30`
+        `slot_interval_minutes=${slotInterval}`
       )
 
       if (response.ok) {
@@ -2682,10 +2694,8 @@ export default function CalendarPage() {
                           onSelectDateTime={(date, time) => {
                             setNewBookingData({ ...newBookingData, date, time })
                           }}
-                          onWeekChange={(newWeekStart) => {
-                            setWeekStart(newWeekStart)
-                          }}
                           isLoading={loadingNewBookingAvailability}
+                          disableNavigation={true}
                         />
                       )}
                     </div>

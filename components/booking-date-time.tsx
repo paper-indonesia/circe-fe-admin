@@ -52,6 +52,7 @@ interface BookingDateTimeProps {
   isLoading?: boolean
   error?: string
   className?: string
+  disableNavigation?: boolean
 }
 
 // Loading skeleton component
@@ -68,9 +69,10 @@ export function BookingDateTime({
   onWeekChange,
   isLoading = false,
   error,
-  className
+  className,
+  disableNavigation = false
 }: BookingDateTimeProps) {
-  const [weekStart, setWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [weekStart, setWeekStart] = useState(startOfDay(new Date()))
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
   const [selectedTime, setSelectedTime] = useState<string>("")
   const [loadingSlots, setLoadingSlots] = useState(false)
@@ -223,7 +225,8 @@ export function BookingDateTime({
             variant="ghost"
             size="sm"
             onClick={handlePrevWeek}
-            className="h-8 w-8 p-0 hover:bg-gray-100"
+            disabled={disableNavigation}
+            className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
             aria-label="Previous week"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -233,13 +236,15 @@ export function BookingDateTime({
             <h4 className="text-sm font-bold text-gray-900">
               {format(new Date(selectedDate), 'MMMM yyyy')}
             </h4>
-            <button
-              type="button"
-              onClick={handleBackToToday}
-              className="text-xs font-medium text-[#C8B6FF] hover:text-[#B8A6EF] transition-colors"
-            >
-              Today
-            </button>
+            {!disableNavigation && (
+              <button
+                type="button"
+                onClick={handleBackToToday}
+                className="text-xs font-medium text-[#C8B6FF] hover:text-[#B8A6EF] transition-colors"
+              >
+                Today
+              </button>
+            )}
           </div>
 
           <Button
@@ -247,7 +252,8 @@ export function BookingDateTime({
             variant="ghost"
             size="sm"
             onClick={handleNextWeek}
-            className="h-8 w-8 p-0 hover:bg-gray-100"
+            disabled={disableNavigation}
+            className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
             aria-label="Next week"
           >
             <ChevronRight className="h-5 w-5" />
@@ -303,6 +309,16 @@ export function BookingDateTime({
             })}
           </div>
         </div>
+
+        {/* Info Message when navigation is disabled */}
+        {disableNavigation && (
+          <div className="px-4 py-2 bg-blue-50 border-t border-blue-100">
+            <p className="text-xs text-blue-700 text-center">
+              <AlertCircle className="h-3 w-3 inline mr-1.5" />
+              You can only book within the next 7 days from today
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Time Slots Grid */}
