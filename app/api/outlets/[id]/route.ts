@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
+export const dynamic = 'force-dynamic'
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'
 
 export async function PUT(
