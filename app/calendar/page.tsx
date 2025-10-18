@@ -563,9 +563,11 @@ export default function CalendarPage() {
         email: newBookingData.newClientEmail || '',
       })
 
-      if (response.success && response.customer) {
-        const customerId = response.customer._id || response.customer.id
+      // Handle response - API returns customer object directly or wrapped in { customer: {...} }
+      const customer = (response as any).customer || response
+      const customerId = customer._id || customer.id
 
+      if (customerId) {
         // Set the customer as selected
         setNewBookingData({
           ...newBookingData,
@@ -574,7 +576,7 @@ export default function CalendarPage() {
         })
 
         // Add to customers list
-        setCustomers(prev => [response.customer, ...prev])
+        setCustomers(prev => [customer, ...prev])
 
         setCustomerConfirmed(true)
         setCustomerSearchResult('found')
@@ -584,7 +586,7 @@ export default function CalendarPage() {
           description: `${newBookingData.newClientName} has been added to your customer list.`,
         })
       } else {
-        throw new Error(response.error || 'Failed to create customer')
+        throw new Error('Failed to create customer - no customer ID returned')
       }
     } catch (error: any) {
       console.error('[Calendar] Error creating customer:', error)
@@ -2392,10 +2394,20 @@ export default function CalendarPage() {
                                 type="button"
                                 size="sm"
                                 onClick={handleConfirmNewCustomer}
-                                className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                                disabled={searchingCustomer}
+                                className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <UserPlus className="h-3 w-3 mr-1.5" />
-                                Confirm as New Customer
+                                {searchingCustomer ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                                    Creating Customer...
+                                  </>
+                                ) : (
+                                  <>
+                                    <UserPlus className="h-3 w-3 mr-1.5" />
+                                    Confirm as New Customer
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </div>

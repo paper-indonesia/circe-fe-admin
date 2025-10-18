@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(git add app/page.tsx)",
-      "Bash(git commit -m \"fix: force dynamic rendering for root page redirect\")"
+      "Bash(git commit -m \"fix: force dynamic rendering for root page redirect\")",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []
