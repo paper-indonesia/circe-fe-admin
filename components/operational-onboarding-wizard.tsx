@@ -118,22 +118,22 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-[95vw] w-full sm:max-w-[1120px] max-h-[90vh] p-0 gap-0 border-0 rounded-2xl shadow-2xl overflow-hidden">
-        <div className="flex flex-col h-full max-h-[90vh]">
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-[1120px] max-h-[90vh] p-0 gap-0 border-0 rounded-2xl shadow-2xl overflow-hidden overflow-x-hidden">
+        <div className="flex flex-col h-full max-h-[90vh] overflow-x-hidden">
         {/* Header with Progress */}
-        <div className="flex-shrink-0 bg-white border-b px-6 py-5 rounded-t-2xl">
-          <div className="flex items-start justify-between gap-6 mb-4">
+        <div className="flex-shrink-0 bg-white border-b px-6 py-5 rounded-t-2xl overflow-x-hidden">
+          <div className="flex items-start justify-between gap-6 mb-4 max-w-full">
             {/* Left: Title + Subtitle */}
-            <div className="flex-shrink-0">
-              <h2 className="text-2xl font-bold text-gray-900">
+            <div className="flex-shrink-0 min-w-0">
+              <h2 className="text-2xl font-bold text-gray-900 truncate">
                 Setup Awal Sistem
               </h2>
-              <p className="text-sm text-gray-600 mt-1">Lengkapi 4 langkah berikut agar siap melakukan booking</p>
+              <p className="text-sm text-gray-600 mt-1 truncate">Lengkapi 4 langkah berikut agar siap melakukan booking</p>
             </div>
 
             {/* Center: Stepper (one line on desktop) */}
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-center gap-2">
+            <div className="flex-1 flex items-center justify-center min-w-0 overflow-x-auto">
+              <div className="flex items-center gap-2 min-w-max">
                 {STEPS.map((step, index) => {
                   const Icon = step.icon
                   const isActive = progress.currentStep === step.number
@@ -185,7 +185,7 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
         </div>
 
         {/* Content - Scrollable Body */}
-        <div className="flex-1 overflow-y-auto px-6 pt-6 pb-8 min-h-0">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 pt-6 pb-8 min-h-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={progress.currentStep}
@@ -194,6 +194,7 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
               animate="animate"
               exit="exit"
               transition={{ duration: 0.3 }}
+              className="max-w-full overflow-x-hidden"
             >
               {CurrentStepComponent && (
                 <CurrentStepComponent onValidChange={setCanProceed} />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,7 @@ import { useStaff, useBookings, useTreatments } from "@/lib/context"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
 import { apiClient, ApiError } from "@/lib/api-client"
+import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
@@ -30,6 +31,8 @@ export default function StaffPage() {
   const { treatments } = useTreatments()
   const { toast } = useToast()
   const router = useRouter()
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const undoToastDismissRef = useRef<(() => void) | null>(null)
   const [outlets, setOutlets] = useState<any[]>([])
   const [positionTemplates, setPositionTemplates] = useState<string[]>([])
   const [loadingPositions, setLoadingPositions] = useState(false)
@@ -693,13 +696,43 @@ export default function StaffPage() {
   const handleConfirmDelete = async () => {
     if (!staffToDelete) return
 
+    const deletedStaff = { ...staffToDelete }
+
     try {
       await deleteStaff(staffToDelete.id)
 
-      toast({
-        title: "Berhasil",
-        description: `Staff ${staffToDelete.name || staffToDelete.display_name} berhasil dihapus`,
+      // Clear existing undo timer if any
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current)
+      }
+      if (undoToastDismissRef.current) {
+        undoToastDismissRef.current()
+      }
+
+      // Show undo toast
+      const { dismiss } = toast({
+        title: "Staff deleted (soft)",
+        description: "Undo within 10 seconds.",
+        duration: 10000,
+        action: (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleUndoDeleteStaff(deletedStaff.id)}
+            className="bg-white hover:bg-gray-100"
+          >
+            Undo
+          </Button>
+        ),
       })
+
+      undoToastDismissRef.current = dismiss
+
+      // Set timer to finalize deletion after 10 seconds
+      undoTimerRef.current = setTimeout(() => {
+        undoTimerRef.current = null
+        undoToastDismissRef.current = null
+      }, 10000)
 
       setShowDeleteDialog(false)
       setStaffToDelete(null)
@@ -738,6 +771,44 @@ export default function StaffPage() {
           variant: "destructive",
         })
       }
+    }
+  }
+
+  const handleUndoDeleteStaff = async (staffId: string) => {
+    try {
+      // Call restore API endpoint
+      const response = await fetch(`/api/staff/${staffId}/restore`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to restore staff')
+      }
+
+      // Clear undo timer
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current)
+        undoTimerRef.current = null
+      }
+      if (undoToastDismissRef.current) {
+        undoToastDismissRef.current()
+        undoToastDismissRef.current = null
+      }
+
+      toast({
+        title: "Staff restored",
+        description: "Staff has been successfully restored.",
+      })
+
+      // Refresh staff list - the context should handle this
+      window.location.reload()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to restore staff",
+        variant: "destructive"
+      })
     }
   }
 
@@ -3023,31 +3094,26 @@ export default function StaffPage() {
         </Dialog>
 
         {/* Delete Confirmation Dialog */}
-        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Konfirmasi Hapus Staff</AlertDialogTitle>
-              <AlertDialogDescription>
-                Apakah Anda yakin ingin menghapus staff <strong>{staffToDelete?.name || staffToDelete?.display_name}</strong>?
-                <br /><br />
-                Tindakan ini akan melakukan soft delete (data tidak akan hilang permanen) dan status staff akan berubah menjadi TERMINATED. Staff ini tidak dapat ditugaskan ke appointment baru.
-                <br /><br />
-                <strong>Catatan:</strong> Staff tidak dapat dihapus jika memiliki appointment yang akan datang (confirmed atau pending).
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="border-[#E7C6FF] hover:bg-[#FFD6FF]">
-                Batal
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleConfirmDelete}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                Hapus Staff
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteEntityDialog
+          open={showDeleteDialog && !!staffToDelete}
+          onOpenChange={setShowDeleteDialog}
+          entityType="Staff"
+          entityName={staffToDelete?.name || staffToDelete?.display_name || ""}
+          entityDetails={[
+            { label: "Name", value: staffToDelete?.name || staffToDelete?.display_name || "-" },
+            { label: "Position", value: staffToDelete?.position || staffToDelete?.role || "-" },
+            { label: "Phone", value: staffToDelete?.phone || "-" },
+            { label: "Email", value: staffToDelete?.email || "-" },
+            { label: "Status", value: staffToDelete?.status || "active" },
+          ]}
+          onConfirmDelete={handleConfirmDelete}
+          softDeleteImpacts={[
+            "Staff will be marked as TERMINATED and inactive",
+            "Staff cannot be assigned to new appointments",
+            "Historical appointment data will be preserved",
+            "Staff data can be restored within 10 seconds"
+          ]}
+        />
 
         {/* Error Dialog */}
         <AlertDialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>

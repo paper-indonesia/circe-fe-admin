@@ -230,31 +230,31 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
   const canAddMore = !planLimits || progress.outlets.length < planLimits.max
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-x-hidden">
       {/* Info Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="p-5 border-blue-200 bg-blue-50 min-h-[130px] flex">
-          <div className="flex items-start gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-full">
+        <Card className="p-5 border-blue-200 bg-blue-50 min-h-[130px] flex max-w-full">
+          <div className="flex items-start gap-3 min-w-0 w-full">
             <div className="bg-blue-100 rounded-lg p-2 flex-shrink-0">
               <Info className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-blue-900 mb-2">Apa yang harus dilakukan</h3>
-              <p className="text-sm text-blue-700 leading-relaxed">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-blue-900 mb-2 truncate">Apa yang harus dilakukan</h3>
+              <p className="text-sm text-blue-700 leading-relaxed break-words">
                 Buat minimal 1 outlet untuk mendefinisikan lokasi layanan Anda. Outlet ini akan menjadi dasar untuk penjadwalan dan booking.
               </p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-5 border-purple-200 bg-purple-50 min-h-[130px] flex">
-          <div className="flex items-start gap-3">
+        <Card className="p-5 border-purple-200 bg-purple-50 min-h-[130px] flex max-w-full">
+          <div className="flex items-start gap-3 min-w-0 w-full">
             <div className="bg-purple-100 rounded-lg p-2 flex-shrink-0">
               <CheckCircle2 className="h-5 w-5 text-purple-600" />
             </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-purple-900 mb-2">Kenapa ini penting</h3>
-              <p className="text-sm text-purple-700 leading-relaxed">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-purple-900 mb-2 truncate">Kenapa ini penting</h3>
+              <p className="text-sm text-purple-700 leading-relaxed break-words">
                 Outlet menentukan lokasi, zona waktu, jam operasional, dan menjadi basis untuk perhitungan pajak serta penjadwalan staff.
               </p>
             </div>
@@ -281,13 +281,13 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
       )}
 
       {/* Form */}
-      <Card className="p-6 rounded-xl">
-        <div className="flex items-center gap-3 mb-6">
-          <Building2 className="h-6 w-6 text-gray-600" />
-          <h3 className="text-lg font-semibold">Tambah Outlet Baru</h3>
+      <Card className="p-6 rounded-xl max-w-full overflow-x-hidden">
+        <div className="flex items-center gap-3 mb-6 min-w-0">
+          <Building2 className="h-6 w-6 text-gray-600 flex-shrink-0" />
+          <h3 className="text-lg font-semibold truncate">Tambah Outlet Baru</h3>
         </div>
 
-        <div className="grid grid-cols-12 gap-4">
+        <div className="grid grid-cols-12 gap-4 max-w-full">
           {/* Nama Outlet - 6 cols */}
           <div className="col-span-12 lg:col-span-6 space-y-2">
             <Label htmlFor="name" className="text-sm font-medium">
@@ -426,19 +426,20 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
 
       {/* Outlet List - Collapsible */}
       {progress.outlets.length > 0 && (
-        <Card className="overflow-hidden rounded-xl">
+        <Card className="overflow-hidden rounded-xl max-w-full">
           <button
             onClick={() => setShowOutletList(!showOutletList)}
-            className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-colors"
+            className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded-t-xl"
           >
-            <div className="flex items-center gap-3">
-              <Building2 className="h-5 w-5 text-gray-600" />
-              <h3 className="font-semibold text-gray-900">Outlet yang Ditambahkan</h3>
-              <Badge variant="secondary" className="ml-2">{progress.outlets.length} outlet</Badge>
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Building2 className="h-5 w-5 text-gray-600 flex-shrink-0" />
+              <h3 className="font-semibold text-gray-900 truncate">Outlet yang Ditambahkan</h3>
+              <Badge variant="secondary" className="ml-2 flex-shrink-0">{progress.outlets.length} outlet</Badge>
             </div>
             <motion.div
               animate={{ rotate: showOutletList ? 180 : 0 }}
               transition={{ duration: 0.2 }}
+              className="flex-shrink-0 ml-2"
             >
               <ChevronDown className="h-5 w-5 text-gray-400" />
             </motion.div>
@@ -451,28 +452,28 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="overflow-hidden"
+                className="overflow-hidden overflow-x-hidden"
               >
-                <div className="px-5 pb-5 space-y-3 border-t">
+                <div className="px-5 pb-5 space-y-3 border-t max-w-full">
                   {progress.outlets.map((outlet, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="flex items-start gap-3 p-4 border rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 hover:shadow-md transition-shadow mt-3 first:mt-3"
+                      className="flex items-start gap-3 p-4 border rounded-lg bg-gradient-to-br from-blue-50 to-cyan-50 hover:shadow-md transition-shadow mt-3 first:mt-3 max-w-full min-w-0"
                     >
                       <div className="bg-blue-500 rounded-lg p-2 flex-shrink-0">
                         <Building2 className="h-5 w-5 text-white" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-900">{outlet.name}</h4>
-                        <p className="text-sm text-gray-600 mt-1">{outlet.address}</p>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <h4 className="font-semibold text-gray-900 truncate">{outlet.name}</h4>
+                        <p className="text-sm text-gray-600 mt-1 truncate">{outlet.address}</p>
                         <div className="flex items-center gap-4 mt-2 flex-wrap">
-                          <p className="text-xs text-gray-500 flex items-center gap-1">
-                            <span className="font-medium">📞</span> {outlet.phone}
+                          <p className="text-xs text-gray-500 flex items-center gap-1 truncate">
+                            <span className="font-medium flex-shrink-0">📞</span> <span className="truncate">{outlet.phone}</span>
                           </p>
-                          <Badge variant="outline" className="text-xs bg-white">
+                          <Badge variant="outline" className="text-xs bg-white flex-shrink-0 truncate max-w-[200px]">
                             {TIMEZONES.find(tz => tz.value === outlet.timezone)?.label || outlet.timezone}
                           </Badge>
                         </div>

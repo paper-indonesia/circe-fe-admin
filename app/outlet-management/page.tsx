@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { useToast } from "@/hooks/use-toast"
 import { MainLayout } from "@/components/layout/main-layout"
+import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -126,6 +128,10 @@ const DEFAULT_SETTINGS: OutletSettings = {
 export default function OutletManagementPage() {
   const router = useRouter()
   const { user, isAdmin, loading: authLoading } = useAuth()
+  const { toast } = useToast()
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const undoToastDismissRef = useRef<(() => void) | null>(null)
+
   const [outlets, setOutlets] = useState<OutletData[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -343,6 +349,8 @@ export default function OutletManagementPage() {
   const handleDeleteOutlet = async () => {
     if (!selectedOutlet) return
 
+    const deletedOutlet = { ...selectedOutlet }
+
     try {
       setError("")
       const response = await fetch(`/api/outlets/${selectedOutlet.id}`, {
@@ -350,17 +358,96 @@ export default function OutletManagementPage() {
       })
 
       if (response.ok) {
-        setSuccess('Outlet deleted successfully')
+        // Clear existing undo timer if any
+        if (undoTimerRef.current) {
+          clearTimeout(undoTimerRef.current)
+        }
+        if (undoToastDismissRef.current) {
+          undoToastDismissRef.current()
+        }
+
+        // Show undo toast
+        const { dismiss } = toast({
+          title: "Outlet deleted (soft)",
+          description: "Undo within 10 seconds.",
+          duration: 10000,
+          action: (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleUndoDeleteOutlet(deletedOutlet.id)}
+              className="bg-white hover:bg-gray-100"
+            >
+              Undo
+            </Button>
+          ),
+        })
+
+        undoToastDismissRef.current = dismiss
+
+        // Set timer to finalize deletion after 10 seconds
+        undoTimerRef.current = setTimeout(() => {
+          undoTimerRef.current = null
+          undoToastDismissRef.current = null
+        }, 10000)
+
         setIsDeleteDialogOpen(false)
         setSelectedOutlet(null)
         fetchOutlets()
-        setTimeout(() => setSuccess(""), 3000)
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to delete outlet')
+        toast({
+          title: "Error",
+          description: data.error || 'Failed to delete outlet',
+          variant: "destructive"
+        })
       }
     } catch (error) {
       setError('Failed to delete outlet')
+      toast({
+        title: "Error",
+        description: 'Failed to delete outlet',
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleUndoDeleteOutlet = async (outletId: string) => {
+    try {
+      // Call restore API endpoint
+      const response = await fetch(`/api/outlets/${outletId}/restore`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to restore outlet')
+      }
+
+      // Clear undo timer
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current)
+        undoTimerRef.current = null
+      }
+      if (undoToastDismissRef.current) {
+        undoToastDismissRef.current()
+        undoToastDismissRef.current = null
+      }
+
+      toast({
+        title: "Outlet restored",
+        description: "Outlet has been successfully restored.",
+      })
+
+      // Refresh outlets list
+      fetchOutlets()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to restore outlet",
+        variant: "destructive"
+      })
     }
   }
 
@@ -1242,24 +1329,26 @@ export default function OutletManagementPage() {
         </Dialog>
 
         {/* Delete Outlet Dialog */}
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Outlet</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete {selectedOutlet?.name}? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleDeleteOutlet} variant="destructive">
-                Delete Outlet
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <DeleteEntityDialog
+          open={isDeleteDialogOpen && !!selectedOutlet}
+          onOpenChange={setIsDeleteDialogOpen}
+          entityType="Outlet"
+          entityName={selectedOutlet?.name || ""}
+          entityDetails={[
+            { label: "Name", value: selectedOutlet?.name || "-" },
+            { label: "Slug", value: selectedOutlet?.slug || "-" },
+            { label: "Address", value: `${selectedOutlet?.address?.street || ""}, ${selectedOutlet?.address?.city || ""}` },
+            { label: "Phone", value: selectedOutlet?.contact?.phone || "-" },
+            { label: "Status", value: selectedOutlet?.status || "active" },
+          ]}
+          onConfirmDelete={handleDeleteOutlet}
+          softDeleteImpacts={[
+            "Outlet will be marked as deleted and inactive",
+            "Outlet will not appear in booking forms",
+            "Staff and appointment data will be preserved",
+            "Outlet data can be restored within 10 seconds"
+          ]}
+        />
       </div>
     </MainLayout>
   )

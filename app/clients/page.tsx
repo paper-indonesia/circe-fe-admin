@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,7 @@ import { format, parseISO, isValid } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { useRouter } from "next/navigation"
 import { EmptyState } from "@/components/ui/empty-state"
+import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Star } from "lucide-react"
 import {
   Users,
@@ -41,6 +42,8 @@ import {
 export default function ClientsPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const undoToastDismissRef = useRef<(() => void) | null>(null)
 
   const [customers, setCustomers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -417,12 +420,14 @@ export default function ClientsPage() {
     setShowDeleteDialog(true)
   }
 
-  const confirmDeleteClient = async (permanent: boolean = false) => {
+  const confirmDeleteClient = async () => {
     if (!clientToDelete) return
 
+    const deletedCustomer = { ...clientToDelete }
+
     try {
-      // Use soft delete by default (permanent=false)
-      const response = await fetch(`/api/customers/${clientToDelete.id}?permanent=${permanent}`, {
+      // Perform soft delete
+      const response = await fetch(`/api/customers/${clientToDelete.id}?permanent=false`, {
         method: 'DELETE'
       })
 
@@ -432,10 +437,40 @@ export default function ClientsPage() {
       }
 
       const data = await response.json()
-      toast({
-        title: "Success",
-        description: data.message || "Customer deleted successfully"
+
+      // Clear existing undo timer if any
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current)
+      }
+      if (undoToastDismissRef.current) {
+        undoToastDismissRef.current()
+      }
+
+      // Show undo toast
+      const { dismiss } = toast({
+        title: "Customer deleted (soft)",
+        description: "Undo within 10 seconds.",
+        duration: 10000,
+        action: (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleUndoDelete(deletedCustomer.id)}
+            className="bg-white hover:bg-gray-100"
+          >
+            Undo
+          </Button>
+        ),
       })
+
+      undoToastDismissRef.current = dismiss
+
+      // Set timer to finalize deletion after 10 seconds
+      undoTimerRef.current = setTimeout(() => {
+        undoTimerRef.current = null
+        undoToastDismissRef.current = null
+      }, 10000)
+
       setSelectedClient(null)
       setShowClientDialog(false)
       setShowDeleteDialog(false)
@@ -445,6 +480,43 @@ export default function ClientsPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to delete customer",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleUndoDelete = async (customerId: string) => {
+    try {
+      // Call restore API endpoint
+      const response = await fetch(`/api/customers/${customerId}/restore`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to restore customer')
+      }
+
+      // Clear undo timer
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current)
+        undoTimerRef.current = null
+      }
+      if (undoToastDismissRef.current) {
+        undoToastDismissRef.current()
+        undoToastDismissRef.current = null
+      }
+
+      toast({
+        title: "Customer restored",
+        description: "Customer has been successfully restored.",
+      })
+
+      fetchCustomers() // Reload customer list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to restore customer",
         variant: "destructive"
       })
     }
@@ -1289,73 +1361,27 @@ export default function ClientsPage() {
         </Dialog>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-red-600">
-                <AlertTriangle className="h-5 w-5" />
-                Delete Customer
-              </DialogTitle>
-            </DialogHeader>
-            {clientToDelete && (
-              <div className="space-y-4">
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>Soft Delete:</strong> This customer will be deactivated but data will be preserved for audit purposes.
-                  </p>
-                  <ul className="text-sm text-blue-700 space-y-1 ml-4">
-                    <li>• Customer will be marked as deleted and inactive</li>
-                    <li>• Appointment history will be preserved</li>
-                    <li>• Data can be restored if needed</li>
-                  </ul>
-                </div>
-
-                <div className="p-4 bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg">
-                  <h4 className="font-medium text-pink-800 mb-2">Customer Details:</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-pink-700">Name:</span>
-                      <span className="font-medium text-pink-900">{clientToDelete.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-pink-700">Phone:</span>
-                      <span className="font-medium text-pink-900">{clientToDelete.phone}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-pink-700">Total Appointments:</span>
-                      <span className="font-medium text-pink-900">{clientToDelete.totalVisits}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-pink-700">Loyalty Points:</span>
-                      <span className="font-medium text-pink-900">{clientToDelete.loyalty_points || "0"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-pink-700">Status:</span>
-                      <span className="font-medium text-pink-900">{getStatusBadge(clientToDelete.status)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button onClick={() => confirmDeleteClient(false)} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete Customer (Soft)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowDeleteDialog(false)
-                      setClientToDelete(null)
-                    }}
-                    className="flex-1 border-gray-300 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        <DeleteEntityDialog
+          open={showDeleteDialog && !!clientToDelete}
+          onOpenChange={setShowDeleteDialog}
+          entityType="Customer"
+          entityName={clientToDelete?.name || ""}
+          entityDetails={[
+            { label: "Name", value: clientToDelete?.name || "-" },
+            { label: "Phone", value: clientToDelete?.phone || "-" },
+            { label: "Email", value: clientToDelete?.email || "-" },
+            { label: "Total Appointments", value: clientToDelete?.totalVisits || 0 },
+            { label: "Loyalty Points", value: clientToDelete?.loyalty_points || 0 },
+            { label: "Status", value: clientToDelete?.status || "active" },
+          ]}
+          onConfirmDelete={confirmDeleteClient}
+          softDeleteImpacts={[
+            "Customer will be marked as deleted and inactive",
+            "Appointment history will be preserved",
+            "Customer data can be restored within 10 seconds",
+            "After 10 seconds, restoration requires admin intervention"
+          ]}
+        />
     </MainLayout>
   )
 }

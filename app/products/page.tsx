@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,12 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/context"
+import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, DollarSign, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp } from "lucide-react"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { EmptyState } from "@/components/ui/empty-state"
 
 export default function TreatmentsPage() {
   const { toast } = useToast()
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const undoToastDismissRef = useRef<(() => void) | null>(null)
 
   const {
     treatments = [],
@@ -32,6 +35,8 @@ export default function TreatmentsPage() {
 
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editingTreatment, setEditingTreatment] = useState<any>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [productToDelete, setProductToDelete] = useState<any>(null)
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [staffFilter, setStaffFilter] = useState("all")
@@ -270,28 +275,98 @@ export default function TreatmentsPage() {
     }
   }
 
-  const handleDeleteTreatment = async (treatmentId: string) => {
-    const treatmentBookings = bookings.filter((b) => b.treatmentId === treatmentId)
+  const handleDeleteTreatment = (treatment: any) => {
+    setProductToDelete(treatment)
+    setShowDeleteDialog(true)
+  }
 
-    if (treatmentBookings.length > 0) {
-      if (
-        !confirm(
-          `This product has ${treatmentBookings.length} associated bookings. Are you sure you want to delete it?`,
-        )
-      ) {
-        return
-      }
-    }
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return
+
+    const deletedProduct = { ...productToDelete }
 
     try {
-      await deleteTreatment(treatmentId)
-      toast({ title: "Success", description: "Product deleted successfully" })
+      await deleteTreatment(productToDelete.id)
+
+      // Clear existing undo timer if any
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current)
+      }
+      if (undoToastDismissRef.current) {
+        undoToastDismissRef.current()
+      }
+
+      // Show undo toast
+      const { dismiss } = toast({
+        title: "Product deleted (soft)",
+        description: "Undo within 10 seconds.",
+        duration: 10000,
+        action: (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => handleUndoDeleteProduct(deletedProduct.id)}
+            className="bg-white hover:bg-gray-100"
+          >
+            Undo
+          </Button>
+        ),
+      })
+
+      undoToastDismissRef.current = dismiss
+
+      // Set timer to finalize deletion after 10 seconds
+      undoTimerRef.current = setTimeout(() => {
+        undoTimerRef.current = null
+        undoToastDismissRef.current = null
+      }, 10000)
+
+      setShowDeleteDialog(false)
+      setProductToDelete(null)
     } catch (error: any) {
       let errorMessage = "Failed to delete product"
       if (error.message) {
         errorMessage = error.message
       }
       toast({ title: "Error", description: errorMessage, variant: "destructive" })
+    }
+  }
+
+  const handleUndoDeleteProduct = async (productId: string) => {
+    try {
+      // Call restore API endpoint
+      const response = await fetch(`/api/treatments/${productId}/restore`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to restore product')
+      }
+
+      // Clear undo timer
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current)
+        undoTimerRef.current = null
+      }
+      if (undoToastDismissRef.current) {
+        undoToastDismissRef.current()
+        undoToastDismissRef.current = null
+      }
+
+      toast({
+        title: "Product restored",
+        description: "Product has been successfully restored.",
+      })
+
+      // Refresh products list
+      window.location.reload()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to restore product",
+        variant: "destructive"
+      })
     }
   }
 
@@ -543,7 +618,7 @@ export default function TreatmentsPage() {
                               variant="outline"
                               size="sm"
                               className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent"
-                              onClick={() => handleDeleteTreatment(treatment.id)}
+                              onClick={() => handleDeleteTreatment(treatment)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -989,6 +1064,40 @@ export default function TreatmentsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteEntityDialog
+        open={showDeleteDialog && !!productToDelete}
+        onOpenChange={setShowDeleteDialog}
+        entityType="Product"
+        entityName={productToDelete?.name || ""}
+        entityDetails={[
+          { label: "Name", value: productToDelete?.name || "-" },
+          { label: "Category", value: productToDelete?.category || "-" },
+          { label: "Price", value: productToDelete?.price ? `$${productToDelete.price}` : "-" },
+          { label: "Duration", value: `${productToDelete?.durationMin || 0} minutes` },
+          { label: "Status", value: productToDelete?.status || "active" },
+        ]}
+        onConfirmDelete={confirmDeleteProduct}
+        blocker={
+          productToDelete && bookings.filter((b) => b.treatmentId === productToDelete.id).length > 0
+            ? {
+                type: "active_bookings",
+                message: "Cannot delete product with active bookings",
+                details: [
+                  `This product has ${bookings.filter((b) => b.treatmentId === productToDelete.id).length} associated bookings`,
+                  "Please cancel or complete all bookings before deleting this product"
+                ]
+              }
+            : undefined
+        }
+        softDeleteImpacts={[
+          "Product will be marked as deleted and inactive",
+          "Product will not appear in booking forms",
+          "Historical booking data will be preserved",
+          "Product data can be restored within 10 seconds"
+        ]}
+      />
     </MainLayout>
   )
 }

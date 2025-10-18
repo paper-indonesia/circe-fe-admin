@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { useToast } from "@/hooks/use-toast"
 import { MainLayout } from "@/components/layout/main-layout"
+import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -75,6 +77,10 @@ const EMPLOYMENT_TYPES = [
 export default function UserManagementPage() {
   const router = useRouter()
   const { user, isAdmin, loading: authLoading } = useAuth()
+  const { toast } = useToast()
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const undoToastDismissRef = useRef<(() => void) | null>(null)
+
   const [users, setUsers] = useState<UserData[]>([])
   const [outlets, setOutlets] = useState<OutletInfo[]>([])
   const [loading, setLoading] = useState(true)
@@ -368,6 +374,8 @@ export default function UserManagementPage() {
   const handleDeleteUser = async () => {
     if (!selectedUser) return
 
+    const deletedUser = { ...selectedUser }
+
     try {
       setError("")
       const response = await fetch(`/api/users/${selectedUser.id}`, {
@@ -375,17 +383,96 @@ export default function UserManagementPage() {
       })
 
       if (response.ok) {
-        setSuccess('User deleted successfully')
+        // Clear existing undo timer if any
+        if (undoTimerRef.current) {
+          clearTimeout(undoTimerRef.current)
+        }
+        if (undoToastDismissRef.current) {
+          undoToastDismissRef.current()
+        }
+
+        // Show undo toast
+        const { dismiss } = toast({
+          title: "User deleted (soft)",
+          description: "Undo within 10 seconds.",
+          duration: 10000,
+          action: (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleUndoDeleteUser(deletedUser.id)}
+              className="bg-white hover:bg-gray-100"
+            >
+              Undo
+            </Button>
+          ),
+        })
+
+        undoToastDismissRef.current = dismiss
+
+        // Set timer to finalize deletion after 10 seconds
+        undoTimerRef.current = setTimeout(() => {
+          undoTimerRef.current = null
+          undoToastDismissRef.current = null
+        }, 10000)
+
         setIsDeleteDialogOpen(false)
         setSelectedUser(null)
         fetchUsers()
-        setTimeout(() => setSuccess(""), 3000)
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to delete user')
+        toast({
+          title: "Error",
+          description: data.error || 'Failed to delete user',
+          variant: "destructive"
+        })
       }
     } catch (error) {
       setError('Failed to delete user')
+      toast({
+        title: "Error",
+        description: 'Failed to delete user',
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleUndoDeleteUser = async (userId: string) => {
+    try {
+      // Call restore API endpoint
+      const response = await fetch(`/api/users/${userId}/restore`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to restore user')
+      }
+
+      // Clear undo timer
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current)
+        undoTimerRef.current = null
+      }
+      if (undoToastDismissRef.current) {
+        undoToastDismissRef.current()
+        undoToastDismissRef.current = null
+      }
+
+      toast({
+        title: "User restored",
+        description: "User has been successfully restored.",
+      })
+
+      // Refresh users list
+      fetchUsers()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to restore user",
+        variant: "destructive"
+      })
     }
   }
 
@@ -1044,24 +1131,25 @@ export default function UserManagementPage() {
       </Dialog>
 
       {/* Delete User Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete {selectedUser?.first_name} {selectedUser?.last_name}? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleDeleteUser} variant="destructive">
-              Delete User
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteEntityDialog
+        open={isDeleteDialogOpen && !!selectedUser}
+        onOpenChange={setIsDeleteDialogOpen}
+        entityType="User"
+        entityName={selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : ""}
+        entityDetails={[
+          { label: "Name", value: selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : "-" },
+          { label: "Email", value: selectedUser?.email || "-" },
+          { label: "Role", value: selectedUser?.role || "-" },
+          { label: "Status", value: selectedUser?.status || "active" },
+        ]}
+        onConfirmDelete={handleDeleteUser}
+        softDeleteImpacts={[
+          "User will be marked as deleted and inactive",
+          "User will not be able to login",
+          "User data will be preserved for audit purposes",
+          "User account can be restored within 10 seconds"
+        ]}
+      />
       </div>
     </MainLayout>
   )
