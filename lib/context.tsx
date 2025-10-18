@@ -73,7 +73,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.log('[Context] User authenticated, loading data from API...')
 
         // Fetch data with individual error handling
-        const [mongoStaff, mongoTreatments, mongoBookings] = await Promise.all([
+        const [mongoStaff, mongoTreatments, mongoBookings, mongoCustomers] = await Promise.all([
           apiClient.getStaff().catch(err => {
             console.warn('[Context] Failed to load staff:', err)
             return { items: [] }
@@ -86,12 +86,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
             console.warn('[Context] Failed to load appointments:', err)
             return { items: [] }
           }),
+          fetch('/api/customers?page=1&size=100')
+            .then(res => res.ok ? res.json() : { items: [] })
+            .catch(err => {
+              console.warn('[Context] Failed to load customers:', err)
+              return { items: [] }
+            }),
         ])
 
         console.log('[Context] Raw API responses:', {
           staff: mongoStaff,
           treatments: mongoTreatments,
-          bookings: mongoBookings
+          bookings: mongoBookings,
+          customers: mongoCustomers
         })
 
         // Map MongoDB data to frontend format
@@ -168,6 +175,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
           isActive: t.isActive !== false && t.is_active !== false,
           status: t.status || 'active',
           tags: t.tags || [],
+        }))
+
+        // Handle paginated response from API for customers
+        const customersArray = Array.isArray(mongoCustomers)
+          ? mongoCustomers
+          : (mongoCustomers.items || [])
+
+        const patients = customersArray.map((c: any) => ({
+          id: c._id || c.id,
+          name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email || 'Unknown',
+          firstName: c.first_name || '',
+          lastName: c.last_name || '',
+          email: c.email || '',
+          phone: c.phone || '',
+          dateOfBirth: c.date_of_birth || c.birth_date,
+          gender: c.gender,
+          address: c.address,
+          medicalHistory: c.medical_history || c.notes || '',
+          allergies: c.allergies || [],
+          notes: c.notes || '',
+          tags: c.tags || [],
+          preferences: c.preferences || {},
+          hasPassword: c.has_password || false,
+          emailVerified: c.email_verified || false,
+          loyaltyPoints: c.loyalty_points || 0,
+          totalSpent: c.total_spent || 0,
+          visitCount: c.visit_count || 0,
+          lastVisit: c.last_visit_date,
+          createdAt: c.created_at || c.createdAt || new Date().toISOString(),
+          updatedAt: c.updated_at || c.updatedAt,
         }))
 
         // Handle paginated response from API
@@ -248,10 +285,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.log('[Context] Parsed data:', {
           staff: staff.length,
           treatments: treatments.length,
-          bookings: bookings.length
+          bookings: bookings.length,
+          patients: patients.length
         })
 
-        setPatients([]) // No patients endpoint yet
+        setPatients(patients)
         setStaff(staff)
         setTreatments(treatments)
         setBookings(bookings)

@@ -310,17 +310,23 @@ function DashboardContent() {
     bookings?.filter((booking) => booking.status === 'pending').length || 0
   , [bookings])
 
-  // Pending payments (unpaid bookings)
+  // Pending payments (unpaid bookings, exclude cancelled and no-show)
   const pendingPayments = useMemo(() =>
-    bookings?.filter((booking) =>
-      booking.status === 'completed' && booking.paymentStatus === 'pending'
-    ) || []
+    bookings?.filter((booking) => {
+      const isUnpaid = booking.payment_status === 'unpaid' || booking.payment_status === 'pending'
+      const isValidStatus = booking.status !== 'cancelled' && booking.status !== 'no_show' && booking.status !== 'no-show'
+      return isUnpaid && isValidStatus
+    }) || []
   , [bookings])
 
   const pendingPaymentsCount = pendingPayments.length
 
   const pendingPaymentsAmount = useMemo(() =>
     pendingPayments.reduce((total, booking) => {
+      // Use total_price from appointment if available, otherwise fallback to treatment price
+      if (booking.total_price) {
+        return total + booking.total_price
+      }
       const treatment = treatments?.find((t) => t.id === booking.treatmentId)
       return total + (treatment?.price || 0)
     }, 0)
@@ -744,7 +750,7 @@ function DashboardContent() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-500">Today's Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(todaysRevenue)}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(todaysRevenue, true)}</p>
 
                   {/* Comparison indicator */}
                   {(() => {
@@ -789,8 +795,8 @@ function DashboardContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Pending Payments</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(pendingPaymentsAmount)}</p>
-                  <p className="text-xs text-orange-600 mt-1">Needs collection</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(pendingPaymentsAmount, true)}</p>
+                  <p className="text-xs text-orange-600 mt-1">{pendingPaymentsCount} invoice{pendingPaymentsCount !== 1 ? 's' : ''}</p>
                 </div>
                 <div className="p-3 bg-[#FFD6FF]/30 rounded-lg">
                   <Clock className="h-6 w-6 text-[#E7C6FF]" />
@@ -876,34 +882,91 @@ function DashboardContent() {
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-gray-100">
-                            <th className="text-left text-xs font-medium text-gray-500 pb-3">Date</th>
+                            <th className="text-left text-xs font-medium text-gray-500 pb-3">Date & Time</th>
                             <th className="text-left text-xs font-medium text-gray-500 pb-3">Client</th>
                             <th className="text-left text-xs font-medium text-gray-500 pb-3">Service</th>
+                            <th className="text-left text-xs font-medium text-gray-500 pb-3">Staff</th>
+                            <th className="text-left text-xs font-medium text-gray-500 pb-3">Type</th>
                             <th className="text-right text-xs font-medium text-gray-500 pb-3">Amount</th>
-                            <th className="text-right text-xs font-medium text-gray-500 pb-3">Status</th>
+                            <th className="text-center text-xs font-medium text-gray-500 pb-3">Status</th>
+                            <th className="text-center text-xs font-medium text-gray-500 pb-3">Payment</th>
                           </tr>
                         </thead>
                         <tbody>
                           {allTransactions.slice(0, 5).map((transaction) => {
+                            // Get service info from services array (new API structure)
+                            const firstService = transaction.services && transaction.services.length > 0
+                              ? transaction.services[0]
+                              : null
+
+                            // Fallback to old structure
                             const treatment = treatments.find(t => t.id === transaction.treatmentId)
+                            const staffMember = staff.find(s => s.id === transaction.staffId)
                             const patient = patients.find(p => p.id === transaction.patientId)
+
+                            // Use new API data or fallback to old
+                            const serviceName = firstService?.service_name || treatment?.name || "Unknown"
+                            const staffName = firstService?.staff_name || staffMember?.name || "N/A"
+                            const amount = transaction.total_price || treatment?.price || 0
+                            const appointmentDate = transaction.appointment_date
+                              ? `${transaction.appointment_date} ${transaction.start_time || ''}`
+                              : transaction.createdAt
+
                             return (
-                              <tr key={transaction.id} className="border-b border-gray-50 hover:bg-gray-50">
+                              <tr key={transaction.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                 <td className="py-3 text-sm text-gray-600">
-                                  {format(new Date(transaction.createdAt), "MMM dd")}
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{format(new Date(appointmentDate), "MMM dd")}</span>
+                                    {transaction.start_time && (
+                                      <span className="text-xs text-gray-500">{transaction.start_time}</span>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="py-3 text-sm font-medium text-gray-900">
-                                  {patient?.name || transaction.patientName}
+                                  {patient?.name || transaction.patientName || transaction.customer?.name || 'Unknown'}
                                 </td>
                                 <td className="py-3 text-sm text-gray-600">
-                                  {treatment?.name || "Unknown"}
+                                  <div className="flex flex-col">
+                                    <span>{serviceName}</span>
+                                    {firstService?.duration_minutes && (
+                                      <span className="text-xs text-gray-500">{firstService.duration_minutes} min</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-3 text-sm text-gray-600">
+                                  {staffName}
+                                </td>
+                                <td className="py-3 text-sm">
+                                  <Badge variant="outline" className="text-xs capitalize">
+                                    {transaction.appointment_type || transaction.source || 'online'}
+                                  </Badge>
                                 </td>
                                 <td className="py-3 text-sm font-medium text-gray-900 text-right">
-                                  {formatCurrency(treatment?.price || 0)}
+                                  {formatCurrency(amount)}
                                 </td>
-                                <td className="py-3 text-right">
-                                  <Badge variant={transaction.paymentStatus === "paid" ? "default" : "secondary"} className="text-xs">
-                                    {transaction.paymentStatus}
+                                <td className="py-3 text-center">
+                                  <Badge
+                                    variant={
+                                      transaction.status === "completed" ? "default" :
+                                      transaction.status === "confirmed" ? "secondary" :
+                                      transaction.status === "cancelled" ? "destructive" :
+                                      "outline"
+                                    }
+                                    className="text-xs capitalize"
+                                  >
+                                    {transaction.status}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 text-center">
+                                  <Badge
+                                    variant={
+                                      transaction.payment_status === "paid" ? "default" :
+                                      transaction.payment_status === "pending" || transaction.payment_status === "unpaid" ? "secondary" :
+                                      "outline"
+                                    }
+                                    className="text-xs capitalize"
+                                  >
+                                    {transaction.payment_status || transaction.paymentStatus || 'unpaid'}
                                   </Badge>
                                 </td>
                               </tr>
@@ -938,7 +1001,7 @@ function DashboardContent() {
                           <span className="text-sm font-medium text-red-900">{pendingPaymentsCount} Unpaid Invoice{pendingPaymentsCount > 1 ? 's' : ''}</span>
                         </div>
                         <Badge variant="destructive" className="text-xs">
-                          {formatCurrency(pendingPaymentsAmount)}
+                          {formatCurrency(pendingPaymentsAmount, true)}
                         </Badge>
                       </div>
                     )}
@@ -1040,7 +1103,7 @@ function DashboardContent() {
                           <p className="text-xs text-gray-500">{s.bookings} bookings</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-gray-900">{formatCurrency(s.earnings)}</p>
+                          <p className="text-sm font-bold text-gray-900">{formatCurrency(s.earnings, true)}</p>
                         </div>
                       </div>
                     ))
