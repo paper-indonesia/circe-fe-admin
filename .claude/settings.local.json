@@ -5,7 +5,8 @@
       "Bash(do)",
       "Bash(done)",
       "Bash(git add -A)",
-      "Bash(git commit -m \"fix: replace all LiquidLoading imports with GradientLoading\n\n- Update 12 remaining files that still imported liquid-loader\n- Fix both @/ and relative import paths\n- Standardize all loading components to use GradientLoading\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")"
+      "Bash(git commit -m \"fix: replace all LiquidLoading imports with GradientLoading\n\n- Update 12 remaining files that still imported liquid-loader\n- Fix both @/ and relative import paths\n- Standardize all loading components to use GradientLoading\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\")",
+      "Bash(npm run build)"
     ],
     "deny": [],
     "ask": []
