@@ -20,8 +20,7 @@ import { apiClient, ApiError } from "@/lib/api-client"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
-import LiquidLoading from "@/components/ui/liquid-loader"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useRouter } from "next/navigation"
 
@@ -1122,7 +1121,7 @@ export default function StaffPage() {
     return (
       <MainLayout>
         <div className="flex min-h-[600px] w-full items-center justify-center">
-          <LiquidLoading />
+          <GradientLoading text="Loading Staff" />
         </div>
       </MainLayout>
     )
@@ -2279,7 +2278,7 @@ export default function StaffPage() {
                     <div className="space-y-2">
                       {availabilityLoading ? (
                         <div className="text-center py-8">
-                          <LiquidLoading />
+                          <GradientLoading text="Loading Staff" />
                         </div>
                       ) : availabilityEntries.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">

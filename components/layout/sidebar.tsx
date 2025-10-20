@@ -18,7 +18,6 @@ export function Sidebar() {
   const { isAdmin } = useAuth()
   const [user, setUser] = useState<any>(null)
   const [tenant, setTenant] = useState<any>(null)
-  const [sessionTime, setSessionTime] = useState({ minutes: 30, seconds: 0 })
 
   // Use subscription context instead of local state
   const { subscription } = useSubscription()
@@ -30,43 +29,33 @@ export function Sidebar() {
 
   // Load user and tenant from localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem("user")
-    const storedTenant = localStorage.getItem("tenant")
+    try {
+      const storedUser = localStorage.getItem("user")
+      const storedTenant = localStorage.getItem("tenant")
 
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (e) {
-        console.error("Failed to parse user data")
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser))
+        } catch (e) {
+          console.error("Failed to parse user data:", e)
+          localStorage.removeItem("user") // Clear corrupted data
+        }
       }
-    }
 
-    if (storedTenant) {
-      try {
-        setTenant(JSON.parse(storedTenant))
-      } catch (e) {
-        console.error("Failed to parse tenant data")
+      if (storedTenant) {
+        try {
+          setTenant(JSON.parse(storedTenant))
+        } catch (e) {
+          console.error("Failed to parse tenant data:", e)
+          localStorage.removeItem("tenant") // Clear corrupted data
+        }
       }
+    } catch (e) {
+      console.error("localStorage access error:", e)
     }
   }, [])
 
   // Subscription data is now loaded from context - no need to fetch here
-
-  // Session timer countdown
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSessionTime(prev => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 }
-        } else if (prev.minutes > 0) {
-          return { minutes: prev.minutes - 1, seconds: 59 }
-        }
-        return prev
-      })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [])
 
   const menuGroups = useMemo(() => {
     const groups = [

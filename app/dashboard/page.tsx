@@ -12,7 +12,7 @@ import { useSubscription } from "@/lib/subscription-context"
 import { format, isToday, subDays, startOfDay, endOfDay, isWithinInterval, isSameDay, startOfWeek } from "date-fns"
 import { useRouter } from "next/navigation"
 import { formatCurrency, cn } from "@/lib/utils"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 import { OnboardingResumeBanner } from "@/components/onboarding-resume-banner"
 import { OperationalOnboardingWizard } from "@/components/operational-onboarding-wizard"
 import { OperationalOnboardingProvider as OnboardingContext, useOperationalOnboarding } from "@/lib/operational-onboarding-context"
@@ -319,7 +319,7 @@ function DashboardContent() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <LiquidLoading />
+        <GradientLoading text="Loading Dashboard" />
       </div>
     )
   }

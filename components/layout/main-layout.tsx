@@ -24,8 +24,13 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebarCollapsed')
-      return saved === 'true'
+      try {
+        const saved = localStorage.getItem('sidebarCollapsed')
+        return saved === 'true'
+      } catch (e) {
+        console.error('localStorage access error:', e)
+        return false
+      }
     }
     return false
   })
@@ -44,14 +49,18 @@ export function MainLayout({ children }: MainLayoutProps) {
   const handleSetCollapsed = (value: boolean) => {
     setIsCollapsed(value)
     if (typeof window !== 'undefined') {
-      localStorage.setItem('sidebarCollapsed', value.toString())
+      try {
+        localStorage.setItem('sidebarCollapsed', value.toString())
+      } catch (e) {
+        console.error('localStorage write error:', e)
+      }
     }
   }
 
   return (
     <LayoutContext.Provider value={{ isCollapsed, setIsCollapsed: handleSetCollapsed }}>
       <div className="min-h-screen bg-gray-50" style={{ position: 'relative' }}>
-        <Sidebar key="main-sidebar" />
+        <Sidebar />
         <div
           className="transition-all duration-300"
           style={{
