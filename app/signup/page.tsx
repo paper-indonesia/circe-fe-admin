@@ -112,10 +112,124 @@ export default function SignUpPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [termsError, setTermsError] = useState(false)
   const [privacyError, setPrivacyError] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Validation functions
+  const validateEmail = (email: string): string => {
+    if (!email) return ""
+    if (!email.includes('@')) {
+      return "Email harus mengandung simbol @"
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return "Format email tidak valid (contoh: nama@domain.com)"
+    }
+    return ""
+  }
+
+  const validateWebsite = (url: string): string => {
+    if (!url) return "" // Optional field
+    const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/
+    if (!urlRegex.test(url)) {
+      return "URL tidak valid (contoh: https://domain.com)"
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return "URL harus dimulai dengan http:// atau https://"
+    }
+    return ""
+  }
+
+  const validatePhone = (phone: string): string => {
+    if (!phone) return ""
+    // Remove +62 prefix for validation
+    const phoneNumber = phone.startsWith('+62') ? phone.slice(3) : phone
+    if (phoneNumber.length < 9 || phoneNumber.length > 13) {
+      return "Nomor telepon harus 9-13 digit"
+    }
+    if (!/^\d+$/.test(phoneNumber)) {
+      return "Nomor telepon hanya boleh berisi angka"
+    }
+    if (!phoneNumber.startsWith('8')) {
+      return "Nomor telepon harus dimulai dengan 8 (contoh: 81234567890)"
+    }
+    return ""
+  }
+
+  const validateName = (name: string, fieldName: string): string => {
+    if (!name) return ""
+    if (name.length < 2) {
+      return `${fieldName} minimal 2 karakter`
+    }
+    if (!/^[a-zA-Z\s]+$/.test(name)) {
+      return `${fieldName} hanya boleh berisi huruf`
+    }
+    return ""
+  }
+
+  const validatePassword = (password: string): string => {
+    if (!password) return ""
+    if (password.length < 8) {
+      return "Password minimal 8 karakter"
+    }
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
+    if (!passwordRegex.test(password)) {
+      return "Password harus mengandung huruf besar, huruf kecil, dan angka"
+    }
+    return ""
+  }
+
+  const validateConfirmPassword = (password: string, confirmPassword: string): string => {
+    if (!confirmPassword) return ""
+    if (password !== confirmPassword) {
+      return "Password tidak cocok"
+    }
+    return ""
+  }
+
+  const validateField = (fieldId: string, value: string) => {
+    let error = ""
+
+    switch (fieldId) {
+      case 'business_email':
+      case 'admin_email':
+        error = validateEmail(value)
+        break
+      case 'website':
+        error = validateWebsite(value)
+        break
+      case 'business_phone':
+        error = validatePhone(value)
+        break
+      case 'business_name':
+        error = validateName(value, "Nama bisnis")
+        break
+      case 'admin_first_name':
+        error = validateName(value, "Nama depan")
+        break
+      case 'admin_last_name':
+        error = validateName(value, "Nama belakang")
+        break
+      case 'admin_password':
+        error = validatePassword(value)
+        break
+      case 'confirmPassword':
+        error = validateConfirmPassword(formData.admin_password, value)
+        break
+      default:
+        break
+    }
+
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldId]: error
+    }))
+
+    return error
+  }
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -125,6 +239,19 @@ export default function SignUpPage() {
       [id]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     })
     setError("")
+
+    // Clear field error when typing
+    if (fieldErrors[id]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [id]: ""
+      }))
+    }
+  }
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target
+    validateField(id, value)
   }
 
   const handleSelectChange = (field: string, value: string) => {
@@ -152,28 +279,44 @@ export default function SignUpPage() {
 
   const validateStep = (step: number): boolean => {
     setError("")
+    let hasError = false
 
     if (step === 1) {
       // Clear TnC errors when leaving step 3
       setTermsError(false)
       setPrivacyError(false)
-      // Validate Business Information
+
+      // Validate all step 1 fields
+      const fields = ['business_name', 'business_email', 'business_phone', 'website']
+      fields.forEach(field => {
+        const error = validateField(field, formData[field as keyof typeof formData] as string)
+        if (error) hasError = true
+      })
+
+      // Check required fields
       if (!formData.business_name.trim()) {
-        setError("Business name is required")
+        setError("Nama bisnis wajib diisi")
         return false
       }
       if (!formData.business_email.trim()) {
-        setError("Business email is required")
+        setError("Email bisnis wajib diisi")
         return false
       }
       if (!formData.business_phone.trim()) {
-        setError("Business phone is required")
+        setError("Nomor telepon bisnis wajib diisi")
         return false
       }
       if (!formData.business_type) {
-        setError("Please select a business type")
+        setError("Pilih tipe bisnis terlebih dahulu")
         return false
       }
+
+      // Check for validation errors
+      if (hasError || fieldErrors.business_email || fieldErrors.business_phone || fieldErrors.website || fieldErrors.business_name) {
+        setError("Mohon perbaiki kesalahan pada form sebelum melanjutkan")
+        return false
+      }
+
       return true
     }
 
@@ -181,42 +324,47 @@ export default function SignUpPage() {
       // Clear TnC errors when leaving step 3
       setTermsError(false)
       setPrivacyError(false)
-      // Validate Admin Account
+
+      // Validate all step 2 fields
+      const fields = ['admin_first_name', 'admin_last_name', 'admin_email', 'admin_password', 'confirmPassword']
+      fields.forEach(field => {
+        const error = validateField(field, formData[field as keyof typeof formData] as string)
+        if (error) hasError = true
+      })
+
+      // Check required fields
       if (!formData.admin_first_name.trim()) {
-        setError("First name is required")
+        setError("Nama depan wajib diisi")
         return false
       }
       if (!formData.admin_last_name.trim()) {
-        setError("Last name is required")
+        setError("Nama belakang wajib diisi")
         return false
       }
       if (!formData.admin_email.trim()) {
-        setError("Admin email is required")
+        setError("Email admin wajib diisi")
         return false
       }
       if (!formData.admin_password) {
-        setError("Password is required")
+        setError("Password wajib diisi")
         return false
       }
-      if (formData.admin_password.length < 8) {
-        setError("Password must be at least 8 characters long")
+      if (!formData.confirmPassword) {
+        setError("Konfirmasi password wajib diisi")
         return false
       }
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
-      if (!passwordRegex.test(formData.admin_password)) {
-        setError("Password must contain at least one uppercase letter, one lowercase letter, and one number")
+
+      // Check for validation errors
+      if (hasError || Object.values(fieldErrors).some(err => err !== "")) {
+        setError("Mohon perbaiki kesalahan pada form sebelum melanjutkan")
         return false
       }
-      if (formData.admin_password !== formData.confirmPassword) {
-        setError("Passwords do not match")
-        return false
-      }
+
       return true
     }
 
     if (step === 3) {
       // Validate Terms & Privacy
-      let hasError = false
       if (!formData.terms_accepted) {
         setTermsError(true)
         hasError = true
@@ -226,7 +374,7 @@ export default function SignUpPage() {
         hasError = true
       }
       if (hasError) {
-        setError("You must accept the Terms of Service and Privacy Policy to continue")
+        setError("Anda harus menyetujui Terms of Service dan Privacy Policy untuk melanjutkan")
         return false
       }
       return true
@@ -578,9 +726,16 @@ export default function SignUpPage() {
                             placeholder="Your Business Name"
                             value={formData.business_name}
                             onChange={handleChange}
-                            className="h-11"
+                            onBlur={handleBlur}
+                            className={`h-11 ${fieldErrors.business_name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                             disabled={isLoading}
                           />
+                          {fieldErrors.business_name && (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.business_name}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -593,10 +748,17 @@ export default function SignUpPage() {
                               placeholder="contact@business.com"
                               value={formData.business_email}
                               onChange={handleChange}
-                              className="pl-10 h-11"
+                              onBlur={handleBlur}
+                              className={`pl-10 h-11 ${fieldErrors.business_email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               disabled={isLoading}
                             />
                           </div>
+                          {fieldErrors.business_email && (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.business_email}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -605,22 +767,40 @@ export default function SignUpPage() {
                             <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium h-11">
                               +62
                             </div>
-                            <Input
-                              id="business_phone"
-                              type="tel"
-                              placeholder="81xxxxxxxxx"
-                              value={formData.business_phone.startsWith('+62') ? formData.business_phone.slice(3) : formData.business_phone}
-                              onChange={(e) => {
-                                const input = e.target.value.replace(/\D/g, '')
-                                setFormData({
-                                  ...formData,
-                                  business_phone: input ? `+62${input}` : ''
-                                })
-                              }}
-                              className="h-11"
-                              disabled={isLoading}
-                            />
+                            <div className="flex-1">
+                              <Input
+                                id="business_phone"
+                                type="tel"
+                                placeholder="81xxxxxxxxx"
+                                value={formData.business_phone.startsWith('+62') ? formData.business_phone.slice(3) : formData.business_phone}
+                                onChange={(e) => {
+                                  const input = e.target.value.replace(/\D/g, '')
+                                  setFormData({
+                                    ...formData,
+                                    business_phone: input ? `+62${input}` : ''
+                                  })
+                                  // Clear error when typing
+                                  if (fieldErrors.business_phone) {
+                                    setFieldErrors(prev => ({
+                                      ...prev,
+                                      business_phone: ""
+                                    }))
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  validateField('business_phone', formData.business_phone)
+                                }}
+                                className={`h-11 ${fieldErrors.business_phone ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                                disabled={isLoading}
+                              />
+                            </div>
                           </div>
+                          {fieldErrors.business_phone && (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.business_phone}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -633,10 +813,17 @@ export default function SignUpPage() {
                               placeholder="https://yourbusiness.com"
                               value={formData.website}
                               onChange={handleChange}
-                              className="pl-10 h-11"
+                              onBlur={handleBlur}
+                              className={`pl-10 h-11 ${fieldErrors.website ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               disabled={isLoading}
                             />
                           </div>
+                          {fieldErrors.website && (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.website}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
@@ -649,20 +836,6 @@ export default function SignUpPage() {
                             className="min-h-[80px] resize-none"
                             disabled={isLoading}
                           />
-                        </div>
-
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="preferred_slug">Preferred Slug (Optional)</Label>
-                          <Input
-                            id="preferred_slug"
-                            type="text"
-                            placeholder="my-business-slug"
-                            value={formData.preferred_slug}
-                            onChange={handleChange}
-                            className="h-11"
-                            disabled={isLoading}
-                          />
-                          <p className="text-xs text-gray-500">This will be used in your business URL. Leave blank for auto-generation.</p>
                         </div>
                       </div>
                     </motion.div>
@@ -690,10 +863,17 @@ export default function SignUpPage() {
                               placeholder="John"
                               value={formData.admin_first_name}
                               onChange={handleChange}
-                              className="pl-10 h-11"
+                              onBlur={handleBlur}
+                              className={`pl-10 h-11 ${fieldErrors.admin_first_name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               disabled={isLoading}
                             />
                           </div>
+                          {fieldErrors.admin_first_name && (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.admin_first_name}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -706,10 +886,17 @@ export default function SignUpPage() {
                               placeholder="Doe"
                               value={formData.admin_last_name}
                               onChange={handleChange}
-                              className="pl-10 h-11"
+                              onBlur={handleBlur}
+                              className={`pl-10 h-11 ${fieldErrors.admin_last_name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               disabled={isLoading}
                             />
                           </div>
+                          {fieldErrors.admin_last_name && (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.admin_last_name}
+                            </p>
+                          )}
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
@@ -722,11 +909,19 @@ export default function SignUpPage() {
                               placeholder="admin@business.com"
                               value={formData.admin_email}
                               onChange={handleChange}
-                              className="pl-10 h-11"
+                              onBlur={handleBlur}
+                              className={`pl-10 h-11 ${fieldErrors.admin_email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               disabled={isLoading}
                             />
                           </div>
-                          <p className="text-xs text-gray-500">This will be your login email</p>
+                          {fieldErrors.admin_email ? (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.admin_email}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-gray-500">This will be your login email</p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -739,7 +934,8 @@ export default function SignUpPage() {
                               placeholder="Create a strong password"
                               value={formData.admin_password}
                               onChange={handleChange}
-                              className="pl-10 pr-10 h-11"
+                              onBlur={handleBlur}
+                              className={`pl-10 pr-10 h-11 ${fieldErrors.admin_password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               disabled={isLoading}
                             />
                             <button
@@ -755,7 +951,14 @@ export default function SignUpPage() {
                               )}
                             </button>
                           </div>
-                          <p className="text-xs text-gray-500">Min. 8 chars with uppercase, lowercase, and number</p>
+                          {fieldErrors.admin_password ? (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.admin_password}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-gray-500">Min. 8 chars with uppercase, lowercase, and number</p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -768,7 +971,8 @@ export default function SignUpPage() {
                               placeholder="Confirm your password"
                               value={formData.confirmPassword}
                               onChange={handleChange}
-                              className="pl-10 pr-10 h-11"
+                              onBlur={handleBlur}
+                              className={`pl-10 pr-10 h-11 ${fieldErrors.confirmPassword ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               disabled={isLoading}
                             />
                             <button
@@ -784,6 +988,12 @@ export default function SignUpPage() {
                               )}
                             </button>
                           </div>
+                          {fieldErrors.confirmPassword && (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.confirmPassword}
+                            </p>
+                          )}
                         </div>
                       </div>
 
