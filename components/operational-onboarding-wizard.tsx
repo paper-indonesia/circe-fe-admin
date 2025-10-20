@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -56,25 +56,53 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
   const [loading, setLoading] = useState(false)
   const [canProceed, setCanProceed] = useState(false)
 
+  // Debug: Log canProceed changes
+  useEffect(() => {
+    console.log('[Wizard] canProceed changed:', canProceed, 'currentStep:', progress.currentStep)
+  }, [canProceed, progress.currentStep])
+
   // Set initial step when component mounts
   useEffect(() => {
     if (initialStep && initialStep !== progress.currentStep) {
       setCurrentStep(initialStep)
     }
-  }, [initialStep, setCurrentStep])
+  }, [initialStep, setCurrentStep, progress.currentStep])
+
+  // Stable validation callback - this is the ONLY way to update canProceed
+  const handleValidChange = useCallback((isValid: boolean) => {
+    console.log('[Wizard] onValidChange called:', isValid, 'step:', progress.currentStep)
+    setCanProceed(isValid)
+  }, [])
 
   const currentStepData = STEPS[progress.currentStep - 1]
   const CurrentStepComponent = currentStepData?.component
 
+  // Debug: Log render state
+  console.log('[Wizard] Rendering with:', {
+    canProceed,
+    currentStep: progress.currentStep,
+    outletsCount: progress.outlets.length,
+    usersCount: progress.users.length,
+    productsCount: progress.products.length,
+    staffCount: progress.staff.length,
+    loading,
+    lanjutButtonDisabled: !canProceed,
+    backButtonDisabled: loading,
+    shouldShowBackButton: progress.currentStep > 1
+  })
+
   const handleNext = () => {
     if (progress.currentStep < STEPS.length) {
+      console.log('[Wizard] Moving to next step')
+      setCanProceed(false) // Reset validation for next step
       setCurrentStep(progress.currentStep + 1)
-      setCanProceed(false)
     }
   }
 
   const handleBack = () => {
     if (progress.currentStep > 1) {
+      console.log('[Wizard] Moving to previous step')
+      setCanProceed(false) // Reset validation when going back
       setCurrentStep(progress.currentStep - 1)
     }
   }
@@ -197,7 +225,7 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
               className="max-w-full overflow-x-hidden"
             >
               {CurrentStepComponent && (
-                <CurrentStepComponent onValidChange={setCanProceed} />
+                <CurrentStepComponent onValidChange={handleValidChange} />
               )}
             </motion.div>
           </AnimatePresence>
@@ -220,9 +248,14 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
               ) : progress.currentStep > 1 ? (
                 <Button
                   variant="ghost"
-                  onClick={handleBack}
+                  onClick={() => {
+                    console.log('[Wizard] Back button clicked! loading:', loading)
+                    handleBack()
+                  }}
                   disabled={loading}
                   className="gap-2"
+                  data-loading={loading}
+                  data-current-step={progress.currentStep}
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Kembali
@@ -233,9 +266,13 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
             <div className="flex items-center gap-3">
               {progress.currentStep < STEPS.length ? (
                 <Button
-                  onClick={handleNext}
+                  onClick={() => {
+                    console.log('[Wizard] Button clicked! canProceed:', canProceed)
+                    handleNext()
+                  }}
                   disabled={!canProceed}
                   className="h-12 px-8 gap-2"
+                  data-can-proceed={canProceed}
                 >
                   Lanjut
                   <ChevronRight className="h-4 w-4" />

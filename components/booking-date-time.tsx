@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import { format, addDays, subDays, startOfWeek, isToday, isSameDay, startOfDay, isSameMonth, getMonth } from "date-fns"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { format, addDays, startOfDay } from "date-fns"
 import { ChevronLeft, ChevronRight, Calendar, Clock, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -55,15 +55,9 @@ interface BookingDateTimeProps {
   disableNavigation?: boolean
 }
 
-// Loading skeleton component
-const SlotSkeleton = () => (
-  <div className="animate-pulse bg-gray-200 rounded-lg h-10" />
-)
-
 export function BookingDateTime({
   provider,
   selectedStaffId,
-  existingBookings = [],
   availabilityGrid,
   onSelectDateTime,
   onWeekChange,
@@ -72,13 +66,21 @@ export function BookingDateTime({
   className,
   disableNavigation = false
 }: BookingDateTimeProps) {
+  // Always start from today
   const [weekStart, setWeekStart] = useState(startOfDay(new Date()))
-  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
+  const [selectedDate, setSelectedDate] = useState<string>("")
   const [selectedTime, setSelectedTime] = useState<string>("")
-  const [loadingSlots, setLoadingSlots] = useState(false)
-  const [slots, setSlots] = useState<TimeSlot[]>([])
 
-  // Generate week days
+  // Sync weekStart with availabilityGrid data from API
+  useEffect(() => {
+    if (availabilityGrid && availabilityGrid.start_date) {
+      const gridStartDate = startOfDay(new Date(availabilityGrid.start_date))
+      setWeekStart(gridStartDate)
+      console.log('[BookingDateTime] Synced weekStart with grid:', format(gridStartDate, 'yyyy-MM-dd'))
+    }
+  }, [availabilityGrid])
+
+  // Generate week days (7 days from weekStart)
   const weekDays = useMemo(() => {
     const days = []
     for (let i = 0; i < 7; i++) {
@@ -87,119 +89,92 @@ export function BookingDateTime({
         date: format(day, 'yyyy-MM-dd'),
         dayName: format(day, 'EEE'),
         dayNumber: format(day, 'd'),
-        isToday: isToday(day),
-        isPast: day < startOfDay(new Date())
+        fullDate: day
       })
     }
     return days
   }, [weekStart])
 
-  // Fetch time slots from availability grid
-  const fetchTimeSlots = useCallback(async (date: string) => {
-    if (!selectedStaffId) {
-      setSlots([])
-      return
-    }
+  // Get all unique time slots across all days
+  const allTimeSlots = useMemo(() => {
+    if (!availabilityGrid) return []
 
-    setLoadingSlots(true)
+    const timeSlotsSet = new Set<string>()
+    Object.values(availabilityGrid.availability_grid).forEach(daySlots => {
+      daySlots.forEach(slot => {
+        timeSlotsSet.add(slot.start_time)
+      })
+    })
 
-    // Use setTimeout to avoid blocking UI
-    const timer = setTimeout(() => {
-      try {
-        // Get slots from availability grid API data
-        let apiSlots: TimeSlot[] = []
+    return Array.from(timeSlotsSet).sort()
+  }, [availabilityGrid])
 
-        if (availabilityGrid && availabilityGrid.availability_grid[date]) {
-          // Convert API slots to component format
-          apiSlots = availabilityGrid.availability_grid[date].map(slot => ({
-            time: slot.start_time,
-            available: slot.is_available
-          }))
+  // Build grid data structure: { time: { date: { available, slot } } }
+  const gridData = useMemo(() => {
+    if (!availabilityGrid) return {}
+
+    const grid: Record<string, Record<string, { available: boolean; isPast: boolean }>> = {}
+    const now = new Date()
+    const currentTime = format(now, 'HH:mm')
+    const today = format(now, 'yyyy-MM-dd')
+
+    allTimeSlots.forEach(time => {
+      grid[time] = {}
+      weekDays.forEach(day => {
+        const daySlots = availabilityGrid.availability_grid[day.date] || []
+        const slot = daySlots.find(s => s.start_time === time)
+
+        // Check if slot is in the past (only for today)
+        const isPast = day.date === today && time < currentTime
+
+        grid[time][day.date] = {
+          available: slot ? slot.is_available && !isPast : false,
+          isPast
         }
+      })
+    })
 
-        // Get current time for today's slots (filter out past times)
-        const now = new Date()
-        const isToday = date === format(now, 'yyyy-MM-dd')
-        const currentHour = now.getHours()
-        const currentMinute = now.getMinutes()
+    return grid
+  }, [availabilityGrid, allTimeSlots, weekDays])
 
-        // Filter out past slots for today
-        const processedSlots = apiSlots.map(slot => {
-          // Check if slot is in the past (only for today)
-          let isPast = false
-          if (isToday) {
-            const [slotHour, slotMinute] = slot.time.split(':').map(Number)
-            isPast = slotHour < currentHour || (slotHour === currentHour && slotMinute <= currentMinute)
-          }
-
-          return {
-            ...slot,
-            available: slot.available && !isPast
-          }
-        })
-
-        setSlots(processedSlots)
-      } catch (err) {
-        console.error('Failed to process slots:', err)
-        setSlots([])
-      } finally {
-        setLoadingSlots(false)
-      }
-    }, 100)
-
-    return () => clearTimeout(timer)
-  }, [selectedStaffId, availabilityGrid])
-
-  // Fetch slots when date or staff changes
-  useEffect(() => {
-    fetchTimeSlots(selectedDate)
-  }, [selectedDate, fetchTimeSlots])
-
-  // Sync URL params
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (selectedDate) params.set('date', selectedDate)
-    if (selectedTime) params.set('time', selectedTime)
-
-    const newUrl = `${window.location.pathname}?${params.toString()}`
-    window.history.replaceState({}, '', newUrl)
-  }, [selectedDate, selectedTime])
-
-  // Handlers
+  // Handler for previous week
   const handlePrevWeek = () => {
-    const newWeekStart = subDays(weekStart, 7)
-    setWeekStart(newWeekStart)
+    const newWeekStart = addDays(weekStart, -7)
+    console.log('[BookingDateTime] Previous button clicked:', {
+      currentWeekStart: format(weekStart, 'yyyy-MM-dd'),
+      newWeekStart: format(newWeekStart, 'yyyy-MM-dd')
+    })
+    setSelectedDate("")
     setSelectedTime("")
     onWeekChange?.(newWeekStart)
   }
 
+  // Handler for next week
   const handleNextWeek = () => {
     const newWeekStart = addDays(weekStart, 7)
-    setWeekStart(newWeekStart)
+    console.log('[BookingDateTime] Next button clicked:', {
+      currentWeekStart: format(weekStart, 'yyyy-MM-dd'),
+      newWeekStart: format(newWeekStart, 'yyyy-MM-dd')
+    })
+    setSelectedDate("")
     setSelectedTime("")
     onWeekChange?.(newWeekStart)
   }
 
-  const handleBackToToday = () => {
-    const today = startOfWeek(new Date(), { weekStartsOn: 1 })
-    setWeekStart(today)
-    setSelectedDate(format(new Date(), 'yyyy-MM-dd'))
-    setSelectedTime("")
-    onWeekChange?.(today)
-  }
+  // Check if can go back (only if weekStart is after today)
+  const canGoBack = useMemo(() => {
+    const today = startOfDay(new Date())
+    return weekStart > today
+  }, [weekStart])
 
-  const handleSelectDate = (date: string) => {
+  // Handler for selecting a time slot
+  const handleSelectSlot = (date: string, time: string, available: boolean) => {
+    if (!available) return
+
     setSelectedDate(date)
-    setSelectedTime("")
-  }
-
-  const handleSelectTime = (time: string) => {
     setSelectedTime(time)
-    onSelectDateTime(selectedDate, time)
+    onSelectDateTime(date, time)
   }
-
-  // Check if has selection
-  const hasSelection = selectedDate && selectedTime
 
   return (
     <div className={cn("flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden", className)}>
@@ -217,34 +192,26 @@ export function BookingDateTime({
         </div>
       </div>
 
-      {/* Week Strip Navigation */}
+      {/* Week Navigation */}
       <div className="border-b border-gray-100">
-        <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handlePrevWeek}
-            disabled={disableNavigation}
-            className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Previous week"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
+        <div className="flex items-center justify-between px-4 py-3 bg-white">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handlePrevWeek}
+              disabled={!canGoBack}
+              className="h-8 px-2 hover:bg-gray-100 gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label="Previous 7 days"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Prev
+            </Button>
 
-          <div className="flex items-center gap-3">
-            <h4 className="text-sm font-bold text-gray-900">
-              {format(new Date(selectedDate), 'MMMM yyyy')}
+            <h4 className="text-sm font-bold text-gray-900 ml-2">
+              {format(weekDays[0].fullDate, 'MMM d')} - {format(weekDays[6].fullDate, 'MMM d, yyyy')}
             </h4>
-            {!disableNavigation && (
-              <button
-                type="button"
-                onClick={handleBackToToday}
-                className="text-xs font-medium text-[#C8B6FF] hover:text-[#B8A6EF] transition-colors"
-              >
-                Today
-              </button>
-            )}
           </div>
 
           <Button
@@ -252,152 +219,122 @@ export function BookingDateTime({
             variant="ghost"
             size="sm"
             onClick={handleNextWeek}
-            disabled={disableNavigation}
-            className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Next week"
+            className="h-8 px-3 hover:bg-gray-100 gap-1"
+            aria-label="Next 7 days"
           >
-            <ChevronRight className="h-5 w-5" />
+            Next
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-
-        {/* Week Days Strip - Full Width Grid */}
-        <div className="w-full">
-          <div className="grid grid-cols-7 w-full">
-            {weekDays.map((day, idx) => {
-              const isSelected = selectedDate === day.date
-              const isDisabled = day.isPast
-              const dayDate = new Date(day.date)
-              const prevDay = idx > 0 ? new Date(weekDays[idx - 1].date) : null
-              const showMonthDivider = prevDay && !isSameMonth(dayDate, prevDay)
-
-              return (
-                <div key={day.date} className="relative">
-                  {/* Month Divider */}
-                  {showMonthDivider && (
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-[#C8B6FF] z-20" />
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => !isDisabled && handleSelectDate(day.date)}
-                    disabled={isDisabled}
-                    aria-pressed={isSelected}
-                    className={cn(
-                      "w-full flex flex-col items-center justify-center py-4 transition-all border-r last:border-r-0",
-                      isSelected
-                        ? "bg-[#C8B6FF] text-white"
-                        : isDisabled
-                          ? "bg-white text-gray-300 cursor-not-allowed"
-                          : "bg-white hover:bg-gray-50 focus:outline-none active:bg-gray-100"
-                    )}
-                  >
-                    <span className={cn(
-                      "text-xs font-medium uppercase tracking-wide",
-                      isSelected ? "text-white/80" : "text-gray-400"
-                    )}>
-                      {day.dayName}
-                    </span>
-                    <span className={cn(
-                      "text-xl font-bold leading-none mt-1.5",
-                      isSelected ? "text-white" : day.isToday ? "text-[#C8B6FF]" : "text-gray-900"
-                    )}>
-                      {day.dayNumber}
-                    </span>
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Info Message when navigation is disabled */}
-        {disableNavigation && (
-          <div className="px-4 py-2 bg-blue-50 border-t border-blue-100">
-            <p className="text-xs text-blue-700 text-center">
-              <AlertCircle className="h-3 w-3 inline mr-1.5" />
-              You can only book within the next 7 days from today
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Time Slots Grid */}
-      <div className="flex-1 overflow-y-auto p-4 min-h-[250px]">
+      {/* Availability Grid */}
+      <div className="flex-1 overflow-auto p-4">
         {error ? (
           // Error State
           <div className="flex flex-col items-center justify-center h-full py-8">
             <AlertCircle className="h-10 w-10 text-red-500 mb-2" />
-            <p className="text-sm font-medium text-red-600 mb-3">Failed to load time slots</p>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => fetchTimeSlots(selectedDate)}
-              className="text-xs"
-            >
-              Try Again
-            </Button>
+            <p className="text-sm font-medium text-red-600">Failed to load availability</p>
           </div>
         ) : !selectedStaffId ? (
           // No Staff Selected
           <div className="flex flex-col items-center justify-center h-full py-8 text-gray-500">
             <Clock className="h-12 w-12 mb-3 opacity-30" />
             <p className="text-sm font-medium">Select a staff member first</p>
-            <p className="text-xs text-gray-400 mt-1">Time slots will appear here</p>
           </div>
-        ) : loadingSlots || isLoading ? (
+        ) : isLoading ? (
           // Loading State
-          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
-            {Array.from({ length: 18 }).map((_, idx) => (
-              <div key={idx} className="animate-pulse bg-gray-200 rounded h-12" />
+          <div className="space-y-2">
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <div key={idx} className="flex gap-2">
+                <div className="w-16 h-10 animate-pulse bg-gray-200 rounded" />
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className="flex-1 h-10 animate-pulse bg-gray-200 rounded" />
+                ))}
+              </div>
             ))}
           </div>
-        ) : slots.length === 0 ? (
+        ) : allTimeSlots.length === 0 ? (
           // Empty State
-          <div className="flex flex-col items-center justify-center h-full py-6 text-gray-500">
-            <Calendar className="h-8 w-8 mb-2 opacity-30" />
-            <p className="text-xs font-medium">No slots for this day</p>
+          <div className="flex flex-col items-center justify-center h-full py-8 text-gray-500">
+            <Calendar className="h-10 w-10 mb-3 opacity-30" />
+            <p className="text-sm font-medium">No availability found</p>
           </div>
         ) : (
-          // Time Slots Grid - Full Width Layout
-          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
-            {slots.map((slot) => {
-              const isSelected = selectedTime === slot.time
-              const isDisabled = !slot.available
-
-              return (
-                <button
-                  key={slot.time}
-                  type="button"
-                  onClick={() => slot.available && handleSelectTime(slot.time)}
-                  disabled={isDisabled}
-                  aria-pressed={isSelected}
-                  className={cn(
-                    "px-4 py-3 rounded-lg text-sm font-semibold transition-all focus:outline-none",
-                    isSelected
-                      ? "bg-teal-500 text-white shadow-md"
-                      : isDisabled
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-teal-50 border border-teal-200 text-teal-700 hover:bg-teal-100"
-                  )}
+          // Grid Layout
+          <div className="min-w-max">
+            {/* Header Row - Dates */}
+            <div className="flex mb-2 sticky top-0 bg-white z-10 pb-2 border-b">
+              <div className="w-20 flex-shrink-0" /> {/* Time column spacer */}
+              {weekDays.map((day) => (
+                <div
+                  key={day.date}
+                  className="flex-1 min-w-[80px] px-2 text-center"
                 >
-                  {slot.time}
-                </button>
-              )
-            })}
+                  <div className="text-xs font-medium text-gray-500 uppercase">
+                    {day.dayName}
+                  </div>
+                  <div className="text-lg font-bold text-gray-900 mt-0.5">
+                    {day.dayNumber}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Time Rows */}
+            <div className="space-y-1">
+              {allTimeSlots.map((time) => (
+                <div key={time} className="flex items-center gap-2">
+                  {/* Time Label */}
+                  <div className="w-20 flex-shrink-0 text-sm font-medium text-gray-600 text-right pr-4">
+                    {time}
+                  </div>
+
+                  {/* Availability Cells */}
+                  {weekDays.map((day) => {
+                    const cellData = gridData[time]?.[day.date]
+                    const isSelected = selectedDate === day.date && selectedTime === time
+                    const isAvailable = cellData?.available || false
+                    const isPast = cellData?.isPast || false
+
+                    return (
+                      <button
+                        key={day.date}
+                        type="button"
+                        onClick={() => handleSelectSlot(day.date, time, isAvailable)}
+                        disabled={!isAvailable}
+                        className={cn(
+                          "flex-1 min-w-[80px] h-10 px-2 rounded-lg text-xs font-medium transition-all",
+                          isSelected
+                            ? "bg-[#C8B6FF] text-white shadow-md ring-2 ring-[#B8A6EF] ring-offset-1"
+                            : isAvailable
+                              ? "bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300"
+                              : isPast
+                                ? "bg-gray-50 text-gray-300 cursor-not-allowed opacity-40"
+                                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        )}
+                      >
+                        {isAvailable ? (isSelected ? "Selected" : "Available") : (isPast ? "Past" : "-")}
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
       {/* Footer - Selection Summary */}
-      {hasSelection && (
-        <div className="border-t border-gray-200 bg-gradient-to-r from-teal-50 to-blue-50 px-4 py-3">
+      {selectedDate && selectedTime && (
+        <div className="border-t border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3">
           <div className="flex items-center justify-center gap-2 text-sm">
-            <Calendar className="h-4 w-4 text-teal-600 flex-shrink-0" />
+            <Calendar className="h-4 w-4 text-[#C8B6FF] flex-shrink-0" />
             <span className="font-semibold text-gray-900">
-              {format(new Date(selectedDate), 'EEE, MMM d')}
+              {format(new Date(selectedDate), 'EEE, MMM d, yyyy')}
             </span>
             <span className="text-gray-400 mx-1">·</span>
-            <Clock className="h-4 w-4 text-teal-600 flex-shrink-0" />
+            <Clock className="h-4 w-4 text-[#C8B6FF] flex-shrink-0" />
             <span className="font-semibold text-gray-900">{selectedTime}</span>
           </div>
         </div>

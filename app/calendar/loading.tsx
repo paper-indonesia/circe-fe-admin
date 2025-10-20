@@ -1,3 +1,5 @@
+import GradientLoading from '@/components/gradient-loading';
+
 export default function Loading() {
-  return null
+  return <GradientLoading />;
 }

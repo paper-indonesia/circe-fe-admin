@@ -32,6 +32,14 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
         return
       }
 
+      // Only check onboarding on Dashboard page
+      if (pathname !== '/dashboard') {
+        console.log('OperationalOnboardingProvider: Skipping on non-dashboard page:', pathname)
+        setLoading(false)
+        setShowWizard(false)
+        return
+      }
+
       // Only check for tenant_admin
       if (!user || !isAdmin()) {
         setLoading(false)
@@ -39,23 +47,8 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
       }
 
       try {
-        // Check if operational onboarding is already marked as completed in localStorage
-        if (typeof window !== 'undefined') {
-          const completionData = localStorage.getItem('operational-onboarding-completed')
-          if (completionData) {
-            try {
-              const parsed = JSON.parse(completionData)
-              if (parsed.completed) {
-                setLoading(false)
-                return
-              }
-            } catch (e) {
-              // Invalid data, continue with check
-            }
-          }
-        }
-
-        // Check existing data to determine if wizard is needed
+        // Always check existing data to determine if wizard is needed
+        // (don't rely solely on localStorage as data may have been deleted)
         const [outletsRes, usersRes, servicesRes, staffRes] = await Promise.all([
           fetch('/api/outlets?page=1&size=1'),
           fetch('/api/users?page=1&size=1'),
@@ -70,6 +63,7 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
         if (outletsRes.ok) {
           const outletsData = await outletsRes.json()
           const hasOutlets = outletsData.items && outletsData.items.length > 0
+          console.log('OperationalOnboardingProvider: Checking outlets -', { hasOutlets, count: outletsData.items?.length || 0 })
 
           if (!hasOutlets) {
             needsOnboarding = true
@@ -79,6 +73,7 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
             if (usersRes.ok) {
               const usersData = await usersRes.json()
               const hasUsers = usersData.items && usersData.items.length > 0
+              console.log('OperationalOnboardingProvider: Checking users -', { hasUsers, count: usersData.items?.length || 0 })
 
               if (!hasUsers) {
                 needsOnboarding = true
@@ -88,6 +83,7 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
                 if (servicesRes.ok) {
                   const servicesData = await servicesRes.json()
                   const hasServices = servicesData.items && servicesData.items.length > 0
+                  console.log('OperationalOnboardingProvider: Checking services -', { hasServices, count: servicesData.items?.length || 0 })
 
                   if (!hasServices) {
                     needsOnboarding = true
@@ -97,6 +93,7 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
                     if (staffRes.ok) {
                       const staffData = await staffRes.json()
                       const hasStaff = staffData.items && staffData.items.length > 0
+                      console.log('OperationalOnboardingProvider: Checking staff -', { hasStaff, count: staffData.items?.length || 0 })
 
                       if (!hasStaff) {
                         needsOnboarding = true
@@ -121,8 +118,16 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
           }
         }
 
+        console.log('OperationalOnboardingProvider: Final decision -', { needsOnboarding, startStep, showWizard: needsOnboarding })
+
         setShowWizard(needsOnboarding)
         setInitialStep(startStep)
+
+        // Clear completion flag if onboarding is needed again
+        if (needsOnboarding && typeof window !== 'undefined') {
+          localStorage.removeItem('operational-onboarding-completed')
+          console.log('OperationalOnboardingProvider: Cleared completion flag, onboarding needed')
+        }
 
       } catch (error) {
         console.error('Failed to check onboarding status:', error)

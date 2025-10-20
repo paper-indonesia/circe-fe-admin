@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -121,21 +120,24 @@ function DashboardContent() {
     else setGreeting("Good evening")
   }, [])
 
-  // Fetch subscription data - only for tenant_admin
+  // Fetch subscription and usage data - only for tenant_admin (combined to avoid redundant API calls)
   useEffect(() => {
-    const fetchSubscription = async () => {
+    const fetchSubscriptionData = async () => {
       // Only fetch if user is tenant_admin
       if (user?.role !== 'tenant_admin') {
         setSubscriptionLoading(false)
+        setUsageLoading(false)
         return
       }
 
       setSubscriptionLoading(true)
+      setUsageLoading(true)
       try {
         const response = await fetch('/api/subscription')
         if (response.ok) {
           const data = await response.json()
-          // Transform API response to match component expectations
+
+          // Set subscription data
           setSubscription({
             plan: data.plan_type?.toLowerCase() || 'free',
             status: data.status,
@@ -144,52 +146,32 @@ function DashboardContent() {
             usage: data.usage,
             scheduled_changes: data.scheduled_changes
           })
-        }
-      } catch (error) {
-        console.error("Failed to fetch subscription:", error)
-      } finally {
-        setSubscriptionLoading(false)
-      }
-    }
 
-    fetchSubscription()
-  }, [user])
+          // Set usage data from the same API response
+          if (data.usage) {
+            setUsage(data.usage)
 
-  // Fetch usage data - only for tenant_admin
-  useEffect(() => {
-    const fetchUsage = async () => {
-      // Only fetch if user is tenant_admin
-      if (user?.role !== 'tenant_admin') {
-        setUsageLoading(false)
-        return
-      }
-
-      setUsageLoading(true)
-      try {
-        const response = await fetch('/api/subscription/usage')
-        if (response.ok) {
-          const data = await response.json()
-          setUsage(data)
-
-          // Show warnings if any
-          if (data.warnings && data.warnings.length > 0) {
-            data.warnings.forEach((warning: string) => {
-              toast({
-                title: "Usage Warning",
-                description: warning,
-                variant: "destructive"
+            // Show warnings if any
+            if (data.usage.warnings && data.usage.warnings.length > 0) {
+              data.usage.warnings.forEach((warning: string) => {
+                toast({
+                  title: "Usage Warning",
+                  description: warning,
+                  variant: "destructive"
+                })
               })
-            })
+            }
           }
         }
       } catch (error) {
-        console.error("Failed to fetch usage:", error)
+        console.error("Failed to fetch subscription data:", error)
       } finally {
+        setSubscriptionLoading(false)
         setUsageLoading(false)
       }
     }
 
-    fetchUsage()
+    fetchSubscriptionData()
   }, [user, toast])
 
   // Get display name
@@ -388,17 +370,14 @@ function DashboardContent() {
 
   if (isLoading) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center h-[60vh]">
-          <LiquidLoading />
-        </div>
-      </MainLayout>
+      <div className="flex items-center justify-center h-[60vh]">
+        <LiquidLoading />
+      </div>
     )
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8">
         {/* Greeting */}
         <div className="flex items-center justify-between">
           <div>
@@ -1123,7 +1102,6 @@ function DashboardContent() {
           </div>
         </div>
       </div>
-    </MainLayout>
   )
 }
 

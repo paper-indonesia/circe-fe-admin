@@ -1,5 +1,6 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 
 const LiquidLoading = () => {
   const [mounted, setMounted] = useState(false);
@@ -11,124 +12,302 @@ const LiquidLoading = () => {
   if (!mounted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
-        <div className="w-20 h-20 opacity-50 overflow-hidden rounded-3xl">
-          <Image
-            src="/reserva_logo_only_loading.gif"
-            alt="Loading..."
-            width={80}
-            height={80}
-            unoptimized
-            className="scale-125 -ml-2"
-          />
+        <div className="grid grid-cols-2 gap-2">
+          {[0, 1, 2, 3].map((index) => (
+            <div key={index} className="w-12 h-12 relative">
+              <div
+                className="absolute inset-0 rounded-xl"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(192, 132, 252, 0.3) 0%, rgba(129, 140, 248, 0.3) 100%)'
+                }}
+              />
+            </div>
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] space-y-8">
-      {/* Modern Animated Logo with GIF */}
+    <div className="flex flex-col items-center justify-center min-h-[400px]">
       <div className="relative">
-        {/* Logo with soft glow - cropped to remove border */}
-        <div className="relative w-24 h-24 rounded-3xl overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 shadow-xl flex items-center justify-center">
-          <div className="relative w-20 h-20 overflow-hidden rounded-2xl">
-            <Image
-              src="/reserva_logo_only_loading.gif"
-              alt="Loading..."
-              width={100}
-              height={100}
-              unoptimized
-              priority
-              className="absolute top-0 left-0 scale-125 -ml-2 -mt-1"
-            />
+        {/* 2x2 Grid of animated boxes */}
+        <div className="grid grid-cols-2 gap-3">
+          {[0, 1, 2, 3].map((index) => (
+            <div key={index} className="w-16 h-16 relative">
+              {/* Glow effect */}
+              <div
+                className="absolute inset-0 rounded-2xl blur-xl"
+                style={{
+                  background: 'linear-gradient(135deg, #FF6B9D 0%, #C084FC 50%, #818CF8 100%)',
+                  animation: `glow${index} 1.6s ease-in-out infinite`,
+                  opacity: 0
+                }}
+              />
+
+              {/* Background frame */}
+              <div
+                className="absolute inset-0 rounded-2xl p-[2px]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(192, 132, 252, 0.3) 0%, rgba(129, 140, 248, 0.3) 100%)'
+                }}
+              >
+                <div className="w-full h-full bg-white/50 backdrop-blur-sm rounded-xl" />
+              </div>
+
+              {/* Animated filled gradient */}
+              <div
+                className="absolute inset-0 rounded-2xl shadow-2xl"
+                style={{
+                  background: 'linear-gradient(135deg, #FF6B9D 0%, #C084FC 50%, #818CF8 100%)',
+                  animation: `fillBox${index} 1.6s ease-in-out infinite`,
+                  boxShadow: '0 8px 32px rgba(192, 132, 252, 0.4)'
+                }}
+              />
+
+              {/* Inner shine effect */}
+              <div
+                className="absolute inset-0 rounded-2xl overflow-hidden"
+                style={{
+                  animation: `fillBox${index} 1.6s ease-in-out infinite`
+                }}
+              >
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Loading Text */}
+        <div className="mt-6 text-center">
+          <h2
+            className="text-lg font-bold bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 bg-clip-text text-transparent"
+            style={{
+              animation: 'pulse-text 1.6s ease-in-out infinite'
+            }}
+          >
+            Loading Dashboard
+          </h2>
+          <div className="flex justify-center items-center mt-2 gap-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full bg-purple-400"
+                style={{
+                  animation: `dot${i} 1.6s ease-in-out infinite`
+                }}
+              />
+            ))}
           </div>
         </div>
-
-        {/* Animated gradient ring */}
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-[#FFD6FF] via-[#E7C6FF] to-[#C8B6FF] animate-spin-slow opacity-40 blur-xl" />
-        </div>
-      </div>
-
-      {/* Loading Text with gradient */}
-      <div className="flex flex-col items-center space-y-3">
-        <h3 className="text-xl font-bold bg-gradient-to-r from-[#C8B6FF] to-[#B8A6EF] bg-clip-text text-transparent" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-          Loading Dashboard
-        </h3>
-        <p className="text-sm text-muted-foreground font-medium">
-          Please wait a moment
-        </p>
-      </div>
-
-      {/* Modern Progress Bar */}
-      <div className="w-72 h-1.5 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full overflow-hidden shadow-inner">
-        <div className="h-full bg-gradient-to-r from-[#C8B6FF] to-[#B8A6EF] animate-[loading_1.5s_ease-in-out_infinite] shadow-lg" />
       </div>
 
       <style jsx>{`
-        @keyframes loading {
+        @keyframes fillBox0 {
           0% {
-            transform: translateX(-100%);
-            width: 40%;
+            opacity: 1;
+            transform: scale(1.05) rotate(0deg);
+          }
+          20% {
+            opacity: 0.8;
+            transform: scale(1) rotate(5deg);
+          }
+          25% {
+            opacity: 0;
+            transform: scale(0.85) rotate(0deg);
+          }
+          95%, 100% {
+            opacity: 1;
+            transform: scale(1.05) rotate(0deg);
+          }
+        }
+
+        @keyframes fillBox1 {
+          0%, 20% {
+            opacity: 0;
+            transform: scale(0.85) rotate(0deg);
+          }
+          25% {
+            opacity: 1;
+            transform: scale(1.05) rotate(0deg);
+          }
+          45% {
+            opacity: 0.8;
+            transform: scale(1) rotate(5deg);
+          }
+          50%, 100% {
+            opacity: 0;
+            transform: scale(0.85) rotate(0deg);
+          }
+        }
+
+        @keyframes fillBox2 {
+          0%, 45% {
+            opacity: 0;
+            transform: scale(0.85) rotate(0deg);
           }
           50% {
-            width: 60%;
+            opacity: 1;
+            transform: scale(1.05) rotate(0deg);
+          }
+          70% {
+            opacity: 0.8;
+            transform: scale(1) rotate(5deg);
+          }
+          75%, 100% {
+            opacity: 0;
+            transform: scale(0.85) rotate(0deg);
+          }
+        }
+
+        @keyframes fillBox3 {
+          0%, 70% {
+            opacity: 0;
+            transform: scale(0.85) rotate(0deg);
+          }
+          75% {
+            opacity: 1;
+            transform: scale(1.05) rotate(0deg);
+          }
+          95% {
+            opacity: 0.8;
+            transform: scale(1) rotate(5deg);
           }
           100% {
-            transform: translateX(250%);
-            width: 40%;
+            opacity: 0;
+            transform: scale(0.85) rotate(0deg);
           }
         }
-        @keyframes spin-slow {
-          from {
-            transform: rotate(0deg) scale(1.1);
+
+        @keyframes glow0 {
+          0% {
+            opacity: 0.8;
+            transform: scale(1.2);
           }
-          to {
-            transform: rotate(360deg) scale(1.1);
+          20% {
+            opacity: 0.4;
+            transform: scale(1.1);
+          }
+          25%, 100% {
+            opacity: 0;
+            transform: scale(1);
           }
         }
-        @keyframes pulse1 {
-          0%, 100% {
-            opacity: 1;
+
+        @keyframes glow1 {
+          0%, 20% {
+            opacity: 0;
+            transform: scale(1);
+          }
+          25% {
+            opacity: 0.8;
+            transform: scale(1.2);
+          }
+          45% {
+            opacity: 0.4;
+            transform: scale(1.1);
+          }
+          50%, 100% {
+            opacity: 0;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes glow2 {
+          0%, 45% {
+            opacity: 0;
             transform: scale(1);
           }
           50% {
-            opacity: 0.7;
-            transform: scale(0.95);
+            opacity: 0.8;
+            transform: scale(1.2);
           }
-        }
-        @keyframes pulse2 {
-          0%, 100% {
-            opacity: 1;
+          70% {
+            opacity: 0.4;
+            transform: scale(1.1);
+          }
+          75%, 100% {
+            opacity: 0;
             transform: scale(1);
           }
-          50% {
-            opacity: 0.7;
-            transform: scale(0.95);
-          }
         }
-        @keyframes pulse3 {
-          0%, 100% {
-            opacity: 1;
+
+        @keyframes glow3 {
+          0%, 70% {
+            opacity: 0;
             transform: scale(1);
           }
-          50% {
-            opacity: 0.7;
-            transform: scale(0.95);
+          75% {
+            opacity: 0.8;
+            transform: scale(1.2);
           }
-        }
-        @keyframes pulse4 {
-          0%, 100% {
-            opacity: 1;
+          95% {
+            opacity: 0.4;
+            transform: scale(1.1);
+          }
+          100% {
+            opacity: 0;
             transform: scale(1);
           }
+        }
+
+        @keyframes pulse-text {
+          0%, 100% {
+            opacity: 1;
+          }
           50% {
-            opacity: 0.7;
-            transform: scale(0.95);
+            opacity: 0.5;
           }
         }
-        .animate-spin-slow {
-          animation: spin-slow 3s linear infinite;
+
+        @keyframes dot0 {
+          0%, 60% {
+            opacity: 0.3;
+            transform: scale(0.8);
+          }
+          20% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+          40% {
+            opacity: 0.3;
+            transform: scale(0.8);
+          }
+        }
+
+        @keyframes dot1 {
+          0%, 60% {
+            opacity: 0.3;
+            transform: scale(0.8);
+          }
+          30% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+          50% {
+            opacity: 0.3;
+            transform: scale(0.8);
+          }
+        }
+
+        @keyframes dot2 {
+          0%, 50% {
+            opacity: 0.3;
+            transform: scale(0.8);
+          }
+          40% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+          60% {
+            opacity: 0.3;
+            transform: scale(0.8);
+          }
         }
       `}</style>
     </div>

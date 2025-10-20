@@ -39,10 +39,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <LayoutContext.Provider value={{ isCollapsed, setIsCollapsed: handleSetCollapsed }}>
-      <NavigationLoader />
       <div className="min-h-screen bg-gray-50">
         <Sidebar />
-        <div className={`transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
+        <div className={`transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'} relative`}>
+          <NavigationLoader />
           <main className="py-6 px-4 lg:px-8">
             {children}
           </main>

@@ -120,10 +120,19 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
   }, [progress, isMounted])
 
   const addOutlet = (outlet: OutletData) => {
-    setProgress((prev) => ({
-      ...prev,
-      outlets: [...prev.outlets, outlet],
-    }))
+    console.log('[Context] addOutlet called:', outlet)
+    setProgress((prev) => {
+      const newOutlets = [...prev.outlets, outlet]
+      console.log('[Context] Updated outlets:', {
+        previousCount: prev.outlets.length,
+        newCount: newOutlets.length,
+        outlets: newOutlets
+      })
+      return {
+        ...prev,
+        outlets: newOutlets,
+      }
+    })
   }
 
   const addUser = (user: UserData) => {

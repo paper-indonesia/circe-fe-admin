@@ -75,8 +75,14 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
 
   // Update parent validation state
   useEffect(() => {
-    onValidChange(progress.outlets.length > 0)
-  }, [progress.outlets, onValidChange])
+    const isValid = progress.outlets.length > 0
+    console.log('[OutletSetup] Validation check:', {
+      outletsCount: progress.outlets.length,
+      isValid,
+      outlets: progress.outlets
+    })
+    onValidChange(isValid)
+  }, [progress.outlets.length, onValidChange])
 
   const validate = () => {
     const newErrors: Record<string, string> = {}

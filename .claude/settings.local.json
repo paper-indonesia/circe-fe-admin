@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git add app/page.tsx)",
       "Bash(git commit -m \"fix: force dynamic rendering for root page redirect\")",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run build)"
     ],
     "deny": [],
     "ask": []
