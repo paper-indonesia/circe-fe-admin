@@ -139,12 +139,14 @@ function DashboardContent() {
 
           // Set subscription data
           setSubscription({
-            plan: data.plan_type?.toLowerCase() || 'free',
+            plan: data.plan?.toLowerCase() || 'free',
             status: data.status,
             end_date: data.current_period_end,
-            plan_details: data.plan_details,
-            usage: data.usage,
-            scheduled_changes: data.scheduled_changes
+            billing_period: data.billing_period,
+            features: data.features,
+            trial_end: data.trial_end,
+            cancel_at_period_end: data.cancel_at_period_end,
+            cancelled_at: data.cancelled_at
           })
 
           // Set usage data from the same API response

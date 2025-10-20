@@ -64,17 +64,18 @@ export default function ManageSubscriptionPage() {
           const data = await response.json()
           // Transform API response to match component expectations
           setSubscription({
-            id: data.subscription_id || data.id, // Store subscription ID for renewal
-            plan: data.plan_type?.toLowerCase() || 'free',
+            id: data.id,
+            plan: data.plan?.toLowerCase() || 'free',
             status: data.status,
             start_date: data.current_period_start,
             end_date: data.current_period_end,
             auto_renew: !data.cancel_at_period_end, // False if cancellation scheduled
             cancel_at_period_end: data.cancel_at_period_end,
-            canceled_at: data.canceled_at,
-            plan_details: data.plan_details,
+            canceled_at: data.cancelled_at,
+            billing_period: data.billing_period,
+            features: data.features,
             usage: data.usage,
-            scheduled_changes: data.scheduled_changes
+            trial_end: data.trial_end
           })
         } else {
           toast({

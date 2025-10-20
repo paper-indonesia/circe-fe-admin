@@ -52,7 +52,7 @@ export function Sidebar() {
         if (response.ok) {
           const data = await response.json()
           setSubscription({
-            plan: data.plan_type?.toLowerCase() || 'free',
+            plan: data.plan?.toLowerCase() || 'free',
             status: data.status
           })
         }

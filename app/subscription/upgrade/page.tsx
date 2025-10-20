@@ -107,11 +107,11 @@ export default function UpgradePage() {
           const subData = await currentSubRes.json()
           // Transform API response to match component expectations
           setCurrentSubscription({
-            plan: subData.plan_type?.toLowerCase(),
+            plan: subData.plan?.toLowerCase(),
             status: subData.status,
             ...subData
           })
-          setCurrentPlan(subData.plan_type?.toLowerCase() || null)
+          setCurrentPlan(subData.plan?.toLowerCase() || null)
         }
       } catch (error) {
         console.error("Failed to fetch subscription data:", error)
