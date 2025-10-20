@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Package, Plus, AlertCircle, CheckCircle2, Info, ArrowUpCircle, Clock, DollarSign, Settings, ChevronDown, ChevronUp, Image, FileText } from "lucide-react"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
+import { useSubscription } from "@/lib/subscription-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -21,6 +22,7 @@ interface ProductServicesStepProps {
 export function ProductServicesStep({ onValidChange }: ProductServicesStepProps) {
   const { toast } = useToast()
   const { progress, addProduct } = useOperationalOnboarding()
+  const { usage } = useSubscription()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -76,28 +78,15 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
     fetchCategoryTemplates()
   }, [])
 
-  // Load plan limits
+  // Load plan limits from subscription context
   useEffect(() => {
-    const fetchLimits = async () => {
-      try {
-        const usageResponse = await fetch("/api/subscription/usage")
-
-        if (usageResponse.ok) {
-          const usageData = await usageResponse.json()
-
-          // Services might not have a limit in some plans
-          setPlanLimits({
-            current: progress.products.length,
-            max: 999, // No explicit service limit in API
-          })
-        }
-      } catch (error) {
-        console.error("Failed to fetch plan limits:", error)
-      }
+    if (usage?.usage_summary?.services) {
+      setPlanLimits({
+        current: usage.usage_summary.services.used || progress.products.length,
+        max: usage.usage_summary.services.limit || 999,
+      })
     }
-
-    fetchLimits()
-  }, [progress.products.length])
+  }, [usage, progress.products.length])
 
   // Update parent validation state
   useEffect(() => {

@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { useAuth } from "@/lib/auth-context"
+import { useSubscription } from "@/lib/subscription-context"
 import { format, isToday, subDays, startOfDay, endOfDay, isWithinInterval, isSameDay, startOfWeek } from "date-fns"
 import { useRouter } from "next/navigation"
 import { formatCurrency, cn } from "@/lib/utils"
@@ -78,6 +79,9 @@ function DashboardContent() {
   const { staff = [], loading: staffLoading } = useStaff()
   const { treatments = [], loading: treatmentsLoading } = useTreatments()
 
+  // Use subscription context instead of local state
+  const { subscription, usage, loading: subscriptionLoading } = useSubscription()
+
   const isLoading = bookingsLoading || patientsLoading || staffLoading || treatmentsLoading
 
   const [user, setUser] = useState<any>(null)
@@ -86,10 +90,6 @@ function DashboardContent() {
   const [greeting, setGreeting] = useState("Good morning")
   const [transactionPage, setTransactionPage] = useState(0)
   const transactionsPerPage = 5
-  const [subscription, setSubscription] = useState<any>(null)
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
-  const [usage, setUsage] = useState<any>(null)
-  const [usageLoading, setUsageLoading] = useState(false)
   const [showUsageDetails, setShowUsageDetails] = useState(false)
 
   // Load user, tenant and set greeting
@@ -120,61 +120,7 @@ function DashboardContent() {
     else setGreeting("Good evening")
   }, [])
 
-  // Fetch subscription and usage data - only for tenant_admin (combined to avoid redundant API calls)
-  useEffect(() => {
-    const fetchSubscriptionData = async () => {
-      // Only fetch if user is tenant_admin
-      if (user?.role !== 'tenant_admin') {
-        setSubscriptionLoading(false)
-        setUsageLoading(false)
-        return
-      }
-
-      setSubscriptionLoading(true)
-      setUsageLoading(true)
-      try {
-        const response = await fetch('/api/subscription')
-        if (response.ok) {
-          const data = await response.json()
-
-          // Set subscription data
-          setSubscription({
-            plan: data.plan?.toLowerCase() || 'free',
-            status: data.status,
-            end_date: data.current_period_end,
-            billing_period: data.billing_period,
-            features: data.features,
-            trial_end: data.trial_end,
-            cancel_at_period_end: data.cancel_at_period_end,
-            cancelled_at: data.cancelled_at
-          })
-
-          // Set usage data from the same API response
-          if (data.usage) {
-            setUsage(data.usage)
-
-            // Show warnings if any
-            if (data.usage.warnings && data.usage.warnings.length > 0) {
-              data.usage.warnings.forEach((warning: string) => {
-                toast({
-                  title: "Usage Warning",
-                  description: warning,
-                  variant: "destructive"
-                })
-              })
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch subscription data:", error)
-      } finally {
-        setSubscriptionLoading(false)
-        setUsageLoading(false)
-      }
-    }
-
-    fetchSubscriptionData()
-  }, [user, toast])
+  // Subscription data is now loaded from context - no need to fetch here
 
   // Get display name
   const getDisplayName = () => {

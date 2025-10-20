@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
+import { useSubscription } from "@/lib/subscription-context"
 import { useToast } from "@/hooks/use-toast"
 import { MainLayout } from "@/components/layout/main-layout"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
@@ -132,6 +133,9 @@ export default function OutletManagementPage() {
   const undoTimerRef = useRef<NodeJS.Timeout | null>(null)
   const undoToastDismissRef = useRef<(() => void) | null>(null)
 
+  // Use subscription context for usage data
+  const { usage, loading: usageLoading } = useSubscription()
+
   const [outlets, setOutlets] = useState<OutletData[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -145,8 +149,6 @@ export default function OutletManagementPage() {
   const [tenant, setTenant] = useState<any>(null)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [usage, setUsage] = useState<any>(null)
-  const [usageLoading, setUsageLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -193,24 +195,9 @@ export default function OutletManagementPage() {
   useEffect(() => {
     if (!authLoading && user && isAdmin()) {
       fetchOutlets()
-      fetchUsage()
+      // Usage data is now loaded from subscription context
     }
   }, [authLoading, user, isAdmin, page, searchTerm])
-
-  const fetchUsage = async () => {
-    try {
-      setUsageLoading(true)
-      const response = await fetch('/api/subscription/usage')
-      if (response.ok) {
-        const data = await response.json()
-        setUsage(data)
-      }
-    } catch (error) {
-      console.error('Error fetching usage:', error)
-    } finally {
-      setUsageLoading(false)
-    }
-  }
 
   const fetchOutlets = async () => {
     try {

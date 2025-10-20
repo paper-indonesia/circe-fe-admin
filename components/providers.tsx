@@ -6,6 +6,7 @@ import { AppProvider } from "@/lib/context"
 import { AuthProvider } from "@/lib/auth-context"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/lib/theme-context"
+import { SubscriptionProvider } from "@/lib/subscription-context"
 import { OperationalOnboardingProvider } from "@/components/operational-onboarding-provider"
 import { MainLayout } from "@/components/layout/main-layout"
 
@@ -21,16 +22,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <AppProvider>
-        <ThemeProvider>
-          <OperationalOnboardingProvider>
-            {shouldShowLayout ? (
-              <MainLayout>{children}</MainLayout>
-            ) : (
-              children
-            )}
-            <Toaster />
-          </OperationalOnboardingProvider>
-        </ThemeProvider>
+        <SubscriptionProvider>
+          <ThemeProvider>
+            <OperationalOnboardingProvider>
+              {shouldShowLayout ? (
+                <MainLayout>{children}</MainLayout>
+              ) : (
+                children
+              )}
+              <Toaster />
+            </OperationalOnboardingProvider>
+          </ThemeProvider>
+        </SubscriptionProvider>
       </AppProvider>
     </AuthProvider>
   )

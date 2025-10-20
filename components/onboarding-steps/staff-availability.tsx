@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { UserCog, Plus, AlertCircle, CheckCircle2, Info, ArrowUpCircle, Calendar, Clock, Settings, ChevronDown, ChevronUp } from "lucide-react"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
+import { useSubscription } from "@/lib/subscription-context"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -37,6 +38,7 @@ const EMPLOYMENT_TYPES = [
 export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepProps) {
   const { toast } = useToast()
   const { progress, addStaff, addAvailability } = useOperationalOnboarding()
+  const { usage } = useSubscription()
 
   const [currentTab, setCurrentTab] = useState<'staff' | 'availability'>('staff')
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
@@ -161,27 +163,15 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     fetchPositionTemplates()
   }, [])
 
-  // Load plan limits
+  // Load plan limits from subscription context
   useEffect(() => {
-    const fetchLimits = async () => {
-      try {
-        const usageResponse = await fetch("/api/subscription/usage")
-
-        if (usageResponse.ok) {
-          const usageData = await usageResponse.json()
-
-          setPlanLimits({
-            current: usageData.usage_summary?.staff?.used || 0,
-            max: usageData.usage_summary?.staff?.limit || 999,
-          })
-        }
-      } catch (error) {
-        console.error("Failed to fetch plan limits:", error)
-      }
+    if (usage?.usage_summary?.staff) {
+      setPlanLimits({
+        current: usage.usage_summary.staff.used || 0,
+        max: usage.usage_summary.staff.limit || 999,
+      })
     }
-
-    fetchLimits()
-  }, [progress.staff.length])
+  }, [usage])
 
   // Update parent validation state
   useEffect(() => {

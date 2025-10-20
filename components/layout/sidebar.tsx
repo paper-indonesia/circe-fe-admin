@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useLayout } from "./main-layout"
 import { useAuth } from "@/lib/auth-context"
+import { useSubscription } from "@/lib/subscription-context"
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -18,7 +19,9 @@ export function Sidebar() {
   const [user, setUser] = useState<any>(null)
   const [tenant, setTenant] = useState<any>(null)
   const [sessionTime, setSessionTime] = useState({ minutes: 30, seconds: 0 })
-  const [subscription, setSubscription] = useState<any>(null)
+
+  // Use subscription context instead of local state
+  const { subscription } = useSubscription()
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -47,29 +50,7 @@ export function Sidebar() {
     }
   }, [])
 
-  // Fetch subscription data for tenant_admin
-  useEffect(() => {
-    const fetchSubscription = async () => {
-      if (!isAdmin()) return
-
-      try {
-        const response = await fetch('/api/subscription')
-        if (response.ok) {
-          const data = await response.json()
-          setSubscription({
-            plan: data.plan?.toLowerCase() || 'free',
-            status: data.status
-          })
-        }
-      } catch (error) {
-        console.error("Failed to fetch subscription:", error)
-      }
-    }
-
-    if (user) {
-      fetchSubscription()
-    }
-  }, [user, isAdmin])
+  // Subscription data is now loaded from context - no need to fetch here
 
   // Session timer countdown
   useEffect(() => {

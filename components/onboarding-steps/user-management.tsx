@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Users, Plus, AlertCircle, CheckCircle2, Info, ArrowUpCircle, Mail, Phone } from "lucide-react"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
+import { useSubscription } from "@/lib/subscription-context"
 
 interface UserManagementStepProps {
   onValidChange: (isValid: boolean) => void
@@ -24,6 +25,7 @@ const USER_ROLES = [
 export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
   const { toast } = useToast()
   const { progress, addUser } = useOperationalOnboarding()
+  const { usage } = useSubscription()
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -59,27 +61,15 @@ export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
     fetchExistingUsers()
   }, [])
 
-  // Load plan limits
+  // Load plan limits from subscription context
   useEffect(() => {
-    const fetchLimits = async () => {
-      try {
-        const usageResponse = await fetch("/api/subscription/usage")
-
-        if (usageResponse.ok) {
-          const usageData = await usageResponse.json()
-
-          setPlanLimits({
-            current: usageData.usage_summary?.staff?.used || 0,
-            max: usageData.usage_summary?.staff?.limit || 999,
-          })
-        }
-      } catch (error) {
-        console.error("Failed to fetch plan limits:", error)
-      }
+    if (usage?.usage_summary?.staff) {
+      setPlanLimits({
+        current: usage.usage_summary.staff.used || 0,
+        max: usage.usage_summary.staff.limit || 999,
+      })
     }
-
-    fetchLimits()
-  }, [progress.users.length])
+  }, [usage])
 
   // Update parent validation state
   useEffect(() => {

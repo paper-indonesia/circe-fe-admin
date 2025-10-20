@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Building2, Plus, Trash2, AlertCircle, CheckCircle2, Info, ArrowUpCircle, ChevronDown } from "lucide-react"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
+import { useSubscription } from "@/lib/subscription-context"
 import { motion, AnimatePresence } from "framer-motion"
 
 interface OutletSetupStepProps {
@@ -25,6 +26,7 @@ const TIMEZONES = [
 export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
   const { toast } = useToast()
   const { progress, addOutlet } = useOperationalOnboarding()
+  const { usage } = useSubscription()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -51,27 +53,15 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
   const [planLimits, setPlanLimits] = useState<{ current: number; max: number } | null>(null)
   const [showOutletList, setShowOutletList] = useState(true)
 
-  // Load plan limits
+  // Load plan limits from subscription context
   useEffect(() => {
-    const fetchLimits = async () => {
-      try {
-        const usageResponse = await fetch("/api/subscription/usage")
-
-        if (usageResponse.ok) {
-          const usageData = await usageResponse.json()
-
-          setPlanLimits({
-            current: usageData.usage_summary?.outlets?.used || 0,
-            max: usageData.usage_summary?.outlets?.limit || 999,
-          })
-        }
-      } catch (error) {
-        console.error("Failed to fetch plan limits:", error)
-      }
+    if (usage?.usage_summary?.outlets) {
+      setPlanLimits({
+        current: usage.usage_summary.outlets.used || 0,
+        max: usage.usage_summary.outlets.limit || 999,
+      })
     }
-
-    fetchLimits()
-  }, [progress.outlets.length])
+  }, [usage])
 
   // Update parent validation state
   useEffect(() => {

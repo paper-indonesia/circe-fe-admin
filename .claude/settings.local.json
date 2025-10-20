@@ -6,7 +6,11 @@
       "mcp__ide__getDiagnostics",
       "Bash(npm run build)",
       "Bash(find \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\app\" -type f ( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" ) ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" -exec grep -l \"map.*fetch\\|Promise.all\\|Promise.allSettled\" {} ;)",
-      "Bash(find \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\components\" -type f ( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" ) ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" -exec grep -l \"customers\\|customer\" {} ;)"
+      "Bash(find \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\components\" -type f ( -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" ) ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" -exec grep -l \"customers\\|customer\" {} ;)",
+      "Bash(git rm \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\scripts\\migrate-mongodb.ts\")",
+      "Bash(git rm \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\scripts\\seed-database.ts\" \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\scripts\\screenshot-simple.js\" \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\scripts\\screenshot.js\" \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\scripts\\drop-old-indexes.ts\" \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\scripts\\seed-full-data.js\")",
+      "Bash(git rm \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\app\\walk-in\\page-api-integration.patch.tsx\")",
+      "Bash(git rm \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\app\\products\\page.tsx.backup\")"
     ],
     "deny": [],
     "ask": []

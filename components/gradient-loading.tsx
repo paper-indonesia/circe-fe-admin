@@ -2,7 +2,11 @@
 
 import React from 'react';
 
-export default function GradientLoading() {
+interface GradientLoadingProps {
+  text?: string;
+}
+
+export default function GradientLoading({ text = 'Processing' }: GradientLoadingProps) {
   return (
     <div className="flex items-center justify-center py-20">
       <div className="relative">
@@ -66,7 +70,7 @@ export default function GradientLoading() {
               animation: 'pulse-text 1.6s ease-in-out infinite'
             }}
           >
-            Processing
+            {text}
           </h2>
           <div className="flex justify-center items-center mt-2 gap-1">
             {[0, 1, 2].map((i) => (
