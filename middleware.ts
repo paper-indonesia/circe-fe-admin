@@ -66,7 +66,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Check authentication for protected routes
-  const publicPaths = ['/signin', '/signup', '/forgot-password']
+  const publicPaths = ['/signin', '/signup', '/forgot-password', '/terms', '/privacy']
   const isPublicPath = publicPaths.some(path => pathname.includes(path))
 
   // Skip auth check for public paths and root
