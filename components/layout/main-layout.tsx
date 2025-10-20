@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, createContext, useContext } from "react"
+import { useState, createContext, useContext, useEffect } from "react"
 import { Sidebar } from "./sidebar"
 import { NavigationLoader } from "@/components/navigation-loader"
 
@@ -30,6 +30,17 @@ export function MainLayout({ children }: MainLayoutProps) {
     return false
   })
 
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
   const handleSetCollapsed = (value: boolean) => {
     setIsCollapsed(value)
     if (typeof window !== 'undefined') {
@@ -39,9 +50,17 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <LayoutContext.Provider value={{ isCollapsed, setIsCollapsed: handleSetCollapsed }}>
-      <div className="min-h-screen bg-gray-50">
-        <Sidebar />
-        <div className={`transition-all duration-300 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'} relative`}>
+      <div className="min-h-screen bg-gray-50" style={{ position: 'relative' }}>
+        <Sidebar key="main-sidebar" />
+        <div
+          className="transition-all duration-300"
+          style={{
+            position: 'relative',
+            minHeight: '100vh',
+            paddingLeft: isMobile ? '0' : (isCollapsed ? '80px' : '256px'),
+            transition: 'padding-left 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
+        >
           <NavigationLoader />
           <main className="py-6 px-4 lg:px-8">
             {children}

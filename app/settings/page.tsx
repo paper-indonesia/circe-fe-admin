@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building, Shield, Save, Briefcase, Crown, Calendar, AlertCircle, Link2, FileText, Mail, Phone, Globe, Palette, Clock, Users, Tag, X, Plus, CreditCard, Eye, EyeOff, CheckCircle } from "lucide-react"
+import { Building, Shield, Save, Briefcase, Crown, Calendar, AlertCircle, Link2, FileText, Mail, Phone, Globe, Palette, Clock, Users, Tag, X, Plus, CreditCard, Eye, EyeOff, CheckCircle, Copy, ExternalLink, UserPlus, LogIn, ChevronDown, ChevronUp } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
 import LiquidLoading from "@/components/ui/liquid-loader"
@@ -79,6 +79,23 @@ export default function SettingsPage() {
   const [showClientSecret, setShowClientSecret] = useState(false)
   const [newStaffPosition, setNewStaffPosition] = useState("")
   const [newServiceCategory, setNewServiceCategory] = useState("")
+
+  // Folding state for sections
+  const [expandedSections, setExpandedSections] = useState({
+    organization: true,
+    customerAccess: true,
+    subscription: true,
+    payment: true,
+    business: true,
+    security: true
+  })
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
 
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null)
   const [tenantForm, setTenantForm] = useState<{
@@ -375,18 +392,44 @@ export default function SettingsPage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-          <p className="text-muted-foreground">Manage your business settings and preferences</p>
+      <div className="space-y-8 pb-8">
+        {/* Page Header */}
+        <div className="border-b pb-6">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Settings</h1>
+          <p className="text-lg text-gray-600">Manage your business settings and preferences</p>
         </div>
 
-        <div className="grid gap-6">
+        <div className="space-y-12">
           {/* Organization Profile - Only for tenant_admin */}
           {isAdmin() && tenantInfo && (
             <>
-              {/* Tenant Information */}
-              <Card>
+              {/* Section: Organization Settings */}
+              <div className="space-y-6">
+                <div
+                  className="flex items-center justify-between pb-3 border-b-2 border-gray-200 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors"
+                  onClick={() => toggleSection('organization')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <Briefcase className="h-6 w-6 text-blue-700" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Organization Settings</h2>
+                      <p className="text-sm text-gray-600">Configure your organization profile and business details</p>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    {expandedSections.organization ? (
+                      <ChevronUp className="h-6 w-6 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="h-6 w-6 text-gray-600" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Tenant Information */}
+                {expandedSections.organization && (
+                <Card className="shadow-sm border-gray-200">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Briefcase className="h-5 w-5 text-blue-600" />
@@ -616,40 +659,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Branding */}
-                  <div className="space-y-4 pt-4 border-t">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
-                      <Palette className="h-4 w-4 text-blue-600" />
-                      Branding
-                    </h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="themeColor">Theme Color</Label>
-                      <div className="flex items-center gap-3">
-                        <Input
-                          id="themeColor"
-                          type="color"
-                          value={tenantForm.settings.theme_color}
-                          onChange={(e) => setTenantForm(prev => ({
-                            ...prev,
-                            settings: { ...prev.settings, theme_color: e.target.value }
-                          }))}
-                          className="w-20 h-11 cursor-pointer"
-                        />
-                        <Input
-                          type="text"
-                          value={tenantForm.settings.theme_color}
-                          onChange={(e) => setTenantForm(prev => ({
-                            ...prev,
-                            settings: { ...prev.settings, theme_color: e.target.value }
-                          }))}
-                          placeholder="#3B82F6"
-                          className="flex-1 font-mono"
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground">Primary color for your brand (used in booking pages, emails, etc.)</p>
-                    </div>
-                  </div>
-
                   {/* Staff Position Templates */}
                   <div className="space-y-4 pt-4 border-t">
                     <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
@@ -810,31 +819,209 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 pt-2">
-                    <Button onClick={handleSaveTenant} disabled={savingTenant} size="lg" className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700">
+                  <div className="flex items-center gap-3 pt-6 border-t">
+                    <Button
+                      onClick={handleSaveTenant}
+                      disabled={savingTenant}
+                      size="lg"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md"
+                    >
                       <Save className="h-4 w-4 mr-2" />
-                      {savingTenant ? 'Saving...' : 'Save Organization Settings'}
+                      {savingTenant ? 'Saving...' : 'Save Changes'}
                     </Button>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Status:</span>
-                      <Badge variant={tenantInfo.is_active ? "success" : "destructive"}>
+                      <span className="text-sm text-gray-600 font-medium">Status:</span>
+                      <Badge
+                        variant={tenantInfo.is_active ? "success" : "destructive"}
+                        className="font-semibold"
+                      >
                         {tenantInfo.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+              )}
+              </div>
 
-              {/* Subscription & Billing */}
-              {tenantInfo.subscription && (
-                <Card>
+              {/* Section: Customer Access */}
+              <div className="space-y-6">
+                <div
+                  className="flex items-center justify-between pb-3 border-b-2 border-gray-200 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors"
+                  onClick={() => toggleSection('customerAccess')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <UserPlus className="h-6 w-6 text-purple-700" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Customer Access</h2>
+                      <p className="text-sm text-gray-600">Share registration and login links with your customers</p>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    {expandedSections.customerAccess ? (
+                      <ChevronUp className="h-6 w-6 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="h-6 w-6 text-gray-600" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Customer Links */}
+                {expandedSections.customerAccess && (
+                <Card className="shadow-sm border-gray-200">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Crown className="h-5 w-5 text-amber-500" />
-                      Subscription & Billing
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Link2 className="h-5 w-5 text-purple-600" />
+                      Customer Portal Links
+                    </CardTitle>
+                  <CardDescription>
+                    Share these links with your customers for registration and login
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {tenantInfo?.slug ? (
+                    <>
+                      {/* Register Link */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-sm font-semibold">
+                          <UserPlus className="h-4 w-4 text-green-600" />
+                          Registration Link
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={`${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`}
+                            readOnly
+                            className="font-mono text-sm bg-gray-50"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              const link = `${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`
+                              navigator.clipboard.writeText(link)
+                              toast({
+                                title: "Copied!",
+                                description: "Registration link copied to clipboard"
+                              })
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              const link = `${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`
+                              window.open(link, '_blank')
+                            }}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          New customers can use this link to create an account
+                        </p>
+                      </div>
+
+                      {/* Login Link */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-sm font-semibold">
+                          <LogIn className="h-4 w-4 text-blue-600" />
+                          Login Link
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={`${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`}
+                            readOnly
+                            className="font-mono text-sm bg-gray-50"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              const link = `${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`
+                              navigator.clipboard.writeText(link)
+                              toast({
+                                title: "Copied!",
+                                description: "Login link copied to clipboard"
+                              })
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              const link = `${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`
+                              window.open(link, '_blank')
+                            }}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Existing customers can use this link to access their account
+                        </p>
+                      </div>
+
+                      {/* Info Box */}
+                      <Alert className="bg-purple-50 border-purple-200">
+                        <AlertCircle className="h-4 w-4 text-purple-600" />
+                        <AlertDescription className="text-purple-800 text-sm">
+                          <span className="font-medium">Share these links:</span> Include them in your marketing materials, social media, or send directly to customers via email or WhatsApp.
+                        </AlertDescription>
+                      </Alert>
+                    </>
+                  ) : (
+                    <Alert className="bg-yellow-50 border-yellow-200">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <AlertDescription className="text-yellow-800 text-sm">
+                        <span className="font-medium">Slug not configured:</span> Please configure your organization slug in the Organization Profile section above.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+              )}
+              </div>
+
+              {/* Section: Subscription & Billing */}
+              {tenantInfo.subscription && (
+                <div className="space-y-6">
+                  <div
+                    className="flex items-center justify-between pb-3 border-b-2 border-gray-200 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors"
+                    onClick={() => toggleSection('subscription')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-100 rounded-lg">
+                        <Crown className="h-6 w-6 text-amber-700" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Subscription & Billing</h2>
+                        <p className="text-sm text-gray-600">Manage your subscription plan and billing information</p>
+                      </div>
+                    </div>
+                    <div className="p-2">
+                      {expandedSections.subscription ? (
+                        <ChevronUp className="h-6 w-6 text-gray-600" />
+                      ) : (
+                        <ChevronDown className="h-6 w-6 text-gray-600" />
+                      )}
+                    </div>
+                  </div>
+
+                  {expandedSections.subscription && (
+                  <Card className="shadow-sm border-gray-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Crown className="h-5 w-5 text-amber-600" />
+                      Current Plan
                     </CardTitle>
                     <CardDescription>
-                      Your current subscription plan and billing information
+                      Your active subscription plan and billing cycle
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -934,19 +1121,21 @@ export default function SettingsPage() {
                       </div>
 
                       {/* Upgrade Action */}
-                      <div className="flex items-center gap-3 pt-4 border-t">
+                      <div className="flex flex-wrap items-center gap-3 pt-6 border-t">
                         {tenantInfo.subscription.plan === 'free' && (
                           <Button
                             size="lg"
-                            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg"
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-semibold shadow-md"
                             onClick={() => window.location.href = '/subscription/upgrade'}
                           >
                             <Crown className="h-5 w-5 mr-2" />
-                            Upgrade to Premium
+                            Upgrade Plan
                           </Button>
                         )}
                         <Button
                           variant="outline"
+                          size="lg"
+                          className="border-gray-300 hover:bg-gray-50 font-semibold"
                           onClick={() => window.location.href = '/subscription/manage'}
                         >
                           Manage Subscription
@@ -955,17 +1144,44 @@ export default function SettingsPage() {
                     </div>
                   </CardContent>
                 </Card>
+                )}
+                </div>
               )}
 
-              {/* Paper.id Payment Gateway Configuration */}
-              <Card>
+              {/* Section: Payment Integration */}
+              <div className="space-y-6">
+                <div
+                  className="flex items-center justify-between pb-3 border-b-2 border-gray-200 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors"
+                  onClick={() => toggleSection('payment')}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 rounded-lg">
+                      <CreditCard className="h-6 w-6 text-indigo-700" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Payment Integration</h2>
+                      <p className="text-sm text-gray-600">Configure payment gateway for online transactions</p>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    {expandedSections.payment ? (
+                      <ChevronUp className="h-6 w-6 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="h-6 w-6 text-gray-600" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Paper.id Payment Gateway Configuration */}
+                {expandedSections.payment && (
+                <Card className="shadow-sm border-gray-200">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <CreditCard className="h-5 w-5 text-indigo-600" />
-                    Paper.id Payment Gateway
+                    Paper.id Configuration
                   </CardTitle>
                   <CardDescription>
-                    Configure Paper.id credentials for online payment links
+                    Set up Paper.id credentials to enable online payment links for your customers
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1116,161 +1332,29 @@ export default function SettingsPage() {
                   )}
 
                   {/* Save Button */}
-                  <div className="flex items-center gap-3 pt-2">
+                  <div className="flex flex-col gap-3 pt-6 border-t">
                     <Button
                       onClick={handleSavePaperId}
                       disabled={savingPaperId || (paperIdForm.enabled && (!paperIdForm.client_id || !paperIdForm.client_secret))}
                       size="lg"
-                      className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md w-full sm:w-auto"
                     >
                       <Save className="h-4 w-4 mr-2" />
-                      {savingPaperId ? 'Saving...' : 'Save Paper.id Configuration'}
+                      {savingPaperId ? 'Saving...' : 'Save Configuration'}
                     </Button>
                     {paperIdForm.enabled && (!paperIdForm.client_id || !paperIdForm.client_secret) && (
-                      <p className="text-sm text-red-600">
-                        Both Client ID and Client Secret are required
+                      <p className="text-sm text-red-600 font-medium">
+                        ⚠️ Both Client ID and Client Secret are required
                       </p>
                     )}
                   </div>
                 </CardContent>
               </Card>
+              )}
+              </div>
             </>
           )}
 
-          {/* Business Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
-                Business Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="clinicName">Clinic Name</Label>
-                  <Input
-                    id="clinicName"
-                    value={businessInfo.clinicName}
-                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, clinicName: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
-                  <div className="flex gap-2">
-                    <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium">
-                      +62
-                    </div>
-                    <Input
-                      id="phoneNumber"
-                      placeholder="81xxxxxxxxx"
-                      value={businessInfo.phoneNumber.startsWith('+62') ? businessInfo.phoneNumber.slice(3) : businessInfo.phoneNumber}
-                      onChange={(e) => {
-                        const input = e.target.value.replace(/\D/g, '')
-                        setBusinessInfo(prev => ({ ...prev, phoneNumber: input ? `+62${input}` : '' }))
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={businessInfo.email}
-                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, email: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    value={businessInfo.website}
-                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, website: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea
-                    id="address"
-                    value={businessInfo.address}
-                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, address: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="operatingHours">Operating Hours</Label>
-                  <Input
-                    id="operatingHours"
-                    value={businessInfo.operatingHours}
-                    onChange={(e) => setBusinessInfo(prev => ({ ...prev, operatingHours: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <Button onClick={handleSaveBusinessInfo}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Business Info
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Security Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Security Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Two-Factor Authentication</Label>
-                    <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
-                  </div>
-                  <Switch
-                    checked={security.twoFactorAuth}
-                    onCheckedChange={(checked) => setSecurity(prev => ({ ...prev, twoFactorAuth: checked }))}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
-                    <Select value={security.sessionTimeout} onValueChange={(value) => setSecurity(prev => ({ ...prev, sessionTimeout: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15">15 minutes</SelectItem>
-                        <SelectItem value="30">30 minutes</SelectItem>
-                        <SelectItem value="60">1 hour</SelectItem>
-                        <SelectItem value="120">2 hours</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="passwordExpiry">Password Expiry (days)</Label>
-                    <Select value={security.passwordExpiry} onValueChange={(value) => setSecurity(prev => ({ ...prev, passwordExpiry: value }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="30">30 days</SelectItem>
-                        <SelectItem value="60">60 days</SelectItem>
-                        <SelectItem value="90">90 days</SelectItem>
-                        <SelectItem value="180">180 days</SelectItem>
-                        <SelectItem value="365">1 year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              <Button onClick={handleSaveSecurity}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Security Settings
-              </Button>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </MainLayout>

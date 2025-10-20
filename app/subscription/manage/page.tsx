@@ -59,6 +59,9 @@ export default function ManageSubscriptionPage() {
   const [targetPlan, setTargetPlan] = useState("")
   const [billingHistory, setBillingHistory] = useState<any[]>([])
   const [billingLoading, setBillingLoading] = useState(true)
+  const [selectedPayment, setSelectedPayment] = useState<any>(null)
+  const [showPaymentDetailDialog, setShowPaymentDetailDialog] = useState(false)
+  const [paymentDetailLoading, setPaymentDetailLoading] = useState(false)
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -165,13 +168,6 @@ export default function ManageSubscriptionPage() {
     }
   }
 
-  const handleUpdatePaymentMethod = () => {
-    toast({
-      title: "Update Payment Method",
-      description: "Redirecting to payment settings...",
-    })
-    // TODO: Implement payment method update
-  }
 
   const handleRenewSubscription = async () => {
     if (!subscription?.id) {
@@ -298,6 +294,36 @@ export default function ManageSubscriptionPage() {
     if (currentPlan === 'enterprise') return ['pro', 'free']
     if (currentPlan === 'pro') return ['free']
     return []
+  }
+
+  const handleViewPaymentDetail = async (paymentId: string) => {
+    setPaymentDetailLoading(true)
+    setShowPaymentDetailDialog(true)
+
+    try {
+      const response = await fetch(`/api/subscription/payments/${paymentId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setSelectedPayment(data)
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load payment details",
+          variant: "destructive"
+        })
+        setShowPaymentDetailDialog(false)
+      }
+    } catch (error) {
+      console.error("Failed to fetch payment detail:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load payment details",
+        variant: "destructive"
+      })
+      setShowPaymentDetailDialog(false)
+    } finally {
+      setPaymentDetailLoading(false)
+    }
   }
 
   if (loading) {
@@ -571,29 +597,6 @@ export default function ManageSubscriptionPage() {
               </CardContent>
             </Card>
           )}
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <CreditCard className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Payment Method</CardTitle>
-                  <CardDescription>Update billing details</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleUpdatePaymentMethod}
-              >
-                Update Payment Method
-              </Button>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Billing History */}
@@ -637,7 +640,11 @@ export default function ManageSubscriptionPage() {
                     </thead>
                     <tbody>
                       {billingHistory.map((payment) => (
-                        <tr key={payment._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                        <tr
+                          key={payment._id}
+                          className="border-b border-gray-50 hover:bg-blue-50 transition-colors cursor-pointer"
+                          onClick={() => handleViewPaymentDetail(payment._id)}
+                        >
                           <td className="py-4 px-2">
                             <div className="flex flex-col">
                               <span className="text-sm font-medium text-gray-900">
@@ -691,7 +698,11 @@ export default function ManageSubscriptionPage() {
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
                   {billingHistory.map((payment) => (
-                    <Card key={payment._id} className="border border-gray-200">
+                    <Card
+                      key={payment._id}
+                      className="border border-gray-200 cursor-pointer hover:border-blue-400 transition-colors"
+                      onClick={() => handleViewPaymentDetail(payment._id)}
+                    >
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start mb-3">
                           <div>
@@ -873,6 +884,215 @@ export default function ManageSubscriptionPage() {
               >
                 {downgradeLoading ? "Processing..." : "Schedule Downgrade"}
               </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Payment Detail Dialog */}
+        <AlertDialog open={showPaymentDetailDialog} onOpenChange={setShowPaymentDetailDialog}>
+          <AlertDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-blue-600" />
+                Payment Details
+              </AlertDialogTitle>
+            </AlertDialogHeader>
+
+            {paymentDetailLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <LiquidLoading />
+              </div>
+            ) : selectedPayment ? (
+              <div className="space-y-4 pt-4">
+                {/* Payment Status Banner */}
+                <div className={cn(
+                  "p-4 rounded-lg border-2",
+                  selectedPayment.status === 'completed'
+                    ? "bg-green-50 border-green-200"
+                    : selectedPayment.status === 'pending'
+                    ? "bg-yellow-50 border-yellow-200"
+                    : "bg-red-50 border-red-200"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={cn(
+                        "text-sm font-semibold",
+                        selectedPayment.status === 'completed' ? "text-green-900" : "text-yellow-900"
+                      )}>
+                        Payment {selectedPayment.status === 'completed' ? 'Completed' : selectedPayment.status}
+                      </p>
+                      {selectedPayment.paid_at && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          {format(new Date(selectedPayment.paid_at), "MMM dd, yyyy 'at' HH:mm")}
+                        </p>
+                      )}
+                    </div>
+                    <Badge
+                      variant={selectedPayment.status === 'completed' ? 'default' : 'secondary'}
+                      className="text-sm capitalize"
+                    >
+                      {selectedPayment.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Amount Summary */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Amount:</span>
+                      <span className="text-base font-medium">{formatCurrency(parseFloat(selectedPayment.amount))}</span>
+                    </div>
+                    {parseFloat(selectedPayment.tax_amount) > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Tax:</span>
+                        <span className="text-base font-medium">{formatCurrency(parseFloat(selectedPayment.tax_amount))}</span>
+                      </div>
+                    )}
+                    {parseFloat(selectedPayment.platform_fee) > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Platform Fee:</span>
+                        <span className="text-base font-medium">{formatCurrency(parseFloat(selectedPayment.platform_fee))}</span>
+                      </div>
+                    )}
+                    <div className="pt-2 border-t border-blue-300 flex justify-between items-center">
+                      <span className="text-base font-semibold text-gray-900">Total Amount:</span>
+                      <span className="text-2xl font-bold text-blue-900">
+                        {formatCurrency(parseFloat(selectedPayment.total_amount))}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 text-right">
+                      {selectedPayment.currency}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Payment Information */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-gray-500">Reference ID</Label>
+                      <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-1 break-all">
+                        {selectedPayment.reference_id}
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-500">Payment Method</Label>
+                      <div className="mt-1">
+                        <Badge variant="outline" className="capitalize">
+                          {selectedPayment.payment_method === 'bank_transfer' ? 'Bank Transfer' : selectedPayment.payment_method}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-500">Payment Provider</Label>
+                      <p className="text-sm font-medium mt-1 capitalize">
+                        {selectedPayment.payment_provider === 'paper_id' ? 'Paper.id' : selectedPayment.payment_provider}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-gray-500">Payment Type</Label>
+                      <p className="text-sm font-medium mt-1 capitalize">
+                        {selectedPayment.payment_type}
+                      </p>
+                    </div>
+
+                    {selectedPayment.subscription_id && (
+                      <div>
+                        <Label className="text-xs text-gray-500">Subscription ID</Label>
+                        <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-1 break-all">
+                          {selectedPayment.subscription_id}
+                        </p>
+                      </div>
+                    )}
+
+                    {selectedPayment.provider_payment_id && (
+                      <div>
+                        <Label className="text-xs text-gray-500">Provider Payment ID</Label>
+                        <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-1 break-all">
+                          {selectedPayment.provider_payment_id}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedPayment.description && (
+                  <div>
+                    <Label className="text-xs text-gray-500">Description</Label>
+                    <p className="text-sm mt-1 p-3 bg-gray-50 rounded">
+                      {selectedPayment.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {selectedPayment.notes && (
+                  <div>
+                    <Label className="text-xs text-gray-500">Notes</Label>
+                    <p className="text-sm mt-1 p-3 bg-yellow-50 rounded border border-yellow-200">
+                      {selectedPayment.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Timestamps */}
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Created:</span>
+                    <span className="font-medium">
+                      {format(new Date(selectedPayment.created_at), "MMM dd, yyyy 'at' HH:mm:ss")}
+                    </span>
+                  </div>
+                  {selectedPayment.updated_at && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Updated:</span>
+                      <span className="font-medium">
+                        {format(new Date(selectedPayment.updated_at), "MMM dd, yyyy 'at' HH:mm:ss")}
+                      </span>
+                    </div>
+                  )}
+                  {selectedPayment.paid_at && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Paid:</span>
+                      <span className="font-medium text-green-700">
+                        {format(new Date(selectedPayment.paid_at), "MMM dd, yyyy 'at' HH:mm:ss")}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Metadata */}
+                {selectedPayment.metadata && Object.keys(selectedPayment.metadata).length > 0 && (
+                  <div>
+                    <Label className="text-xs text-gray-500 mb-2 block">Additional Information</Label>
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-xs">
+                      {Object.entries(selectedPayment.metadata).map(([key, value]) => (
+                        <div key={key} className="flex justify-between">
+                          <span className="text-gray-500 capitalize">{key.replace(/_/g, ' ')}:</span>
+                          <span className="font-medium">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>No payment details available</p>
+              </div>
+            )}
+
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setShowPaymentDetailDialog(false)}>
+                Close
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

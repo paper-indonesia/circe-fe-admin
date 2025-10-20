@@ -20,6 +20,11 @@ export function Sidebar() {
   const [sessionTime, setSessionTime] = useState({ minutes: 30, seconds: 0 })
   const [subscription, setSubscription] = useState<any>(null)
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false)
+  }, [pathname])
+
   // Load user and tenant from localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
@@ -192,39 +197,56 @@ export function Sidebar() {
       </div>
 
       {/* Sidebar */}
-      <div
+      <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-100 shadow-sm transform transition-all duration-300 lg:translate-x-0 overflow-x-hidden overflow-y-hidden",
-          isCollapsed ? "w-20" : "w-64",
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 bg-white border-r border-gray-100 shadow-sm",
+          "lg:translate-x-0",
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
+        style={{
+          width: isCollapsed ? '80px' : '256px',
+          overflow: 'hidden',
+          transition: 'width 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+          willChange: 'width',
+          contain: 'layout size style paint',
+          minWidth: isCollapsed ? '80px' : '256px',
+          maxWidth: isCollapsed ? '80px' : '256px'
+        }}
       >
-        <div className="flex flex-col h-full overflow-x-hidden overflow-y-hidden">
+        <div className="flex flex-col h-full" style={{ overflow: 'hidden', position: 'relative' }}>
           {/* Logo Section */}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={cn(
-              "flex items-center gap-3 px-6 py-5 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer w-full overflow-hidden",
+              "flex items-center gap-3 px-6 py-5 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer flex-shrink-0",
               isCollapsed && "justify-center px-4"
             )}
+            style={{ width: '100%', overflow: 'hidden' }}
           >
             <img
               src="/reserva_logo.webp"
               alt="Reserva"
               className="h-10 w-10 object-contain flex-shrink-0"
             />
-            {!isCollapsed && (
+            <div
+              style={{
+                width: isCollapsed ? '0px' : 'auto',
+                opacity: isCollapsed ? 0 : 1,
+                overflow: 'hidden',
+                transition: 'width 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 200ms ease-in-out'
+              }}
+            >
               <img
                 src="/reserva_name.webp"
                 alt="Reserva"
-                className="h-7 object-contain transition-opacity duration-300 overflow-hidden"
-                style={{ maxWidth: '100%' }}
+                className="h-7 object-contain"
+                style={{ maxWidth: '100%', display: isCollapsed ? 'none' : 'block' }}
               />
-            )}
+            </div>
           </button>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-4 space-y-6 overflow-y-auto overflow-x-hidden">
+          <nav className="flex-1 px-4 py-4 space-y-6 overflow-y-auto" style={{ overflowX: 'hidden' }}>
             {menuGroups.map((group, groupIndex) => (
               <div key={group.label}>
                 {/* Group Label */}
@@ -237,7 +259,7 @@ export function Sidebar() {
                 )}
 
                 {/* Group Items */}
-                <div className="space-y-1">
+                <div className="space-y-1" style={{ overflow: 'hidden' }}>
                   {group.items.map((item) => {
                     const isActive = pathname === item.href
                     return (
@@ -252,21 +274,31 @@ export function Sidebar() {
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                           isCollapsed && "justify-center"
                         )}
+                        style={{ overflow: 'hidden' }}
                         title={isCollapsed ? item.name : undefined}
                       >
                         <item.icon className={cn(
                           "h-5 w-5 transition-all duration-200 flex-shrink-0",
                           isActive ? "text-[#C8B6FF]" : "text-gray-400 group-hover:text-gray-600"
                         )} />
-                        {!isCollapsed && (
-                          <>
-                            <span className="flex-1">{item.name}</span>
-                            {/* Active indicator */}
-                            {isActive && (
-                              <div className="w-1.5 h-1.5 rounded-full bg-[#C8B6FF]" />
-                            )}
-                          </>
-                        )}
+                        <div
+                          style={{
+                            width: isCollapsed ? '0px' : 'auto',
+                            opacity: isCollapsed ? 0 : 1,
+                            overflow: 'hidden',
+                            flex: 1,
+                            display: isCollapsed ? 'none' : 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            transition: 'opacity 200ms ease-in-out'
+                          }}
+                        >
+                          <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</span>
+                          {/* Active indicator */}
+                          {isActive && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#C8B6FF] flex-shrink-0" />
+                          )}
+                        </div>
 
                         {/* Tooltip for collapsed state */}
                         {isCollapsed && (
@@ -283,7 +315,7 @@ export function Sidebar() {
           </nav>
 
           {/* User Profile Section - Moved to Bottom */}
-          <div className="p-4 border-t border-gray-100 overflow-hidden">
+          <div className="p-4 border-t border-gray-100" style={{ overflow: 'hidden' }}>
             {/* User Info */}
             <div className={cn("flex items-center gap-3 mb-3 overflow-hidden", isCollapsed && "justify-center")}>
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center shadow-sm flex-shrink-0">
@@ -291,42 +323,50 @@ export function Sidebar() {
                   {getInitials()}
                 </span>
               </div>
-              {!isCollapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {getDisplayName()}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {getRoleDisplay() && (
-                      <span className="text-xs text-gray-500">
-                        {getRoleDisplay()}
+              <div
+                style={{
+                  width: isCollapsed ? '0px' : 'auto',
+                  opacity: isCollapsed ? 0 : 1,
+                  overflow: 'hidden',
+                  flex: 1,
+                  minWidth: 0,
+                  display: isCollapsed ? 'none' : 'block',
+                  transition: 'opacity 200ms ease-in-out'
+                }}
+              >
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {getDisplayName()}
+                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {getRoleDisplay() && (
+                    <span className="text-xs text-gray-500">
+                      {getRoleDisplay()}
+                    </span>
+                  )}
+                  {tenant?.name && (
+                    <>
+                      <span className="text-xs text-gray-300">•</span>
+                      <span className="text-xs text-gray-500 truncate">
+                        {tenant.name}
                       </span>
-                    )}
-                    {tenant?.name && (
-                      <>
-                        <span className="text-xs text-gray-300">•</span>
-                        <span className="text-xs text-gray-500 truncate">
-                          {tenant.name}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  {/* Subscription Plan Badge - Only for tenant_admin */}
-                  {isAdmin() && subscription && (
-                    <div className="mt-1.5">
-                      <div className={cn(
-                        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
-                        subscription.plan === 'free' && "bg-gray-100 text-gray-700",
-                        subscription.plan === 'pro' && "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700",
-                        subscription.plan === 'enterprise' && "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700"
-                      )}>
-                        <Crown className="h-3 w-3" />
-                        <span className="capitalize">{subscription.plan} Plan</span>
-                      </div>
-                    </div>
+                    </>
                   )}
                 </div>
-              )}
+                {/* Subscription Plan Badge - Only for tenant_admin */}
+                {isAdmin() && subscription && (
+                  <div className="mt-1.5">
+                    <div className={cn(
+                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                      subscription.plan === 'free' && "bg-gray-100 text-gray-700",
+                      subscription.plan === 'pro' && "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700",
+                      subscription.plan === 'enterprise' && "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700"
+                    )}>
+                      <Crown className="h-3 w-3" />
+                      <span className="capitalize">{subscription.plan} Plan</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Upgrade Button - Only for tenant admins */}
@@ -334,13 +374,25 @@ export function Sidebar() {
               <button
                 onClick={() => router.push('/subscription/upgrade')}
                 className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 shadow-md hover:shadow-lg mb-2 overflow-hidden",
-                  isCollapsed && "justify-center"
+                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all duration-200 shadow-md hover:shadow-lg mb-2 flex-shrink-0",
+                  isCollapsed && "justify-center px-2"
                 )}
+                style={{ overflow: 'hidden' }}
                 title="Upgrade Plan"
               >
-                <Crown className="h-4 w-4" />
-                {!isCollapsed && <span className="text-sm font-medium">Upgrade Plan</span>}
+                <Crown className="h-4 w-4 flex-shrink-0" />
+                <span
+                  className="text-sm font-medium whitespace-nowrap"
+                  style={{
+                    width: isCollapsed ? '0px' : 'auto',
+                    opacity: isCollapsed ? 0 : 1,
+                    overflow: 'hidden',
+                    display: isCollapsed ? 'none' : 'inline-block',
+                    transition: 'opacity 200ms ease-in-out'
+                  }}
+                >
+                  Upgrade Plan
+                </span>
               </button>
             )}
 
@@ -348,17 +400,29 @@ export function Sidebar() {
             <button
               onClick={handleLogout}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900 transition-all duration-200 shadow-sm hover:shadow-md overflow-hidden",
-                isCollapsed && "justify-center"
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0",
+                isCollapsed && "justify-center px-2"
               )}
+              style={{ overflow: 'hidden' }}
               title="Sign Out"
             >
-              <Power className="h-4 w-4" />
-              {!isCollapsed && <span className="text-sm font-medium">Sign Out</span>}
+              <Power className="h-4 w-4 flex-shrink-0" />
+              <span
+                className="text-sm font-medium whitespace-nowrap"
+                style={{
+                  width: isCollapsed ? '0px' : 'auto',
+                  opacity: isCollapsed ? 0 : 1,
+                  overflow: 'hidden',
+                  display: isCollapsed ? 'none' : 'inline-block',
+                  transition: 'opacity 200ms ease-in-out'
+                }}
+              >
+                Sign Out
+              </span>
             </button>
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Mobile Overlay */}
       {isMobileMenuOpen && (
