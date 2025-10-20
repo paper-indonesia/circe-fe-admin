@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
+import { TermsModal } from "@/components/modals/TermsModal"
+import { PrivacyModal } from "@/components/modals/PrivacyModal"
 
 const BUSINESS_TYPES = [
   {
@@ -113,6 +115,8 @@ export default function SignUpPage() {
   const [termsError, setTermsError] = useState(false)
   const [privacyError, setPrivacyError] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -1181,14 +1185,17 @@ export default function SignUpPage() {
                             </div>
                             <Label htmlFor="terms_accepted" className="text-sm text-gray-700 cursor-pointer leading-relaxed flex-1">
                               I have read and agree to the{" "}
-                              <Link
-                                href="/terms"
-                                target="_blank"
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setShowTermsModal(true)
+                                }}
                                 className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
-                                onClick={(e) => e.stopPropagation()}
                               >
                                 Terms of Service
-                              </Link>
+                              </button>
                             </Label>
                             {formData.terms_accepted && (
                               <motion.div
@@ -1238,14 +1245,17 @@ export default function SignUpPage() {
                             </div>
                             <Label htmlFor="privacy_accepted" className="text-sm text-gray-700 cursor-pointer leading-relaxed flex-1">
                               I have read and agree to the{" "}
-                              <Link
-                                href="/privacy"
-                                target="_blank"
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setShowPrivacyModal(true)
+                                }}
                                 className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
-                                onClick={(e) => e.stopPropagation()}
                               >
                                 Privacy Policy
-                              </Link>
+                              </button>
                             </Label>
                             {formData.privacy_accepted && (
                               <motion.div
@@ -1349,15 +1359,10 @@ export default function SignUpPage() {
             </CardContent>
           </Card>
 
-          {/* Back to home link */}
-          <div className="mt-6 text-center">
-            <Link
-              href="/"
-              className="text-sm text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center gap-2"
-            >
-              ← Back to home
-            </Link>
-          </div>
+          {/* Modals */}
+          <TermsModal open={showTermsModal} onOpenChange={setShowTermsModal} />
+          <PrivacyModal open={showPrivacyModal} onOpenChange={setShowPrivacyModal} />
+
         </div>
       </div>
     </div>

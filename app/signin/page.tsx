@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock, Building2, Sparkles, Eye, EyeOff, ArrowRight, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import GradientLoading from "@/components/gradient-loading"
+import { TermsModal } from "@/components/modals/TermsModal"
+import { PrivacyModal } from "@/components/modals/PrivacyModal"
 
 interface Tenant {
   id: string
@@ -30,6 +32,8 @@ export default function SignInPage() {
   const [availableTenants, setAvailableTenants] = useState<Tenant[]>([])
   const [selectedTenant, setSelectedTenant] = useState<string>("")
   const [authToken, setAuthToken] = useState<string>("")
+  const [showTermsModal, setShowTermsModal] = useState(false)
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -384,25 +388,29 @@ export default function SignInPage() {
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <p className="text-center text-xs text-gray-500">
                   By signing in, you agree to our{" "}
-                  <Link
-                    href="/terms"
-                    target="_blank"
+                  <button
+                    type="button"
+                    onClick={() => setShowTermsModal(true)}
                     className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
                   >
                     Terms of Service
-                  </Link>
+                  </button>
                   {" "}and{" "}
-                  <Link
-                    href="/privacy"
-                    target="_blank"
+                  <button
+                    type="button"
+                    onClick={() => setShowPrivacyModal(true)}
                     className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
                   >
                     Privacy Policy
-                  </Link>
+                  </button>
                 </p>
               </div>
             </CardContent>
           </Card>
+
+          {/* Modals */}
+          <TermsModal open={showTermsModal} onOpenChange={setShowTermsModal} />
+          <PrivacyModal open={showPrivacyModal} onOpenChange={setShowPrivacyModal} />
 
         </div>
       </div>
