@@ -299,7 +299,7 @@ export default function ManageSubscriptionPage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 pb-8 max-w-4xl mx-auto">
+      <div className="space-y-6 pb-8">
         {/* Header */}
         <div>
           <Button
