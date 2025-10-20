@@ -1255,72 +1255,54 @@ export default function ClientsPage() {
                         <div className="flex items-center gap-2 mt-1">{getStatusBadge(selectedClient.status)}</div>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEditDialog(selectedClient)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDeleteClient(selectedClient)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </Button>
+
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium mb-2">Contact Information</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              <span>{selectedClient.phone}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              <span>{selectedClient.email || "No email provided"}</span>
+                    <div className="space-y-6">
+                      {/* Contact Information Card */}
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4">
+                        <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          Contact Information
+                        </h4>
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3 bg-white/60 rounded-md p-2.5">
+                            <Phone className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500 mb-0.5">Phone Number</p>
+                              <p className="text-sm font-medium text-gray-900">{selectedClient.phone}</p>
                             </div>
                           </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium mb-2">Account Status</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Email Verified:</span>
-                              <span className="font-medium">{selectedClient.email_verified ? "Yes" : "No"}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Active:</span>
-                              <span className="font-medium">{selectedClient.is_active ? "Yes" : "No"}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Gender:</span>
-                              <span className="font-medium capitalize">{selectedClient.gender || "Not specified"}</span>
+                          <div className="flex items-start gap-3 bg-white/60 rounded-md p-2.5">
+                            <Mail className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-gray-500 mb-0.5">Email Address</p>
+                              <p className="text-sm font-medium text-gray-900 break-all" title={selectedClient.email || "No email provided"}>
+                                {selectedClient.email || "No email provided"}
+                              </p>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium mb-2">Statistics</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Total Appointments:</span>
-                              <span className="font-medium">{selectedClient.totalVisits}</span>
+                      {/* Statistics and Account Status Grid */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* Statistics Card */}
+                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-lg p-4">
+                          <h4 className="font-semibold text-purple-900 mb-3">Statistics</h4>
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between bg-white/60 rounded-md p-2">
+                              <span className="text-xs text-gray-600">Total Appointments:</span>
+                              <span className="font-semibold text-sm text-purple-900">{selectedClient.totalVisits}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Loyalty Points:</span>
-                              <span className="font-medium">{selectedClient.loyalty_points || 0}</span>
+                            <div className="flex items-center justify-between bg-white/60 rounded-md p-2">
+                              <span className="text-xs text-gray-600">Loyalty Points:</span>
+                              <span className="font-semibold text-sm text-purple-900">{selectedClient.loyalty_points || 0}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Member Since:</span>
-                              <span className="font-medium">
+                            <div className="flex items-center justify-between bg-white/60 rounded-md p-2">
+                              <span className="text-xs text-gray-600">Member Since:</span>
+                              <span className="font-semibold text-sm text-purple-900">
                                 {selectedClient.createdAt && typeof selectedClient.createdAt === "string"
                                   ? (() => {
                                       try {
@@ -1332,6 +1314,29 @@ export default function ClientsPage() {
                                     })()
                                   : "Unknown"}
                               </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Account Status Card */}
+                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-lg p-4">
+                          <h4 className="font-semibold text-emerald-900 mb-3">Account Status</h4>
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between bg-white/60 rounded-md p-2">
+                              <span className="text-xs text-gray-600">Email Verified:</span>
+                              <span className={`font-semibold text-sm ${selectedClient.email_verified ? "text-emerald-700" : "text-gray-500"}`}>
+                                {selectedClient.email_verified ? "Yes" : "No"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between bg-white/60 rounded-md p-2">
+                              <span className="text-xs text-gray-600">Active:</span>
+                              <span className={`font-semibold text-sm ${selectedClient.is_active ? "text-emerald-700" : "text-gray-500"}`}>
+                                {selectedClient.is_active ? "Yes" : "No"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between bg-white/60 rounded-md p-2">
+                              <span className="text-xs text-gray-600">Gender:</span>
+                              <span className="font-semibold text-sm text-emerald-900 capitalize">{selectedClient.gender || "Not specified"}</span>
                             </div>
                           </div>
                         </div>
