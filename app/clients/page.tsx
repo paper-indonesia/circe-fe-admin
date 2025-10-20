@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
 import { format, parseISO, isValid } from "date-fns"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 import { useRouter } from "next/navigation"
 import { EmptyState } from "@/components/ui/empty-state"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
@@ -756,7 +756,7 @@ export default function ClientsPage() {
     return (
       <MainLayout>
         <div className="flex min-h-[600px] w-full items-center justify-center">
-          <LiquidLoading />
+          <GradientLoading />
         </div>
       </MainLayout>
     )

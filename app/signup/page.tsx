@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock, User, Building2, Phone, Globe, FileText, Sparkles, CheckCircle, ChevronRight, ChevronLeft, Rocket, Shield, GraduationCap, Briefcase, Dumbbell, Heart, Scissors, Waves, Settings2, Check, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
-import { LiquidLoading } from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -318,7 +318,7 @@ export default function SignUpPage() {
   if (pageLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <LiquidLoading />
+        <GradientLoading />
       </div>
     )
   }

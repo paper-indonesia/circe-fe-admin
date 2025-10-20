@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Building, Shield, Save, Briefcase, Crown, Calendar, AlertCircle, Link2, FileText, Mail, Phone, Globe, Palette, Clock, Users, Tag, X, Plus, CreditCard, Eye, EyeOff, CheckCircle, Copy, ExternalLink, UserPlus, LogIn, ChevronDown, ChevronUp } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/lib/auth-context"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 
 interface TenantInfo {
   id: string
@@ -355,7 +355,7 @@ export default function SettingsPage() {
     return (
       <MainLayout>
         <div className="flex items-center justify-center min-h-[600px]">
-          <LiquidLoading />
+          <GradientLoading />
         </div>
       </MainLayout>
     )

@@ -41,7 +41,7 @@ import {
   AlertTriangle
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 import {
   BarChart,
   Bar,
@@ -558,7 +558,7 @@ export default function ReportsPage() {
     return (
       <MainLayout>
         <div className="flex min-h-[600px] w-full items-center justify-center">
-          <LiquidLoading />
+          <GradientLoading />
         </div>
       </MainLayout>
     )

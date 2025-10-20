@@ -66,7 +66,7 @@ import {
   UserPlus,
   RefreshCw,
 } from "lucide-react"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 import {
   Sheet,
   SheetContent,
@@ -1185,7 +1185,7 @@ export default function CalendarPage() {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-[60vh]">
-          <LiquidLoading />
+          <GradientLoading />
         </div>
       </MainLayout>
     )

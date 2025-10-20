@@ -36,7 +36,7 @@ import {
   Edit,
   X,
 } from "lucide-react"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -205,7 +205,7 @@ export default function AvailabilityCalendarPage() {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-screen">
-          <LiquidLoading />
+          <GradientLoading />
         </div>
       </MainLayout>
     )
@@ -305,7 +305,7 @@ export default function AvailabilityCalendarPage() {
           <CardContent className="p-0">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <LiquidLoading />
+                <GradientLoading />
               </div>
             ) : (
               <div className="overflow-x-auto">

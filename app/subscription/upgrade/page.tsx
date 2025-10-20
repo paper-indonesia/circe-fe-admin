@@ -35,7 +35,7 @@ import {
   BarChart3
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 
 const planIcons: Record<string, any> = {
   free: Shield,
@@ -261,7 +261,7 @@ export default function UpgradePage() {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-[60vh]">
-          <LiquidLoading />
+          <GradientLoading />
         </div>
       </MainLayout>
     )

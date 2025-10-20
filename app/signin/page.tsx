@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock, Building2, Sparkles, Eye, EyeOff, ArrowRight, CheckCircle } from "lucide-react"
 import Link from "next/link"
-import { LiquidLoading } from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 
 interface Tenant {
   id: string
@@ -144,7 +144,7 @@ export default function SignInPage() {
   if (pageLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <LiquidLoading />
+        <GradientLoading text="Loading" />
       </div>
     )
   }

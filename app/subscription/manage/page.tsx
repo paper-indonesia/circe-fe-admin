@@ -42,7 +42,7 @@ import {
   Download
 } from "lucide-react"
 import { format } from "date-fns"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 import { cn, formatCurrency } from "@/lib/utils"
 
 export default function ManageSubscriptionPage() {
@@ -330,7 +330,7 @@ export default function ManageSubscriptionPage() {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-[60vh]">
-          <LiquidLoading />
+          <GradientLoading />
         </div>
       </MainLayout>
     )
@@ -615,7 +615,7 @@ export default function ManageSubscriptionPage() {
           <CardContent>
             {billingLoading ? (
               <div className="flex items-center justify-center py-8">
-                <LiquidLoading />
+                <GradientLoading />
               </div>
             ) : billingHistory.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
@@ -900,7 +900,7 @@ export default function ManageSubscriptionPage() {
 
             {paymentDetailLoading ? (
               <div className="flex items-center justify-center py-12">
-                <LiquidLoading />
+                <GradientLoading />
               </div>
             ) : selectedPayment ? (
               <div className="space-y-4 pt-4">

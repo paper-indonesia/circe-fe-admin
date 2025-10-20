@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/context"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, DollarSign, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp } from "lucide-react"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 
 export default function TreatmentsPage() {
@@ -453,7 +453,7 @@ export default function TreatmentsPage() {
     return (
       <MainLayout>
         <div className="flex min-h-[600px] w-full items-center justify-center">
-          <LiquidLoading />
+          <GradientLoading />
         </div>
       </MainLayout>
     )

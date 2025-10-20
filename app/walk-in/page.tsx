@@ -24,7 +24,7 @@ import { usePatients, useStaff, useTreatments, useBookings } from "@/lib/context
 import { formatCurrency, cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
 import { format, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, isToday, startOfDay, addMonths, subMonths } from "date-fns"
-import LiquidLoading from "@/components/ui/liquid-loader"
+import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useRouter } from "next/navigation"
 import { BookingDateTime } from "@/components/booking-date-time"
@@ -844,7 +844,7 @@ export default function WalkInPage() {
     return (
       <MainLayout>
         <div className="flex min-h-[600px] w-full items-center justify-center">
-          <LiquidLoading />
+          <GradientLoading />
         </div>
       </MainLayout>
     )
