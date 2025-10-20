@@ -443,7 +443,7 @@ export default function SettingsPage() {
                   {/* Basic Information */}
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Basic Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="tenantName" className="flex items-center gap-2">
                           <Building className="h-4 w-4 text-blue-600" />
@@ -457,21 +457,6 @@ export default function SettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="tenantSlug" className="flex items-center gap-2">
-                          <Link2 className="h-4 w-4 text-gray-400" />
-                          Slug (Read-only)
-                        </Label>
-                        <Input
-                          id="tenantSlug"
-                          value={tenantInfo?.slug || ""}
-                          disabled
-                          className="font-mono bg-gray-50 cursor-not-allowed"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Cannot be changed to prevent breaking integrations
-                        </p>
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="tenantDescription" className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-blue-600" />
                           Description
@@ -513,30 +498,36 @@ export default function SettingsPage() {
                           id="tenantPhone"
                           value={tenantForm.phone}
                           onChange={(e) => setTenantForm(prev => ({ ...prev, phone: e.target.value }))}
-                          placeholder="+639171234567"
-                        />
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="tenantWebsite" className="flex items-center gap-2">
-                          <Globe className="h-4 w-4 text-blue-600" />
-                          Website
-                        </Label>
-                        <Input
-                          id="tenantWebsite"
-                          value={tenantForm.website}
-                          onChange={(e) => setTenantForm(prev => ({ ...prev, website: e.target.value }))}
-                          placeholder="https://glamourspa.com"
+                          placeholder="+62812xxxxxxxx"
                         />
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tenantWebsite" className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-blue-600" />
+                        Website
+                      </Label>
+                      <Input
+                        id="tenantWebsite"
+                        value={tenantForm.website}
+                        onChange={(e) => setTenantForm(prev => ({ ...prev, website: e.target.value }))}
+                        placeholder="https://yourwebsite.com"
+                      />
+                    </div>
                   </div>
 
-                  {/* Settings */}
+                  {/* Regional & Business Settings */}
                   <div className="space-y-4 pt-4 border-t">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Settings</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-blue-600" />
+                      Regional & Business Settings
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="timezone">Timezone</Label>
+                        <Label htmlFor="timezone" className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-blue-600" />
+                          Timezone
+                        </Label>
                         <Select
                           value={tenantForm.settings?.timezone || "Asia/Manila"}
                           onValueChange={(value) => setTenantForm(prev => ({
@@ -557,7 +548,10 @@ export default function SettingsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="currency">Currency</Label>
+                        <Label htmlFor="currency" className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-blue-600" />
+                          Currency
+                        </Label>
                         <Select
                           value={tenantForm.settings?.currency || "IDR"}
                           onValueChange={(value) => setTenantForm(prev => ({
@@ -569,8 +563,8 @@ export default function SettingsPage() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="PHP">PHP (Philippine Peso)</SelectItem>
                             <SelectItem value="IDR">IDR (Indonesian Rupiah)</SelectItem>
+                            <SelectItem value="PHP">PHP (Philippine Peso)</SelectItem>
                             <SelectItem value="USD">USD (US Dollar)</SelectItem>
                             <SelectItem value="EUR">EUR (Euro)</SelectItem>
                             <SelectItem value="SGD">SGD (Singapore Dollar)</SelectItem>
@@ -578,7 +572,10 @@ export default function SettingsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="language">Language</Label>
+                        <Label htmlFor="language" className="flex items-center gap-2">
+                          <Globe className="h-4 w-4 text-blue-600" />
+                          Language
+                        </Label>
                         <Select
                           value={tenantForm.settings?.language || "en"}
                           onValueChange={(value) => setTenantForm(prev => ({
@@ -597,7 +594,10 @@ export default function SettingsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="businessType">Business Type</Label>
+                        <Label htmlFor="businessType" className="flex items-center gap-2">
+                          <Briefcase className="h-4 w-4 text-blue-600" />
+                          Business Type
+                        </Label>
                         <Select
                           value={tenantForm.settings?.business_type || "spa"}
                           onValueChange={(value) => setTenantForm(prev => ({
@@ -1317,6 +1317,46 @@ export default function SettingsPage() {
                           Platform fees are automatically calculated and added to payment links
                         </p>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Webhook Callback URL */}
+                  {paperIdForm.enabled && tenantInfo?.id && (
+                    <div className="space-y-2 pt-2">
+                      <Label className="flex items-center gap-2 text-sm font-semibold">
+                        <Link2 className="h-4 w-4 text-indigo-600" />
+                        Webhook Callback URL
+                      </Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Configure this URL in your Paper.id account settings to receive payment notifications
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          value={`${process.env.NEXT_PUBLIC_API_URL_RESERVA || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`}
+                          readOnly
+                          className="font-mono text-sm bg-gray-50"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            const webhookUrl = `${process.env.NEXT_PUBLIC_API_URL_RESERVA || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`
+                            navigator.clipboard.writeText(webhookUrl)
+                            toast({
+                              title: "Copied!",
+                              description: "Webhook callback URL copied to clipboard"
+                            })
+                          }}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Alert className="bg-indigo-50 border-indigo-200 mt-3">
+                        <AlertCircle className="h-4 w-4 text-indigo-600" />
+                        <AlertDescription className="text-indigo-800 text-sm">
+                          <span className="font-medium">Important:</span> Copy this URL and add it to your Paper.id account webhook settings to receive real-time payment notifications.
+                        </AlertDescription>
+                      </Alert>
                     </div>
                   )}
 
