@@ -384,7 +384,7 @@ export default function TreatmentsPage() {
       category: treatment.category,
       durationMin: treatment.durationMin || treatment.duration_minutes || 60,
       price: treatment.price || treatment.pricing?.base_price || 0,
-      currency: treatment.currency || treatment.pricing?.currency || "USD",
+      currency: treatment.currency || treatment.pricing?.currency || "IDR",
       photo: treatment.photo || treatment.image_url || "",
       description: treatment.description || "",
       preparationMinutes: treatment.preparation_minutes || treatment.preparationMinutes || 0,

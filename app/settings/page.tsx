@@ -123,7 +123,7 @@ export default function SettingsPage() {
     website: "",
     settings: {
       timezone: "Asia/Manila",
-      currency: "PHP",
+      currency: "IDR",
       language: "en",
       business_type: "spa",
       booking_advance_days: 30,
@@ -178,7 +178,7 @@ export default function SettingsPage() {
               website: tenantData.website || "",
               settings: {
                 timezone: tenantData.settings?.timezone || "Asia/Manila",
-                currency: tenantData.settings?.currency || "PHP",
+                currency: tenantData.settings?.currency || "IDR",
                 language: tenantData.settings?.language || "en",
                 business_type: tenantData.settings?.business_type || "spa",
                 booking_advance_days: tenantData.settings?.booking_advance_days || 30,
@@ -559,7 +559,7 @@ export default function SettingsPage() {
                       <div className="space-y-2">
                         <Label htmlFor="currency">Currency</Label>
                         <Select
-                          value={tenantForm.settings?.currency || "PHP"}
+                          value={tenantForm.settings?.currency || "IDR"}
                           onValueChange={(value) => setTenantForm(prev => ({
                             ...prev,
                             settings: { ...prev.settings, currency: value }

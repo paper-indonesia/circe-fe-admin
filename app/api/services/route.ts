@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       staffCount: service.staff_count || 0, // Staff count from include_staff=true
       photo: service.image_url || service.photo || '',
       price: service.pricing?.base_price || service.price || 0,
-      currency: service.pricing?.currency || 'USD',
+      currency: service.pricing?.currency || 'IDR',
       isActive: service.is_active !== false && service.isActive !== false,
     })
 
@@ -179,7 +179,7 @@ export async function POST(req: NextRequest) {
       max_parallel_bookings: parseInt(String(body.max_parallel_bookings || 1)) || 1,
       pricing: {
         base_price: parseFloat(String(body.price || body.pricing?.base_price || 0)) || 0,
-        currency: body.currency || body.pricing?.currency || 'USD',
+        currency: body.currency || body.pricing?.currency || 'IDR',
       },
       tags: body.tags || [],
       image_url: body.photo || body.image_url || '',
@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
       assignedStaff: data.assigned_staff || data.assignedStaff || [],
       photo: data.image_url || data.photo || '',
       price: data.pricing?.base_price || data.price || 0,
-      currency: data.pricing?.currency || 'USD',
+      currency: data.pricing?.currency || 'IDR',
       isActive: data.is_active !== false,
     }
 
@@ -378,7 +378,7 @@ export async function PUT(req: NextRequest) {
       assignedStaff: data.assigned_staff || data.assignedStaff || [],
       photo: data.image_url || data.photo || '',
       price: data.pricing?.base_price || data.price || 0,
-      currency: data.pricing?.currency || 'USD',
+      currency: data.pricing?.currency || 'IDR',
       isActive: data.is_active !== false,
     }
 
