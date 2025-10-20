@@ -379,18 +379,31 @@ export default function SignInPage() {
                   <span>2FA Available</span>
                 </div>
               </div>
+
+              {/* Terms & Privacy */}
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <p className="text-center text-xs text-gray-500">
+                  By signing in, you agree to our{" "}
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                  >
+                    Terms of Service
+                  </Link>
+                  {" "}and{" "}
+                  <Link
+                    href="/privacy"
+                    target="_blank"
+                    className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                  >
+                    Privacy Policy
+                  </Link>
+                </p>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Back to home link */}
-          <div className="mt-6 text-center">
-            <Link
-              href="/"
-              className="text-sm text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center gap-2"
-            >
-              ← Back to home
-            </Link>
-          </div>
         </div>
       </div>
     </div>
