@@ -9,7 +9,6 @@ import { Check, ChevronRight, ChevronLeft, Building2, Users, Package, Calendar }
 import { motion, AnimatePresence } from "framer-motion"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
 import { OutletSetupStep } from "./onboarding-steps/outlet-setup"
-import { UserManagementStep } from "./onboarding-steps/user-management"
 import { ProductServicesStep } from "./onboarding-steps/product-services"
 import { StaffAvailabilityStep } from "./onboarding-steps/staff-availability"
 
@@ -29,20 +28,13 @@ const STEPS = [
   },
   {
     number: 2,
-    title: "User Management",
-    description: "Tambahkan user internal sesuai kebutuhan",
-    icon: Users,
-    component: UserManagementStep,
-  },
-  {
-    number: 3,
     title: "Products / Services",
     description: "Tambahkan layanan yang bisa dibooking",
     icon: Package,
     component: ProductServicesStep,
   },
   {
-    number: 4,
+    number: 3,
     title: "Staff + Availability",
     description: "Atur staff dan jam ketersediaan mereka",
     icon: Calendar,
@@ -61,16 +53,18 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
     console.log('[Wizard] canProceed changed:', canProceed, 'currentStep:', progress.currentStep)
   }, [canProceed, progress.currentStep])
 
-  // Set initial step when component mounts
+  // Set initial step ONCE when component mounts
   useEffect(() => {
     if (initialStep && initialStep !== progress.currentStep) {
+      console.log('[Wizard] Setting initial step:', initialStep)
       setCurrentStep(initialStep)
     }
-  }, [initialStep, setCurrentStep, progress.currentStep])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialStep])
 
   // Stable validation callback - this is the ONLY way to update canProceed
   const handleValidChange = useCallback((isValid: boolean) => {
-    console.log('[Wizard] onValidChange called:', isValid, 'step:', progress.currentStep)
+    console.log('[Wizard] onValidChange called:', isValid)
     setCanProceed(isValid)
   }, [])
 
@@ -91,19 +85,31 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
     shouldShowBackButton: progress.currentStep > 1
   })
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (progress.currentStep < STEPS.length) {
-      console.log('[Wizard] Moving to next step')
-      setCanProceed(false) // Reset validation for next step
+      console.log('[Wizard] Moving to next step from', progress.currentStep, 'to', progress.currentStep + 1)
+      setLoading(true)
       setCurrentStep(progress.currentStep + 1)
+      // Don't reset canProceed - let the next step component handle validation
+      // Use requestAnimationFrame to ensure smooth transition
+      await new Promise(resolve => requestAnimationFrame(() => {
+        setTimeout(resolve, 50)
+      }))
+      setLoading(false)
     }
   }
 
-  const handleBack = () => {
+  const handleBack = async () => {
     if (progress.currentStep > 1) {
-      console.log('[Wizard] Moving to previous step')
-      setCanProceed(false) // Reset validation when going back
+      console.log('[Wizard] Moving to previous step from', progress.currentStep, 'to', progress.currentStep - 1)
+      setLoading(true)
       setCurrentStep(progress.currentStep - 1)
+      // Don't reset canProceed - let the step component handle validation
+      // Use requestAnimationFrame to ensure smooth transition
+      await new Promise(resolve => requestAnimationFrame(() => {
+        setTimeout(resolve, 50)
+      }))
+      setLoading(false)
     }
   }
 
@@ -128,6 +134,9 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
     }
   }
 
+  // Check if we're on the final step
+  const isFinalStep = progress.currentStep === STEPS.length
+
   const handleClearAll = () => {
     if (confirm("Apakah Anda yakin ingin menghapus semua progress onboarding? Tindakan ini tidak dapat dibatalkan.")) {
       resetOnboarding()
@@ -144,6 +153,11 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
     exit: { opacity: 0, x: -20 }
   }
 
+  const pageTransition = {
+    duration: 0.2,
+    ease: "easeInOut"
+  }
+
   return (
     <Dialog open={open} onOpenChange={() => {}}>
       <DialogContent className="max-w-[95vw] w-full sm:max-w-[1120px] max-h-[90vh] p-0 gap-0 border-0 rounded-2xl shadow-2xl overflow-hidden overflow-x-hidden">
@@ -156,7 +170,7 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
               <h2 className="text-2xl font-bold text-gray-900 truncate">
                 Setup Awal Sistem
               </h2>
-              <p className="text-sm text-gray-600 mt-1 truncate">Lengkapi 4 langkah berikut agar siap melakukan booking</p>
+              <p className="text-sm text-gray-600 mt-1 truncate">Lengkapi 3 langkah berikut agar siap melakukan booking</p>
             </div>
 
             {/* Center: Stepper (one line on desktop) */}
@@ -221,11 +235,33 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
               initial="initial"
               animate="animate"
               exit="exit"
-              transition={{ duration: 0.3 }}
+              transition={pageTransition}
               className="max-w-full overflow-x-hidden"
             >
               {CurrentStepComponent && (
                 <CurrentStepComponent onValidChange={handleValidChange} />
+              )}
+
+              {/* Final Step Message */}
+              {isFinalStep && canProceed && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="mt-6 p-5 border-2 border-blue-200 bg-blue-50 rounded-xl"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-100 rounded-lg p-2">
+                      <Check className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-blue-900 mb-2">Hampir Selesai!</h4>
+                      <p className="text-sm text-blue-700">
+                        Anda juga dapat menambahkan / mengedit staff, produk, dan jadwal pada menu Reserva dibagian kiri.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
               )}
             </motion.div>
           </AnimatePresence>
@@ -257,8 +293,16 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
                   data-loading={loading}
                   data-current-step={progress.currentStep}
                 >
-                  <ChevronLeft className="h-4 w-4" />
-                  Kembali
+                  {loading ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full"
+                    />
+                  ) : (
+                    <ChevronLeft className="h-4 w-4" />
+                  )}
+                  {loading ? "Loading..." : "Kembali"}
                 </Button>
               ) : null}
             </div>
@@ -270,12 +314,25 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
                     console.log('[Wizard] Button clicked! canProceed:', canProceed)
                     handleNext()
                   }}
-                  disabled={!canProceed}
+                  disabled={!canProceed || loading}
                   className="h-12 px-8 gap-2"
                   data-can-proceed={canProceed}
                 >
-                  Lanjut
-                  <ChevronRight className="h-4 w-4" />
+                  {loading ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                      />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      Lanjut
+                      <ChevronRight className="h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               ) : (
                 <Button

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Building2, Plus, Trash2, AlertCircle, CheckCircle2, Info, ArrowUpCircle, ChevronDown } from "lucide-react"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
@@ -72,7 +73,7 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
       outlets: progress.outlets
     })
     onValidChange(isValid)
-  }, [progress.outlets.length, onValidChange])
+  }, [progress.outlets, onValidChange])
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -389,18 +390,21 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
           {/* Zona Waktu - 6 cols */}
           <div className="col-span-12 lg:col-span-6 space-y-2">
             <Label htmlFor="timezone" className="text-sm font-medium">Zona Waktu</Label>
-            <select
-              id="timezone"
+            <Select
               value={formData.settings.timezone}
-              onChange={(e) => setFormData({ ...formData, settings: { ...formData.settings, timezone: e.target.value } })}
-              className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onValueChange={(value) => setFormData({ ...formData, settings: { ...formData.settings, timezone: value } })}
             >
-              {TIMEZONES.map((tz) => (
-                <option key={tz.value} value={tz.value}>
-                  {tz.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="h-11 rounded-lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

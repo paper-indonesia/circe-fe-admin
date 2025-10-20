@@ -49,9 +49,8 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
       try {
         // Always check existing data to determine if wizard is needed
         // (don't rely solely on localStorage as data may have been deleted)
-        const [outletsRes, usersRes, servicesRes, staffRes] = await Promise.all([
+        const [outletsRes, servicesRes, staffRes] = await Promise.all([
           fetch('/api/outlets?page=1&size=1'),
-          fetch('/api/users?page=1&size=1'),
           fetch('/api/services?page=1&size=1'),
           fetch('/api/staff?page=1&size=1'),
         ])
@@ -69,47 +68,35 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
             needsOnboarding = true
             startStep = 1
           } else {
-            // Has outlets, check users (Step 2)
-            if (usersRes.ok) {
-              const usersData = await usersRes.json()
-              const hasUsers = usersData.items && usersData.items.length > 0
-              console.log('OperationalOnboardingProvider: Checking users -', { hasUsers, count: usersData.items?.length || 0 })
+            // Has outlets, check services (Step 2)
+            if (servicesRes.ok) {
+              const servicesData = await servicesRes.json()
+              const hasServices = servicesData.items && servicesData.items.length > 0
+              console.log('OperationalOnboardingProvider: Checking services -', { hasServices, count: servicesData.items?.length || 0 })
 
-              if (!hasUsers) {
+              if (!hasServices) {
                 needsOnboarding = true
                 startStep = 2
               } else {
-                // Has users, check services (Step 3)
-                if (servicesRes.ok) {
-                  const servicesData = await servicesRes.json()
-                  const hasServices = servicesData.items && servicesData.items.length > 0
-                  console.log('OperationalOnboardingProvider: Checking services -', { hasServices, count: servicesData.items?.length || 0 })
+                // Has services, check staff (Step 3)
+                if (staffRes.ok) {
+                  const staffData = await staffRes.json()
+                  const hasStaff = staffData.items && staffData.items.length > 0
+                  console.log('OperationalOnboardingProvider: Checking staff -', { hasStaff, count: staffData.items?.length || 0 })
 
-                  if (!hasServices) {
+                  if (!hasStaff) {
                     needsOnboarding = true
                     startStep = 3
                   } else {
-                    // Has services, check staff (Step 4)
-                    if (staffRes.ok) {
-                      const staffData = await staffRes.json()
-                      const hasStaff = staffData.items && staffData.items.length > 0
-                      console.log('OperationalOnboardingProvider: Checking staff -', { hasStaff, count: staffData.items?.length || 0 })
+                    // Has everything, mark as completed and no wizard needed
+                    needsOnboarding = false
 
-                      if (!hasStaff) {
-                        needsOnboarding = true
-                        startStep = 4
-                      } else {
-                        // Has everything, mark as completed and no wizard needed
-                        needsOnboarding = false
-
-                        // Auto-mark as completed if all data exists in localStorage
-                        if (typeof window !== 'undefined') {
-                          localStorage.setItem('operational-onboarding-completed', JSON.stringify({
-                            completed: true,
-                            completedAt: new Date().toISOString()
-                          }))
-                        }
-                      }
+                    // Auto-mark as completed if all data exists in localStorage
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('operational-onboarding-completed', JSON.stringify({
+                        completed: true,
+                        completedAt: new Date().toISOString()
+                      }))
                     }
                   }
                 }
@@ -123,10 +110,12 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
         setShowWizard(needsOnboarding)
         setInitialStep(startStep)
 
-        // Clear completion flag if onboarding is needed again
+        // Clear completion flag AND localStorage data if onboarding is needed again
+        // This ensures wizard starts fresh based on actual database state
         if (needsOnboarding && typeof window !== 'undefined') {
           localStorage.removeItem('operational-onboarding-completed')
-          console.log('OperationalOnboardingProvider: Cleared completion flag, onboarding needed')
+          localStorage.removeItem('operational-onboarding-progress')
+          console.log('OperationalOnboardingProvider: Cleared completion flag and cached data, wizard will show fresh state')
         }
 
       } catch (error) {

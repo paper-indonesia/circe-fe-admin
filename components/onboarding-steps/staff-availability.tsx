@@ -41,7 +41,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
   const { usage } = useSubscription()
 
   const [currentTab, setCurrentTab] = useState<'staff' | 'availability'>('staff')
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(true)
   const [staffForm, setStaffForm] = useState({
     first_name: "",
     last_name: "",
@@ -318,7 +318,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
           certifications: [],
           years_experience: null,
         })
-        setShowAdvancedSettings(false)
+        // Keep advanced settings expanded
         setAvailabilityForm((prev) => ({
           ...prev,
           staff_id: newStaff.id!,
@@ -528,7 +528,12 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
           </div>
 
           <div className="space-y-6">
-            {/* Basic Information */}
+            {/* Basic Information - REQUIRED */}
+            <div className="p-5 bg-blue-50/30 border-2 border-blue-200 rounded-xl space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Badge className="bg-blue-600 text-white">Wajib Diisi</Badge>
+                <h4 className="text-sm font-semibold text-gray-700">Informasi Dasar Staff</h4>
+              </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="staff_first_name">
@@ -590,7 +595,10 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="staff_phone">Nomor Telepon</Label>
+                <Label htmlFor="staff_phone">Nomor Telepon
+                  <span className="text-red-500">*</span>
+                </Label>
+
                 <div className="flex gap-2">
                   <div className="flex items-center px-3 py-2 border border-gray-300 bg-gray-50 rounded-md text-gray-600 font-medium h-10">
                     +62
@@ -682,19 +690,21 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
                     <span className="text-sm text-gray-500">Loading outlets...</span>
                   </div>
                 ) : (
-                  <select
-                    id="outlet"
+                  <Select
                     value={staffForm.outlet_id}
-                    onChange={(e) => setStaffForm({ ...staffForm, outlet_id: e.target.value })}
-                    className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${errors.outlet_id ? "border-red-500" : ""}`}
+                    onValueChange={(value) => setStaffForm({ ...staffForm, outlet_id: value })}
                   >
-                    <option value="">-- Pilih Outlet --</option>
-                    {outlets.map((outlet) => (
-                      <option key={outlet._id || outlet.id} value={outlet._id || outlet.id}>
-                        {outlet.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className={`h-10 ${errors.outlet_id ? "border-red-500" : ""}`}>
+                      <SelectValue placeholder="-- Pilih Outlet --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {outlets.map((outlet) => (
+                        <SelectItem key={outlet._id || outlet.id} value={outlet._id || outlet.id}>
+                          {outlet.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 )}
                 {errors.outlet_id && (
                   <p className="text-xs text-red-500">{errors.outlet_id}</p>
@@ -703,15 +713,23 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
 
               <div className="space-y-2 md:col-span-2">
                 <Label>Layanan yang Dikuasai</Label>
+                <p className="text-xs text-gray-500 mb-2">Pilih layanan yang dapat dikerjakan oleh staff ini</p>
                 {loadingServices ? (
                   <div className="h-20 flex items-center justify-center border rounded-md bg-gray-50">
                     <span className="text-sm text-gray-500">Loading services...</span>
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-gray-50">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
                     {services.length > 0 ? (
                       services.map((service) => (
-                        <label key={service.id} className="flex items-center gap-2 cursor-pointer">
+                        <label
+                          key={service.id}
+                          className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                            staffForm.service_ids.includes(service.id)
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
                           <Checkbox
                             checked={staffForm.service_ids.includes(service.id)}
                             onCheckedChange={(checked) => {
@@ -727,12 +745,13 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
                                 })
                               }
                             }}
+                            className="h-5 w-5 flex-shrink-0"
                           />
-                          <span className="text-sm">{service.name}</span>
+                          <span className="text-sm font-medium">{service.name}</span>
                         </label>
                       ))
                     ) : (
-                      <p className="text-xs text-gray-500">Belum ada layanan tersedia. Tambahkan layanan di step sebelumnya.</p>
+                      <p className="text-sm text-gray-500 col-span-2 text-center py-4">Belum ada layanan tersedia. Tambahkan layanan di step sebelumnya.</p>
                     )}
                   </div>
                 )}
@@ -761,17 +780,19 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
                 </div>
               </div>
             </div>
+            </div>
 
-            {/* Advanced Settings - Collapsible */}
-            <div className="pt-4 border-t">
+            {/* Advanced Settings - Collapsible - OPTIONAL */}
+            <div className="pt-2">
               <button
                 type="button"
                 onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 uppercase tracking-wide hover:text-blue-600 transition-colors"
+                className="flex items-center justify-between w-full px-5 py-3 text-sm font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border-2 border-gray-200"
               >
-                <div className="flex items-center gap-2">
-                  <Settings className="h-4 w-4 text-blue-600" />
-                  Pengaturan Lanjutan (Opsional)
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="bg-white">Opsional</Badge>
+                  <Settings className="h-4 w-4 text-gray-600" />
+                  <span>Pengaturan Lanjutan</span>
                 </div>
                 {showAdvancedSettings ? (
                   <ChevronUp className="h-4 w-4" />
@@ -781,7 +802,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
               </button>
 
               {showAdvancedSettings && (
-                <div className="mt-4 space-y-4">
+                <div className="mt-3 p-5 bg-gray-50/50 border-2 border-gray-200 rounded-lg space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="employee_id">Employee ID</Label>
@@ -946,19 +967,21 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
               <Label htmlFor="select_staff">
                 Pilih Staff <span className="text-red-500">*</span>
               </Label>
-              <select
-                id="select_staff"
+              <Select
                 value={availabilityForm.staff_id}
-                onChange={(e) => setAvailabilityForm({ ...availabilityForm, staff_id: e.target.value })}
-                className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${errors.staff_id ? "border-red-500" : ""}`}
+                onValueChange={(value) => setAvailabilityForm({ ...availabilityForm, staff_id: value })}
               >
-                <option value="">-- Pilih Staff --</option>
-                {progress.staff.map((staff) => (
-                  <option key={staff.id} value={staff.id}>
-                    {staff.first_name} {staff.last_name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className={`h-10 ${errors.staff_id ? "border-red-500" : ""}`}>
+                  <SelectValue placeholder="-- Pilih Staff --" />
+                </SelectTrigger>
+                <SelectContent>
+                  {progress.staff.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id!}>
+                      {staff.first_name} {staff.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.staff_id && (
                 <p className="text-xs text-red-500">{errors.staff_id}</p>
               )}

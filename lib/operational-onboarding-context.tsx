@@ -40,7 +40,6 @@ interface StaffData {
 
 interface AvailabilityData {
   staff_id: string
-  outlet_id: string
   date: string
   start_time: string
   end_time: string
