@@ -37,11 +37,13 @@ import {
   TrendingUp,
   Settings,
   TrendingDown,
-  X
+  X,
+  Receipt,
+  Download
 } from "lucide-react"
 import { format } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 
 export default function ManageSubscriptionPage() {
   const router = useRouter()
@@ -55,6 +57,8 @@ export default function ManageSubscriptionPage() {
   const [downgradeLoading, setDowngradeLoading] = useState(false)
   const [downgradeReason, setDowngradeReason] = useState("")
   const [targetPlan, setTargetPlan] = useState("")
+  const [billingHistory, setBillingHistory] = useState<any[]>([])
+  const [billingLoading, setBillingLoading] = useState(true)
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -100,6 +104,28 @@ export default function ManageSubscriptionPage() {
 
     fetchSubscription()
   }, [router, toast])
+
+  // Fetch billing history
+  useEffect(() => {
+    const fetchBillingHistory = async () => {
+      try {
+        setBillingLoading(true)
+        const response = await fetch('/api/subscription/payments?limit=20&offset=0&status=completed')
+        if (response.ok) {
+          const data = await response.json()
+          // Filter only subscription payments
+          const subscriptionPayments = data.filter((payment: any) => payment.payment_type === 'subscription')
+          setBillingHistory(subscriptionPayments)
+        }
+      } catch (error) {
+        console.error("Failed to fetch billing history:", error)
+      } finally {
+        setBillingLoading(false)
+      }
+    }
+
+    fetchBillingHistory()
+  }, [])
 
   const handleCancelSubscription = async () => {
     if (!confirm("Are you sure you want to cancel your subscription? You'll lose access to premium features at the end of your billing period.")) {
@@ -573,14 +599,147 @@ export default function ManageSubscriptionPage() {
         {/* Billing History */}
         <Card>
           <CardHeader>
-            <CardTitle>Billing History</CardTitle>
-            <CardDescription>View your past invoices and payments</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-blue-600" />
+                  Billing History
+                </CardTitle>
+                <CardDescription>View your past subscription payments</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <p className="text-sm">No billing history available</p>
-              <p className="text-xs mt-1">Your invoices will appear here</p>
-            </div>
+            {billingLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <LiquidLoading />
+              </div>
+            ) : billingHistory.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Receipt className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm font-medium">No billing history available</p>
+                <p className="text-xs mt-1">Your subscription invoices will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left text-xs font-medium text-gray-500 pb-3 px-2">Date</th>
+                        <th className="text-left text-xs font-medium text-gray-500 pb-3 px-2">Description</th>
+                        <th className="text-left text-xs font-medium text-gray-500 pb-3 px-2">Reference</th>
+                        <th className="text-left text-xs font-medium text-gray-500 pb-3 px-2">Payment Method</th>
+                        <th className="text-right text-xs font-medium text-gray-500 pb-3 px-2">Amount</th>
+                        <th className="text-center text-xs font-medium text-gray-500 pb-3 px-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {billingHistory.map((payment) => (
+                        <tr key={payment._id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                          <td className="py-4 px-2">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-gray-900">
+                                {format(new Date(payment.paid_at || payment.created_at), "MMM dd, yyyy")}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {format(new Date(payment.paid_at || payment.created_at), "HH:mm")}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-2">
+                            <div className="flex flex-col">
+                              <span className="text-sm text-gray-900">{payment.description}</span>
+                              {payment.notes && (
+                                <span className="text-xs text-gray-500">{payment.notes}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-2">
+                            <span className="text-xs font-mono text-gray-600">{payment.reference_id}</span>
+                          </td>
+                          <td className="py-4 px-2">
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {payment.payment_method === 'bank_transfer' ? 'Bank Transfer' : payment.payment_method}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-2 text-right">
+                            <div className="flex flex-col items-end">
+                              <span className="text-sm font-bold text-gray-900">
+                                {formatCurrency(parseFloat(payment.total_amount))}
+                              </span>
+                              {payment.currency !== 'IDR' && (
+                                <span className="text-xs text-gray-500">{payment.currency}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-4 px-2 text-center">
+                            <Badge
+                              variant={payment.status === 'completed' ? 'default' : 'secondary'}
+                              className="text-xs capitalize"
+                            >
+                              {payment.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                  {billingHistory.map((payment) => (
+                    <Card key={payment._id} className="border border-gray-200">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {format(new Date(payment.paid_at || payment.created_at), "MMM dd, yyyy 'at' HH:mm")}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">{payment.description}</p>
+                          </div>
+                          <Badge
+                            variant={payment.status === 'completed' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {payment.status}
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Reference:</span>
+                            <span className="font-mono text-xs text-gray-600">{payment.reference_id}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Payment Method:</span>
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {payment.payment_method === 'bank_transfer' ? 'Bank Transfer' : payment.payment_method}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                            <span className="text-gray-500 font-medium">Total Amount:</span>
+                            <span className="text-lg font-bold text-gray-900">
+                              {formatCurrency(parseFloat(payment.total_amount))}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {billingHistory.length >= 20 && (
+                  <div className="text-center pt-4">
+                    <Button variant="outline" size="sm">
+                      Load More
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
