@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
 import { apiClient, ApiError } from "@/lib/api-client"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
-import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react"
+import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
 import LiquidLoading from "@/components/ui/liquid-loader"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -127,6 +127,7 @@ export default function StaffPage() {
   // Availability Management State
   const [availabilityEntries, setAvailabilityEntries] = useState<any[]>([])
   const [availabilityLoading, setAvailabilityLoading] = useState(false)
+  const [savingAvailability, setSavingAvailability] = useState(false)
   const [availabilityTab, setAvailabilityTab] = useState<'working_hours' | 'break' | 'blocked' | 'vacation'>('working_hours')
   const [showAddAvailability, setShowAddAvailability] = useState(false)
   const [editingAvailability, setEditingAvailability] = useState<any>(null)
@@ -312,6 +313,7 @@ export default function StaffPage() {
       return
     }
 
+    setSavingAvailability(true)
     try {
       const payload: any = {
         staff_id: selectedStaff.id,
@@ -372,6 +374,8 @@ export default function StaffPage() {
         description: error.message || "Gagal menambahkan ketersediaan",
         variant: "destructive",
       })
+    } finally {
+      setSavingAvailability(false)
     }
   }
 
@@ -379,6 +383,7 @@ export default function StaffPage() {
   const handleUpdateAvailability = async () => {
     if (!editingAvailability) return
 
+    setSavingAvailability(true)
     try {
       const updates: any = {
         start_time: availabilityForm.start_time,
@@ -408,6 +413,8 @@ export default function StaffPage() {
         description: error.message || "Gagal memperbarui ketersediaan",
         variant: "destructive",
       })
+    } finally {
+      setSavingAvailability(false)
     }
   }
 
@@ -2507,10 +2514,20 @@ export default function StaffPage() {
                     <div className="flex gap-3 pt-2 border-t border-purple-200">
                       <Button
                         onClick={editingAvailability ? handleUpdateAvailability : handleCreateAvailability}
-                        className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all font-semibold text-base"
+                        disabled={savingAvailability}
+                        className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <CheckCircle className="h-5 w-5 mr-2" />
-                        {editingAvailability ? 'Perbarui Ketersediaan' : 'Simpan Ketersediaan'}
+                        {savingAvailability ? (
+                          <>
+                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                            Menyimpan...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-5 w-5 mr-2" />
+                            {editingAvailability ? 'Perbarui Ketersediaan' : 'Simpan Ketersediaan'}
+                          </>
+                        )}
                       </Button>
                       <Button
                         variant="outline"
@@ -2518,7 +2535,8 @@ export default function StaffPage() {
                           setShowAddAvailability(false)
                           setEditingAvailability(null)
                         }}
-                        className="h-12 px-6 border-2 hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                        disabled={savingAvailability}
+                        className="h-12 px-6 border-2 hover:bg-red-50 hover:border-red-300 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <X className="h-5 w-5 mr-2" />
                         Batal

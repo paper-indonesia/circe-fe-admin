@@ -34,7 +34,11 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  UserPlus
+  UserPlus,
+  UserCheck,
+  ShieldCheck,
+  Plus,
+  AlertTriangle
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import LiquidLoading from "@/components/ui/liquid-loader"
@@ -78,6 +82,8 @@ export default function ReportsPage() {
   const [data, setData] = useState<any>(null)
   const [clients, setClients] = useState<any[]>([])
   const [treatmentsList, setTreatmentsList] = useState<string[]>([])
+  const [customerStatistics, setCustomerStatistics] = useState<any>(null)
+  const [loadingCustomerStats, setLoadingCustomerStats] = useState(false)
 
   // Set current time only on client side to avoid hydration mismatch
   useEffect(() => {
@@ -86,6 +92,25 @@ export default function ReportsPage() {
       setCurrentTime(new Date())
     }, 60000) // Update every minute instead of every second
     return () => clearInterval(timer)
+  }, [])
+
+  // Fetch customer statistics
+  useEffect(() => {
+    const fetchCustomerStatistics = async () => {
+      try {
+        setLoadingCustomerStats(true)
+        const response = await fetch('/api/customers/statistics/summary')
+        if (response.ok) {
+          const data = await response.json()
+          setCustomerStatistics(data.statistics || null)
+        }
+      } catch (error) {
+        console.error('Error fetching customer statistics:', error)
+      } finally {
+        setLoadingCustomerStats(false)
+      }
+    }
+    fetchCustomerStatistics()
   }, [])
 
   // Fetch reports data directly from individual APIs
@@ -1532,6 +1557,250 @@ export default function ReportsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Customer Analytics Summary */}
+        {!loadingCustomerStats && customerStatistics && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Customer Analytics</h2>
+              <Badge variant="outline" className="text-xs">
+                Last updated: {customerStatistics.generated_at ? new Date(customerStatistics.generated_at).toLocaleString() : 'N/A'}
+              </Badge>
+            </div>
+
+            {/* Overview Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-blue-600 uppercase">Total Customers</p>
+                      <p className="text-2xl font-bold text-blue-900 mt-1">{customerStatistics.total_customers?.toLocaleString() || 0}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge className="bg-emerald-100 text-emerald-700 text-xs">
+                          <UserCheck className="h-3 w-3 mr-1" />
+                          {customerStatistics.active_customers || 0} Active
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-blue-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-emerald-600 uppercase">Total Revenue</p>
+                      <p className="text-2xl font-bold text-emerald-900 mt-1">
+                        Rp {(customerStatistics.total_revenue || 0).toLocaleString('id-ID')}
+                      </p>
+                      <p className="text-xs text-emerald-600 mt-2">
+                        Avg: Rp {(customerStatistics.avg_spent_per_customer || 0).toLocaleString('id-ID')}/customer
+                      </p>
+                    </div>
+                    <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <DollarSign className="h-6 w-6 text-emerald-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-purple-600 uppercase">Total Appointments</p>
+                      <p className="text-2xl font-bold text-purple-900 mt-1">{(customerStatistics.total_appointments || 0).toLocaleString()}</p>
+                      <p className="text-xs text-purple-600 mt-2">
+                        Avg: {(customerStatistics.avg_appointments_per_customer || 0).toFixed(1)}/customer
+                      </p>
+                    </div>
+                    <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-purple-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-amber-600 uppercase">Retention Rate</p>
+                      <p className="text-2xl font-bold text-amber-900 mt-1">{(customerStatistics.retention_rate || 0).toFixed(1)}%</p>
+                      <p className="text-xs text-amber-600 mt-2">
+                        Last 90 days activity
+                      </p>
+                    </div>
+                    <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center">
+                      <TrendingUp className="h-6 w-6 text-amber-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Customer Segments & Additional Stats */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Customer Segments */}
+              {customerStatistics.customer_segments && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Customer Segments
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Award className="h-4 w-4 text-purple-600" />
+                          <span className="font-medium text-sm">VIP Customers</span>
+                        </div>
+                        <Badge className="bg-purple-600">{customerStatistics.customer_segments.vip || 0}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <UserCheck className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium text-sm">Regular Customers</span>
+                        </div>
+                        <Badge className="bg-blue-600">{customerStatistics.customer_segments.regular || 0}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Plus className="h-4 w-4 text-green-600" />
+                          <span className="font-medium text-sm">New Customers</span>
+                        </div>
+                        <Badge className="bg-green-600">{customerStatistics.customer_segments.new || 0}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-red-600" />
+                          <span className="font-medium text-sm">At Risk</span>
+                        </div>
+                        <Badge className="bg-red-600">{customerStatistics.customer_segments.at_risk || 0}</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Additional Statistics */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5" />
+                    Customer Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <span className="text-sm text-muted-foreground">Verified Emails</span>
+                      <span className="font-semibold">{customerStatistics.verified_emails || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <span className="text-sm text-muted-foreground">Registered Accounts</span>
+                      <span className="font-semibold">{customerStatistics.customers_with_password || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <span className="text-sm text-muted-foreground">Walk-in Customers</span>
+                      <span className="font-semibold">{customerStatistics.walk_in_customers || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <span className="text-sm text-muted-foreground">Inactive Customers</span>
+                      <span className="font-semibold">{customerStatistics.inactive_customers || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-sm text-muted-foreground">Total Loyalty Points</span>
+                      <span className="font-semibold">{(customerStatistics.total_loyalty_points || 0).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Top Customers */}
+            {(customerStatistics.top_customers_by_revenue?.length > 0 || customerStatistics.top_customers_by_appointments?.length > 0) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Top by Revenue */}
+                {customerStatistics.top_customers_by_revenue?.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-emerald-600" />
+                        Top Customers by Revenue
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {customerStatistics.top_customers_by_revenue.slice(0, 5).map((customer: any, index: number) => (
+                          <div key={customer.customer_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
+                                #{index + 1}
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">{customer.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{customer.email}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-sm text-emerald-700">
+                                Rp {(customer.total_spent || 0).toLocaleString('id-ID')}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{customer.total_appointments} visits</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Top by Appointments */}
+                {customerStatistics.top_customers_by_appointments?.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Star className="h-5 w-5 text-amber-600" />
+                        Top Customers by Visits
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {customerStatistics.top_customers_by_appointments.slice(0, 5).map((customer: any, index: number) => (
+                          <div key={customer.customer_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
+                                #{index + 1}
+                              </div>
+                              <div>
+                                <p className="font-medium text-sm">{customer.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{customer.email}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-sm text-amber-700">{customer.total_appointments} visits</p>
+                              <p className="text-xs text-muted-foreground">
+                                Rp {(customer.total_spent || 0).toLocaleString('id-ID')}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </MainLayout>
   )
