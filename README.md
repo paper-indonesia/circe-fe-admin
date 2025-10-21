@@ -1,31 +1,181 @@
-# Beauty clinic app
+# Circe Admin - Beauty Clinic Management System
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+Complete booking & appointment management platform for beauty clinics, salons, and spas.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/data-drive-papers-projects/v0-beauty-clinic-app)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/EvKl5mFoAia)
+## 🚀 Features
 
-## Overview
+- **Multi-tenant Support**: Manage multiple outlets/branches
+- **Appointment Management**: Book, reschedule, and cancel appointments
+- **Staff Management**: Track staff schedules and availability
+- **Product & Service Catalog**: Manage services and pricing
+- **Customer Management**: Customer profiles and booking history
+- **Reports & Analytics**: Business insights and performance metrics
+- **Subscription Management**: Flexible pricing plans
+- **Operational Onboarding**: Step-by-step setup wizard
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+## 🐳 Docker Deployment
 
-## Deployment
+### Prerequisites
 
-Your project is live at:
+- Docker 20.10+
+- Docker Compose 2.0+
 
-**[https://vercel.com/data-drive-papers-projects/v0-beauty-clinic-app](https://vercel.com/data-drive-papers-projects/v0-beauty-clinic-app)**
+### Quick Start with Docker Compose
 
-## Build your app
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/paper-indonesia/circe-fe-admin.git
+   cd circe-fe-admin
+   ```
 
-Continue building your app on:
+2. **Create `.env` file** (optional)
+   ```bash
+   NEXT_PUBLIC_API_URL=https://your-api-url.com
+   ```
 
-**[https://v0.app/chat/projects/EvKl5mFoAia](https://v0.app/chat/projects/EvKl5mFoAia)**
+3. **Build and run with Docker Compose**
+   ```bash
+   docker-compose up -d
+   ```
 
-## How It Works
+4. **Access the application**
+   ```
+   http://localhost:3000
+   ```
 
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
-"# circe-fe-admin" 
+### Build Docker Image Manually
+
+```bash
+# Build the image
+docker build -t circe-admin:latest .
+
+# Run the container
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_API_URL=https://your-api-url.com \
+  circe-admin:latest
+```
+
+### Docker Commands
+
+```bash
+# View logs
+docker-compose logs -f circe-admin
+
+# Stop containers
+docker-compose down
+
+# Rebuild and restart
+docker-compose up -d --build
+
+# Check container health
+docker-compose ps
+```
+
+## 💻 Local Development
+
+### Prerequisites
+
+- Node.js 20+
+- npm or yarn
+
+### Setup
+
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Create `.env.local` file**
+   ```bash
+   NEXT_PUBLIC_API_URL=https://circe-fastapi-backend-740443181568.europe-west1.run.app
+   ```
+
+3. **Run development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open browser**
+   ```
+   http://localhost:3000
+   ```
+
+### Build for Production
+
+```bash
+npm run build
+npm run start
+```
+
+## 📁 Project Structure
+
+```
+circe-fe-admin/
+├── app/                    # Next.js App Router pages
+│   ├── api/               # API routes
+│   ├── signin/            # Authentication pages
+│   ├── signup/
+│   ├── dashboard/         # Main dashboard
+│   ├── calendar/          # Appointment calendar
+│   ├── clients/           # Customer management
+│   ├── staff/             # Staff management
+│   ├── products/          # Product/service catalog
+│   └── settings/          # Application settings
+├── components/            # React components
+│   ├── ui/               # shadcn/ui components
+│   ├── modals/           # Modal dialogs
+│   └── ...
+├── lib/                   # Utility functions
+├── middleware.ts          # Next.js middleware
+├── Dockerfile            # Docker configuration
+├── docker-compose.yml    # Docker Compose config
+└── next.config.mjs       # Next.js configuration
+```
+
+## 🔒 Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NEXT_PUBLIC_API_URL` | Backend API URL | `https://circe-fastapi-backend-740443181568.europe-west1.run.app` |
+| `NODE_ENV` | Environment mode | `production` |
+| `PORT` | Application port | `3000` |
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **State Management**: React Context
+- **Form Handling**: React Hook Form
+- **Animations**: Framer Motion
+- **Icons**: Lucide Icons
+
+## 📄 Legal Documents
+
+The application includes comprehensive Terms & Conditions and Privacy Policy:
+- **Terms of Service**: 20 sections covering all legal aspects
+- **Privacy Policy**: Complete data protection and privacy guidelines
+- Compliant with UU PDP (Indonesian Data Protection Law)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is proprietary software owned by Paper Indonesia.
+
+## 📧 Contact
+
+For questions or support:
+- Email: reservaofficialig@gmail.com
+- Organization: [Paper Indonesia](https://github.com/paper-indonesia)
+
+---
+
+**Built with ❤️ by Paper Indonesia**

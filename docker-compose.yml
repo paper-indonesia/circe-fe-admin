@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # Next.js Admin Application
+  circe-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: circe-admin-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://circe-fastapi-backend-740443181568.europe-west1.run.app}
+    restart: unless-stopped
+    networks:
+      - circe-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/test-env', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  circe-network:
+    driver: bridge
