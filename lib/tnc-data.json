@@ -1,0 +1,742 @@
+{
+  "notice": {
+    "title": "PEMBERITAHUAN PENTING",
+    "content": "Dokumen ini mengatur hubungan hukum antara Anda dengan Reserva. Mohon baca dengan saksama sebelum menggunakan layanan kami. Dengan menggunakan Platform Reserva, Anda menyatakan telah membaca, memahami, dan menyetujui seluruh isi dokumen ini serta Kebijakan Privasi kami."
+  },
+  "sections": [
+    {
+      "number": 1,
+      "title": "DEFINISI",
+      "subsections": [
+        {
+          "term": "Aplikasi Pelanggan",
+          "definition": "Aplikasi mobile dan/atau situs web yang digunakan Pengguna Akhir untuk membuat akun, menelusuri layanan, dan melakukan Pemesanan."
+        },
+        {
+          "term": "Konsol Admin",
+          "definition": "Dashboard berbasis web untuk Mitra mengelola outlet, staf, jadwal, produk/layanan, dan transaksi."
+        },
+        {
+          "term": "Mitra",
+          "definition": "Entitas bisnis (klinik, salon, spa, atau penyedia layanan lainnya) yang terdaftar di Platform untuk menawarkan layanannya kepada Pengguna Akhir."
+        },
+        {
+          "term": "Pengguna Akhir (End-User)",
+          "definition": "Individu yang menggunakan Aplikasi Pelanggan untuk memesan layanan dari Mitra."
+        },
+        {
+          "term": "Pengguna Admin",
+          "definition": "Staf atau pemilik Mitra yang menggunakan Konsol Admin."
+        },
+        {
+          "term": "Pengguna",
+          "definition": "Mencakup Pengguna Akhir dan Pengguna Admin."
+        },
+        {
+          "term": "Pemesanan (Booking)",
+          "definition": "Reservasi layanan pada tanggal dan waktu tertentu yang dilakukan melalui Platform."
+        },
+        {
+          "term": "Deposit",
+          "definition": "Pembayaran uang muka untuk mengamankan slot Pemesanan, yang dapat bersifat dapat dikembalikan (refundable) atau tidak dapat dikembalikan (non-refundable) sesuai Kebijakan Mitra."
+        },
+        {
+          "term": "Kebijakan Mitra",
+          "definition": "Ketentuan khusus yang ditetapkan masing-masing Mitra terkait pembatalan, pengembalian dana, keterlambatan, dan hal-hal lain yang ditampilkan pada saat proses pemesanan."
+        },
+        {
+          "term": "Layanan Platform",
+          "definition": "Seluruh fitur, fungsi, konten, dan layanan yang disediakan melalui Aplikasi Pelanggan dan Konsol Admin."
+        },
+        {
+          "term": "Keadaan Kahar (Force Majeure)",
+          "definition": "Peristiwa di luar kendali wajar para pihak, termasuk namun tidak terbatas pada bencana alam, pandemi, perang, kerusuhan, pemogokan massal, gangguan jaringan telekomunikasi nasional, kebijakan pemerintah yang membatasi operasional, atau peristiwa luar biasa lainnya yang diakui secara hukum."
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "title": "RUANG LINGKUP & PERSETUJUAN",
+      "subsections": [
+        {
+          "number": "2.1",
+          "title": "Persetujuan Syarat",
+          "content": "Dengan membuat akun, mengakses, atau menggunakan Layanan Platform (baik Aplikasi Pelanggan maupun Konsol Admin), Anda menyatakan bahwa:\nAnda telah membaca dan memahami Syarat & Ketentuan ini\nAnda menyetujui untuk terikat pada seluruh ketentuan dalam dokumen ini\nAnda telah membaca dan menyetujui Kebijakan Privasi kami\nJika Anda mewakili suatu entitas/perusahaan, Anda memiliki wewenang yang sah untuk mengikat entitas tersebut",
+          "items": []
+        },
+        {
+          "number": "2.2",
+          "title": "Penerimaan Elektronik",
+          "content": "Persetujuan Anda terhadap Syarat ini dapat dilakukan melalui:\nMencentang kotak persetujuan (checkbox) saat registrasi\nMengklik tombol \"Setuju\" atau \"Daftar\"\nMenggunakan Layanan Platform secara berkelanjutan\nPenerimaan elektronik ini memiliki kekuatan hukum yang setara dengan tanda tangan manual sesuai UU No. 11 Tahun 2008 tentang Informasi dan Transaksi Elektronik (UU ITE) sebagaimana telah diubah dengan UU No. 19 Tahun 2016.",
+          "items": []
+        },
+        {
+          "number": "2.3",
+          "title": "Bahasa",
+          "content": "Dokumen ini tersedia dalam Bahasa Indonesia. Jika terdapat versi terjemahan, versi Bahasa Indonesia yang berlaku sebagai acuan hukum.",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "KELAYAKAN & AKUN",
+      "subsections": [
+        {
+          "number": "3.1",
+          "title": "Kelayakan Pengguna",
+          "content": "Pengguna Akhir harus berusia minimal 18 tahun atau 17 tahun dengan persetujuan orang tua/wali yang sah\nPengguna Admin harus berusia minimal 18 tahun dan memiliki kewenangan hukum untuk mewakili Mitra\nPengguna harus merupakan warga negara Indonesia atau warga negara asing yang secara sah berada di Indonesia",
+          "items": []
+        },
+        {
+          "number": "3.2",
+          "title": "Verifikasi Identitas",
+          "content": "Kami berhak meminta dokumen identitas (KTP, Paspor, atau dokumen sah lainnya) untuk tujuan:\nVerifikasi akun\nPencegahan penipuan\nKepatuhan terhadap peraturan Anti Pencucian Uang (APU) dan Pencegahan Pendanaan Terorisme (PPT)",
+          "items": []
+        },
+        {
+          "number": "3.3",
+          "title": "Tanggung Jawab Akun",
+          "content": "Anda bertanggung jawab untuk:\nMenjaga kerahasiaan username, password, dan kredensial akun lainnya\nSemua aktivitas yang terjadi di bawah akun Anda\nMemberikan informasi yang akurat, lengkap, dan terkini\nMemperbarui informasi akun jika terjadi perubahan",
+          "items": []
+        },
+        {
+          "number": "3.4",
+          "title": "Keamanan Akun",
+          "content": "Segera laporkan kepada kami jika terjadi penggunaan tidak sah atau pelanggaran keamanan akun\nKami tidak bertanggung jawab atas kerugian akibat kelalaian Anda dalam menjaga keamanan akun\nAnda tidak boleh membagikan akun kepada pihak lain atau menggunakan akun orang lain tanpa izin",
+          "items": []
+        },
+        {
+          "number": "3.5",
+          "title": "Penangguhan dan Penutupan Akun",
+          "content": "Kami berhak menangguhkan atau menutup akun Anda dengan atau tanpa pemberitahuan sebelumnya jika:\nTerdapat dugaan pelanggaran terhadap Syarat ini\nTerdapat indikasi penipuan, penyalahgunaan, atau aktivitas ilegal\nKami diwajibkan oleh hukum atau perintah pengadilan\nAkun tidak aktif selama lebih dari 24 bulan berturut-turut (dengan pemberitahuan 30 hari sebelumnya)\nAnda berhak mengajukan keberatan atas penangguhan/penutupan akun melalui layanan pelanggan kami dalam waktu 14 hari kalender.",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "title": "HUBUNGAN PARA PIHAK & MODEL BISNIS",
+      "subsections": [
+        {
+          "number": "4.1",
+          "title": "Status Reserva sebagai Platform",
+          "content": "Reserva adalah penyedia platform teknologi yang memfasilitasi hubungan antara Pengguna Akhir dengan Mitra. Reserva BUKAN:\nPenyedia layanan kesehatan, kecantikan, atau layanan lain yang ditawarkan Mitra\nAgen, karyawan, atau mitra usaha dari Mitra\nPihak dalam kontrak penyediaan layanan antara Pengguna Akhir dan Mitra",
+          "items": []
+        },
+        {
+          "number": "4.2",
+          "title": "Tanggung Jawab Mitra",
+          "content": "Mitra bertanggung jawab penuh atas:\nLegalitas operasional: Kepemilikan izin usaha, izin praktik, dan perizinan lain yang diwajibkan oleh peraturan perundang-undangan\nKualitas layanan: Standar profesional, kompetensi staf, kebersihan, keamanan, dan kesesuaian layanan dengan deskripsi\nPenetapan harga: Akurasi harga, pajak, dan biaya tambahan\nKepatuhan hukum: Perlindungan konsumen, standar industri, regulasi kesehatan (jika berlaku), dan peraturan ketenagakerjaan\nKlaim dan sengketa: Penyelesaian keluhan, kompensasi, dan tanggung jawab hukum terhadap Pengguna Akhir terkait layanan yang diberikan\nAsuransi: Memiliki asuransi yang memadai untuk menutup risiko operasional dan profesional",
+          "items": []
+        },
+        {
+          "number": "4.3",
+          "title": "Tanggung Jawab Reserva sebagai Platform",
+          "content": "Reserva bertanggung jawab atas:\nKeamanan data: Melindungi data pribadi sesuai standar industri dan UU No. 27 Tahun 2022 tentang Perlindungan Data Pribadi (UU PDP)\nKeamanan transaksi: Memastikan integritas proses pembayaran melalui penyedia layanan pembayaran berlisensi\nLayanan pelanggan platform: Menyediakan dukungan teknis terkait penggunaan Platform\nTransparansi informasi: Menampilkan informasi Mitra, layanan, dan harga secara jelas",
+          "items": []
+        },
+        {
+          "number": "4.4",
+          "title": "Batasan Tanggung Jawab Reserva",
+          "content": "Reserva TIDAK bertanggung jawab atas:\nHasil, efek samping, komplikasi, atau kerugian yang timbul dari layanan yang diberikan Mitra\nKetidakakuratan informasi yang diunggah oleh Mitra\nSengketa antara Pengguna Akhir dan Mitra terkait kualitas layanan\nKegagalan Mitra memenuhi kewajibannya",
+          "items": []
+        },
+        {
+          "number": "4.5",
+          "title": "Hak Pengguna Akhir",
+          "content": "Pengguna Akhir memiliki hak untuk:\nMengajukan keluhan kepada Mitra dan/atau Reserva\nMendapatkan informasi lengkap dan akurat tentang layanan\nMendapatkan penjelasan tentang prosedur pengembalian dana (jika berlaku)\nMelaporkan Mitra yang tidak memenuhi standar melalui sistem pelaporan kami\nJika Mitra tidak merespons keluhan dalam 3x24 jam, Pengguna Akhir dapat mengeskalasi kepada Reserva melalui reservaofficialig@gmail.com.",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "title": "PEMESANAN, PERUBAHAN, DAN PEMBATALAN",
+      "subsections": [
+        {
+          "number": "5.1",
+          "title": "Proses Pemesanan",
+          "content": "Pemesanan dianggap sah dan mengikat setelah:\nSistem menampilkan konfirmasi pemesanan dengan nomor booking unik\nNotifikasi konfirmasi dikirim ke email/nomor telepon terdaftar\nPembayaran (jika diperlukan) berhasil diproses\nPengguna Akhir wajib memeriksa keakuratan detail pemesanan (tanggal, waktu, layanan, outlet) sebelum konfirmasi final",
+          "items": []
+        },
+        {
+          "number": "5.2",
+          "title": "Perubahan Jadwal (Reschedule)",
+          "content": "Perubahan jadwal tunduk pada:\nKetersediaan slot pada tanggal/waktu yang diminta\nKebijakan Mitra terkait batas waktu perubahan (misalnya, minimal 24 jam sebelum jadwal)\nKemungkinan dikenakan biaya administrasi sesuai kebijakan Mitra\nPerubahan jadwal dapat dilakukan melalui Aplikasi Pelanggan atau menghubungi Mitra langsung\nMitra berhak menolak perubahan jadwal jika tidak memenuhi syarat kebijakan mereka",
+          "items": []
+        },
+        {
+          "number": "5.3",
+          "title": "Pembatalan oleh Pengguna Akhir",
+          "content": "Jendela Pembatalan:\nKebijakan pembatalan ditentukan oleh masing-masing Mitra\nContoh umum:\nPembatalan gratis: Jika dilakukan >48 jam sebelum jadwal\nPembatalan dengan potongan: Jika dilakukan 24-48 jam sebelum jadwal (misalnya, deposit dikembalikan 50%)\nTidak dapat dibatalkan: Jika dilakukan <24 jam sebelum jadwal atau untuk layanan tertentu (deposit hangus)\nPengembalian Dana:\nPengembalian dana diproses sesuai metode pembayaran awal dalam waktu 7-14 hari kerja (tergantung kebijakan penyedia pembayaran)\nBiaya transaksi gateway pembayaran (jika ada) mungkin tidak dapat dikembalikan\nProses pengembalian dana sepenuhnya dilakukan oleh Mitra sesuai dengan kebijakan Mitra",
+          "items": []
+        },
+        {
+          "number": "5.4",
+          "title": "Pembatalan oleh Mitra",
+          "content": "Mitra dapat membatalkan pemesanan dalam kondisi:\nKeadaan Kahar\nKetidaktersediaan staf atau fasilitas yang tidak terduga\nKesalahan sistem yang menyebabkan overbooking\nPengguna Akhir melanggar kebijakan outlet (misalnya, kondisi kesehatan yang tidak diungkapkan)\nKompensasi:\nMitra dapat menawarkan jadwal alternatif atau voucher kompensasi",
+          "items": []
+        },
+        {
+          "number": "5.5",
+          "title": "Keterlambatan dan No-Show",
+          "content": "Keterlambatan Pengguna Akhir:\nBatas toleransi keterlambatan ditentukan oleh Kebijakan Mitra (umumnya 10-15 menit)\nMitra berhak:\nMempersingkat durasi layanan sesuai sisa waktu tersedia\nMenjadwalkan ulang tanpa pengembalian deposit\nMembatalkan pemesanan dan menyatakan deposit hangus (untuk keterlambatan >30 menit tanpa pemberitahuan)\nNo-Show (Tidak Hadir):\nJika Pengguna Akhir tidak hadir tanpa pemberitahuan, deposit akan hangus\nReserva akan mencatat riwayat no-show, dan Mitra dapat menolak pemesanan di masa mendatang dari pengguna dengan riwayat no-show berulang (>3 kali dalam 6 bulan)",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "title": "HARGA, PEMBAYARAN, DAN DEPOSIT",
+      "subsections": [
+        {
+          "number": "6.1",
+          "title": "Penetapan Harga",
+          "content": "Harga layanan ditentukan sepenuhnya oleh Mitra dan dapat berbeda antar outlet\nHarga yang ditampilkan di Platform adalah harga yang berlaku pada saat pemesanan dibuat\nHarga dapat berubah sewaktu-waktu tanpa pemberitahuan sebelumnya, namun harga yang telah dikonfirmasi pada pemesanan yang sah tidak akan berubah",
+          "items": []
+        },
+        {
+          "number": "6.2",
+          "title": "Metode Pembayaran",
+          "content": "Platform mendukung metode pembayaran berikut (tergantung ketersediaan):\nVirtual Account (BCA, Mandiri, BNI, BRI, dll.)\nKartu Kredit/Debit (Visa, Mastercard, JCB)\nE-Wallet (OVO, ShopeePay)\nQRIS\nPembayaran di Tempat (Cash/EDC) â€“ jika diaktifkan oleh Mitra\nPenyedia Layanan Pembayaran:\nTransaksi diproses melalui penyedia pembayaran pihak ketiga\nAnda menyetujui syarat dan ketentuan penyedia pembayaran tersebut\nReserva tidak menyimpan informasi kartu kredit/debit Anda",
+          "items": []
+        },
+        {
+          "number": "6.3",
+          "title": "Deposit",
+          "content": "Fungsi Deposit:\nDeposit adalah pembayaran uang muka untuk mengamankan slot pemesanan\nJumlah deposit bervariasi sesuai kebijakan Mitra (umumnya 20%-50% dari total harga layanan)\nJenis Deposit:\nRefundable: Dapat dikembalikan jika pembatalan memenuhi syarat kebijakan Mitra\nNon-refundable: Tidak dapat dikembalikan dalam kondisi apapun (akan ditampilkan dengan jelas sebelum checkout)\nPelunasan:\nSisa pembayaran dilakukan sebelum atau setelah layanan sesuai kebijakan Mitra",
+          "items": []
+        },
+        {
+          "number": "6.4",
+          "title": "Pengembalian Dana (Refund)",
+          "content": "Pengembalian dana diproses sesuai Kebijakan Mitra dan ketentuan pembatalan\nWaktu pemrosesan: 7-14 hari kerja sejak persetujuan refund\nMetode pengembalian: Ke sumber pembayaran awal atau metode alternatif yang disepakati\nBiaya gateway payment (jika ada) mungkin tidak dapat dikembalikan",
+          "items": []
+        },
+        {
+          "number": "6.5",
+          "title": "Kesalahan Transaksi",
+          "content": "Jika terjadi:\nPembayaran ganda (duplikasi): Segera laporkan kepada reservaofficialig@gmail.com dengan menyertakan bukti transaksi. Kami akan menyelidiki dan memproses pengembalian dana dalam 10 hari kerja\nKesalahan nominal: Jika terjadi perbedaan antara harga yang ditampilkan dengan yang dikenakan, hubungi kami dalam 3x24 jam. Kami akan melakukan investigasi dan mengembalikan selisih jika terbukti kesalahan sistem\nTransaksi gagal namun dana terpotong: Dana akan dikembalikan secara otomatis oleh bank/penyedia pembayaran dalam 7-14 hari kerja sesuai kebijakan mereka",
+          "items": []
+        },
+        {
+          "number": "6.6",
+          "title": "Bukti Transaksi",
+          "content": "Pengguna berhak mendapatkan bukti transaksi elektronik (invoice/receipt) yang dapat diunduh melalui Aplikasi Pelanggan\nBukti transaksi berlaku sebagai bukti pembayaran yang sah",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "title": "KONTEN, IKLAN, DAN MATERI INFORMASI",
+      "subsections": [
+        {
+          "number": "7.1",
+          "title": "Konten Informasi Umum",
+          "content": "Materi informasi dalam Platform (artikel, tips, deskripsi layanan) bersifat umum dan untuk tujuan edukasi\nInformasi disediakan oleh Mitra atau sumber pihak ketiga\nReserva tidak memberikan diagnosis medis, saran medis, atau rekomendasi perawatan kesehatan\nPengguna Akhir harus berkonsultasi langsung dengan profesional kesehatan/kecantikan yang berkualifikasi sebelum mengambil keputusan terkait perawatan",
+          "items": []
+        },
+        {
+          "number": "7.2",
+          "title": "Akurasi Informasi",
+          "content": "Kami berupaya memastikan informasi yang ditampilkan akurat dan terkini, namun tidak menjamin keakuratan 100%\nMitra bertanggung jawab penuh atas keakuratan informasi layanan, harga, dan ketersediaan yang mereka unggah\nPengguna disarankan untuk mengonfirmasi detail penting langsung kepada Mitra sebelum membuat pemesanan",
+          "items": []
+        },
+        {
+          "number": "7.3",
+          "title": "Konten yang Diunggah Pengguna",
+          "content": "Hak dan Kewajiban:\nPengguna (baik End-User maupun Admin) dapat mengunggah konten seperti:\nFoto profil\nUlasan dan rating\nCatatan pribadi terkait pemesanan\nFoto layanan (untuk Admin Mitra)\nAnda menyatakan dan menjamin bahwa:\nAnda memiliki hak hukum atas konten yang diunggah\nKonten tidak melanggar hak cipta, merek dagang, atau hak kekayaan intelektual pihak lain\nKonten tidak mengandung unsur SARA, pornografi, pencemaran nama baik, atau pelanggaran hukum lainnya\nLisensi kepada Reserva:\nDengan mengunggah konten, Anda memberikan kepada Reserva lisensi non-eksklusif, bebas royalti, dapat dialihkan, berlaku di seluruh dunia untuk:\nMenyimpan, memproses, dan menampilkan konten tersebut di Platform\nMenggunakan konten untuk tujuan pemasaran dan promosi Platform (dengan tetap menghormati privasi Anda)\nMembuat salinan cadangan untuk keamanan data\nLisensi ini berlaku selama konten tetap tersedia di Platform dan untuk tujuan arsip setelah penghapusan\nModerasi Konten:\nReserva berhak (namun tidak berkewajiban) untuk meninjau, memoderasi, atau menghapus konten yang:\nMelanggar Syarat ini\nDilaporkan oleh pengguna lain\nBerpotensi melanggar hukum atau merugikan pihak lain\nKami akan berupaya memberikan pemberitahuan sebelum menghapus konten, kecuali dalam kasus pelanggaran serius",
+          "items": []
+        },
+        {
+          "number": "7.4",
+          "title": "Ulasan dan Rating",
+          "content": "Ulasan harus jujur, berdasarkan pengalaman pribadi, dan tidak menyesatkan\nDilarang memberikan ulasan palsu, ulasan berbayar (kecuali diungkapkan), atau ulasan untuk kompensasi tertentu\nMitra tidak boleh meminta penghapusan ulasan negatif yang sah\nReserva dapat menghapus ulasan yang terbukti palsu atau melanggar ketentuan setelah investigasi",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "title": "ATURAN PENGGUNAAN & LARANGAN",
+      "subsections": [
+        {
+          "number": "8.1",
+          "title": "Penggunaan yang Diizinkan",
+          "content": "Anda diizinkan menggunakan Platform untuk:\nMenelusuri dan memesan layanan yang tersedia\nMengelola akun dan preferensi pribadi\nBerkomunikasi dengan Mitra terkait pemesanan\nMemberikan ulasan dan feedback yang konstruktif\n(Untuk Mitra) Mengelola operasional bisnis melalui Konsol Admin sesuai perjanjian komersial",
+          "items": []
+        },
+        {
+          "number": "8.2",
+          "title": "Larangan Umum",
+          "content": "Dilarang keras melakukan hal-hal berikut:\nA. Gangguan Sistem dan Keamanan:\nMencoba mengakses sistem, server, atau jaringan kami tanpa otorisasi\nMelakukan serangan DDoS, SQL injection, atau jenis serangan siber lainnya\nMenggunakan bot, spider, scraper, atau alat otomatis untuk mengakses Platform tanpa izin tertulis\nMerekayasa balik (reverse engineering), mendekompilasi, atau membongkar perangkat lunak Platform\nMemanfaatkan bug, kerentanan, atau celah sistem untuk keuntungan pribadi (wajib melaporkan bug melalui reservaofficialig@gmail.com)\nB. Penyalahgunaan Transaksi:\nMelakukan penipuan pembayaran, chargeback yang tidak berdasar, atau manipulasi sistem pembayaran\nMembuat pemesanan palsu atau menggunakan kartu kredit/akun orang lain tanpa izin\nMemanipulasi harga, promo, atau sistem voucher\nMencoba mendapatkan pengembalian dana untuk layanan yang telah diterima dengan itikad buruk\nC. Konten dan Komunikasi yang Dilarang:\nMengunggah konten yang:\nMelanggar hak cipta, merek dagang, atau kekayaan intelektual pihak lain\nMengandung virus, malware, atau kode berbahaya\nBersifat cabul, pornografi, atau eksploitasi seksual\nMengandung ujaran kebencian, diskriminasi SARA, atau hasutan kekerasan\nMenyebarkan informasi palsu atau menyesatkan (hoax)\nMencemarkan nama baik atau melakukan fitnah\nMelakukan spam, phishing, atau distribusi konten komersial yang tidak diizinkan\nMeniru identitas orang lain atau entitas lain (impersonation)\nD. Penyalahgunaan Data:\nMengumpulkan data pribadi pengguna lain tanpa persetujuan mereka\nMenggunakan data yang diperoleh dari Platform untuk tujuan di luar yang dimaksudkan (misalnya, pemasaran langsung tanpa izin)\nMenjual, menyewakan, atau mengalihkan data pengguna kepada pihak ketiga\nMelanggar ketentuan privasi atau perlindungan data yang berlaku\nE. Manipulasi Sistem:\nMembuat akun palsu atau akun ganda untuk tujuan penipuan\nMemanipulasi ulasan, rating, atau sistem reputasi\nMelakukan kolusi dengan pihak lain untuk memanipulasi sistem promo atau rewards\nMenggunakan Platform untuk aktivitas pencucian uang atau pendanaan terorisme",
+          "items": []
+        },
+        {
+          "number": "8.3",
+          "title": "Konsekuensi Pelanggaran",
+          "content": "Pelanggaran terhadap aturan di atas dapat mengakibatkan:\nPeringatan tertulis\nPenangguhan akun sementara (7-30 hari)\nPenutupan akun permanen tanpa pengembalian dana\nPemblokiran akses dari perangkat atau alamat IP\nPelaporan kepada pihak berwajib jika terdapat indikasi tindak pidana\nTuntutan hukum perdata dan/atau pidana\nKlaim ganti rugi atas kerugian yang ditimbulkan",
+          "items": []
+        },
+        {
+          "number": "8.4",
+          "title": "Pelaporan Pelanggaran",
+          "content": "Jika Anda menemukan pelanggaran oleh pengguna lain:\nLaporkan melalui fitur \"Laporkan\" di Aplikasi atau email reservaofficialig@gmail.com\nSertakan bukti yang relevan (screenshot, nomor booking, dll.)\nKami akan menyelidiki dalam waktu 5 hari kerja dan mengambil tindakan yang sesuai",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "title": "PRIVASI & PERLINDUNGAN DATA PRIBADI",
+      "subsections": [
+        {
+          "number": "9.1",
+          "title": "Kebijakan Privasi",
+          "content": "Pengumpulan, penggunaan, penyimpanan, dan pengungkapan data pribadi diatur secara lengkap dalam Kebijakan Privasi kami yang merupakan bagian tak terpisahkan dari Syarat ini.",
+          "items": []
+        },
+        {
+          "number": "9.2",
+          "title": "Peran Para Pihak dalam Pemrosesan Data",
+          "content": "Reserva sebagai Pengendali dan/atau Pemroses Data:\nUntuk data terkait penggunaan Platform (akun, log aktivitas, data pembayaran): Reserva bertindak sebagai Pengendali Data\nUntuk data pelanggan yang dikelola Mitra melalui Konsol Admin: Reserva bertindak sebagai Pemroses Data atas instruksi Mitra\nMitra sebagai Pengendali Data:\nMitra bertanggung jawab penuh sebagai Pengendali Data atas data pribadi pelanggan mereka\nMitra wajib:\nMemiliki dasar hukum yang sah untuk pemrosesan data (persetujuan, kontrak, kewajiban hukum, atau kepentingan yang sah)\nMematuhi seluruh ketentuan UU PDP\nMenandatangani Perjanjian Pemrosesan Data (Data Processing Agreement/DPA) dengan Reserva\nBertanggung jawab atas pelanggaran data yang terjadi akibat kelalaian mereka",
+          "items": []
+        },
+        {
+          "number": "9.3",
+          "title": "Hak-Hak Subjek Data",
+          "content": "Sesuai UU PDP, Anda memiliki hak untuk:\nA. Hak Akses:\nMendapatkan konfirmasi apakah data pribadi Anda diproses dan mengakses salinan data tersebut\nB. Hak Perbaikan (Rectification):\nMeminta koreksi data pribadi yang tidak akurat atau tidak lengkap\nC. Hak Penghapusan (Right to Erasure):\nMeminta penghapusan data pribadi dalam kondisi tertentu (misalnya, data tidak lagi diperlukan, pencabutan persetujuan)\nD. Hak Pembatasan Pemrosesan:\nMeminta pembatasan pemrosesan data pribadi dalam kondisi tertentu\nE. Hak Portabilitas Data:\nMenerima data pribadi dalam format terstruktur, umum digunakan, dan dapat dibaca mesin\nF. Hak Menolak (Right to Object):\nMenolak pemrosesan data pribadi untuk tujuan tertentu (seperti pemasaran langsung)\nG. Hak untuk Tidak Menjadi Subjek Keputusan Otomatis:\nTidak menjadi subjek keputusan yang sepenuhnya berdasarkan pemrosesan otomatis jika menghasilkan dampak hukum signifikan\nCara Menggunakan Hak:\nAjukan permintaan melalui email reservaofficialig@gmail.com atau fitur pengaturan akun di Aplikasi\nKami akan merespons dalam waktu 14 hari kerja\nKami berhak meminta verifikasi identitas sebelum memproses permintaan\nPermintaan tertentu dapat ditolak jika bertentangan dengan kewajiban hukum kami",
+          "items": []
+        },
+        {
+          "number": "9.4",
+          "title": "Keamanan Data",
+          "content": "Kami menerapkan langkah-langkah keamanan teknis dan organisasi yang sesuai, termasuk:\nEnkripsi data saat transit (TLS/SSL) dan saat disimpan\nKontrol akses berbasis peran (role-based access control)\nAudit log dan monitoring aktivitas mencurigakan\nBackup data secara berkala\nPelatihan keamanan data bagi karyawan\nPenetration testing dan vulnerability assessment secara berkala",
+          "items": []
+        },
+        {
+          "number": "9.5",
+          "title": "Pemberitahuan Pelanggaran Data",
+          "content": "Jika terjadi pelanggaran data pribadi (data breach), kami akan:\nMemberitahu Anda dalam waktu 3x24 jam sejak mengetahui pelanggaran (sesuai UU PDP)\nMelaporkan kepada otoritas yang berwenang (jika diwajibkan)\nMenjelaskan sifat pelanggaran, data yang terdampak, dan langkah mitigasi yang diambil\nMengambil tindakan korektif untuk mencegah pelanggaran serupa di masa mendatang",
+          "items": []
+        },
+        {
+          "number": "9.6",
+          "title": "Transfer Data Lintas Batas",
+          "content": "Jika kami melakukan transfer data pribadi ke luar Indonesia, kami akan:\nMemastikan negara tujuan memiliki tingkat perlindungan data yang memadai, atau\nMenggunakan mekanisme pengamanan yang disetujui (seperti Standard Contractual Clauses)",
+          "items": []
+        },
+        {
+          "number": "9.7",
+          "title": "Penyimpanan Data",
+          "content": "Data pribadi disimpan hanya selama diperlukan untuk tujuan pemrosesannya\nSetelah tidak lagi diperlukan, data akan dihapus atau dianonimkan secara aman\nNamun, data tertentu dapat disimpan lebih lama untuk kepatuhan hukum (misalnya, data transaksi disimpan 10 tahun sesuai peraturan perpajakan)",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "title": "KETERSEDIAAN LAYANAN & PEMELIHARAAN SISTEM",
+      "subsections": [
+        {
+          "number": "10.1",
+          "title": "Pemeliharaan Terjadwal",
+          "content": "Pemeliharaan sistem dilakukan secara berkala untuk peningkatan keamanan dan performa\nPemeliharaan biasanya dilakukan pada jam tidak sibuk (00:00-06:00 WIB)",
+          "items": []
+        },
+        {
+          "number": "10.2",
+          "title": "Gangguan Tidak Terduga",
+          "content": "Jika terjadi gangguan di luar pemeliharaan terjadwal:\nKami akan berupaya memulihkan layanan secepat mungkin",
+          "items": []
+        },
+        {
+          "number": "10.3",
+          "title": "Perubahan Fitur",
+          "content": "Kami berhak menambah, mengubah, menangguhkan, atau menghentikan fitur Platform sewaktu-waktu\nFitur eksperimental (beta) dapat dihentikan tanpa pemberitahuan",
+          "items": []
+        },
+        {
+          "number": "10.4",
+          "title": "Keadaan Kahar (Force Majeure)",
+          "content": "Kami tidak bertanggung jawab atas keterlambatan atau kegagalan memenuhi kewajiban akibat Keadaan Kahar, termasuk namun tidak terbatas pada:\nBencana alam (gempa bumi, banjir, tsunami, letusan gunung berapi)\nPandemi atau wabah penyakit\nPerang, terorisme, kerusuhan sipil, atau pemogokan massal\nKebijakan pemerintah yang membatasi operasional (lockdown, pemadaman internet)\nGangguan infrastruktur telekomunikasi atau listrik dalam skala nasional\nSerangan siber dalam skala besar yang mempengaruhi banyak pihak\nDalam kondisi Keadaan Kahar, kami akan:\nMemberitahu Anda sesegera mungkin\nBerupaya meminimalkan dampak gangguan\nMelanjutkan kewajiban begitu Keadaan Kahar berakhir\nJika Keadaan Kahar berlangsung lebih dari 30 hari berturut-turut, salah satu pihak dapat mengakhiri perjanjian tanpa penalti.",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 11,
+      "title": "BIAYA LANGGANAN, BIAYA TRANSAKSI, & PAJAK (UNTUK MITRA)",
+      "subsections": [
+        {
+          "number": "11.1",
+          "title": "Struktur Biaya untuk Mitra",
+          "content": "Mitra yang menggunakan Konsol Admin dapat dikenakan biaya sebagai berikut:\nBiaya Berlangganan (Subscription Fee): Biaya tetap bulanan/tahunan untuk akses ke fitur Platform\nBiaya Transaksi (Transaction Fee): Persentase dari nilai transaksi yang berhasil diselesaikan melalui Platform (misalnya, 1%-6%)\nBiaya Fitur Premium: Biaya tambahan untuk fitur khusus seperti iklan prioritas, analitik lanjutan, integrasi API\nStruktur biaya akan dijelaskan secara rinci dalam:\nHalaman Paket Berlangganan di Konsol Admin\nPerjanjian Kemitraan (Partnership Agreement) yang ditandatangani terpisah",
+          "items": []
+        },
+        {
+          "number": "11.2",
+          "title": "Pembayaran dan Penagihan",
+          "content": "Biaya berlangganan ditagih di awal periode (bulanan/tahunan)\nBiaya transaksi dipotong otomatis dari pembayaran yang diterima atau ditagih pada akhir periode\nInvoice akan dikirim melalui email terdaftar Mitra\nPembayaran jatuh tempo 7 hari kalender sejak tanggal invoice (untuk berlangganan) atau dipotong otomatis (untuk biaya transaksi)",
+          "items": []
+        },
+        {
+          "number": "11.3",
+          "title": "Keterlambatan Pembayaran",
+          "content": "Keterlambatan pembayaran >7 hari dapat mengakibatkan penangguhan akses ke fitur premium\nKeterlambatan >14 hari dapat mengakibatkan penangguhan seluruh akses Konsol Admin\nDenda keterlambatan: 1% per hari dari nilai tagihan (maksimal 30%)",
+          "items": []
+        },
+        {
+          "number": "11.4",
+          "title": "Perubahan Harga",
+          "content": "Kami berhak mengubah struktur biaya\nMitra yang sudah berlangganan akan terkena harga baru pada periode perpanjangan berikutnya\nJika Mitra tidak setuju dengan perubahan harga, mereka dapat membatalkan langganan sebelum periode baru dimulai tanpa penalti",
+          "items": []
+        },
+        {
+          "number": "11.6",
+          "title": "Refund untuk Biaya Berlangganan",
+          "content": "Biaya berlangganan yang sudah dibayarkan umumnya tidak dapat dikembalikan (non-refundable)\nPengecualian: Jika kami gagal menyediakan layanan sesuai SLA yang disepakati dalam perjanjian komersial, Mitra berhak atas pro-rated refund",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 12,
+      "title": "HAK KEKAYAAN INTELEKTUAL",
+      "subsections": [
+        {
+          "number": "12.1",
+          "title": "Lisensi Terbatas kepada Pengguna",
+          "content": "Kami memberikan kepada Anda lisensi yang bersifat:\nTerbatas: Hanya untuk mengakses dan menggunakan Layanan Platform\nNon-eksklusif: Kami dapat memberikan lisensi serupa kepada pihak lain\nTidak dapat dialihkan: Anda tidak boleh memindahkan lisensi ini kepada orang lain tanpa persetujuan tertulis kami\nDapat dicabut: Kami dapat mencabut lisensi jika Anda melanggar Syarat ini",
+          "items": []
+        },
+        {
+          "number": "12.2",
+          "title": "Pembatasan Penggunaan",
+          "content": "Anda DILARANG:\nMenyalin, mereplikasi, atau membuat karya turunan dari Platform\nMemodifikasi, mengadaptasi, atau menerjemahkan perangkat lunak Platform\nMelakukan reverse engineering, dekompilasi, atau disassembly terhadap kode Platform\nMenghapus atau mengubah pemberitahuan hak cipta, merek dagang, atau hak kepemilikan lainnya\nMenggunakan Platform untuk membuat produk atau layanan yang bersaing\nMengekstrak atau menggunakan database, API, atau data terstruktur lainnya untuk tujuan komersial tanpa izin tertulis",
+          "items": []
+        },
+        {
+          "number": "12.3",
+          "title": "Umpan Balik (Feedback)",
+          "content": "Jika Anda memberikan saran, ide, atau umpan balik kepada kami terkait Platform:\nAnda memberikan umpan balik tersebut secara sukarela dan tanpa ekspektasi kompensasi\nKami bebas menggunakan, mengimplementasikan, atau mengabaikan umpan balik tersebut tanpa kewajiban kepada Anda\nAnda dengan ini mengalihkan seluruh hak atas umpan balik tersebut kepada Reserva",
+          "items": []
+        },
+        {
+          "number": "12.4",
+          "title": "Merek Dagang Pihak Ketiga",
+          "content": "Merek dagang, logo, dan nama produk pihak ketiga yang muncul di Platform adalah milik pemiliknya masing-masing dan digunakan untuk tujuan identifikasi saja. Penggunaan tersebut tidak mengindikasikan afiliasi, endorsement, atau sponsorship.",
+          "items": []
+        },
+        {
+          "number": "12.5",
+          "title": "DMCA dan Pelanggaran Hak Cipta",
+          "content": "Jika Anda yakin konten di Platform melanggar hak cipta Anda:\nKirim pemberitahuan tertulis kepada reservaofficialig@gmail.com dengan informasi:\nIdentifikasi karya yang dilanggar\nIdentifikasi konten yang melanggar (URL atau lokasi spesifik)\nInformasi kontak Anda\nPernyataan itikad baik bahwa penggunaan tersebut tidak diizinkan\nPernyataan bahwa informasi dalam notifikasi akurat dan Anda berwenang bertindak atas nama pemilik hak cipta\nKami akan menyelidiki dan mengambil tindakan sesuai prosedur DMCA (Digital Millennium Copyright Act) atau hukum Indonesia yang berlaku",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 13,
+      "title": "PERNYATAAN DAN PENYANGKALAN (DISCLAIMER)",
+      "subsections": [
+        {
+          "number": "13.1",
+          "title": "Layanan \"Sebagaimana Adanya\"",
+          "content": "Platform Reserva disediakan \"sebagaimana adanya\" (as is) dan \"sebagaimana tersedia\" (as available), dengan seluruh kekurangan yang ada.",
+          "items": []
+        },
+        {
+          "number": "13.2",
+          "title": "Penyangkalan Jaminan Tersirat",
+          "content": "Sepanjang diizinkan oleh hukum yang berlaku, kami menyangkal seluruh jaminan, baik tersurat maupun tersirat, termasuk namun tidak terbatas pada:\nJaminan kelayakan untuk diperdagangkan (merchantability)\nJaminan kesesuaian untuk tujuan tertentu (fitness for a particular purpose)\nJaminan tidak melanggar hak pihak ketiga (non-infringement)\nJaminan akurasi, kelengkapan, atau keandalan informasi",
+          "items": []
+        },
+        {
+          "number": "13.3",
+          "title": "Yang TIDAK Kami Jamin",
+          "content": "Kami TIDAK menjamin bahwa:\nPlatform akan selalu tersedia, tepat waktu, aman, atau bebas dari kesalahan\nHasil penggunaan Platform akan memenuhi harapan Anda\nKualitas produk, layanan, informasi, atau materi lain yang diperoleh melalui Platform akan sesuai ekspektasi Anda\nKesalahan atau bug dalam perangkat lunak akan diperbaiki dalam jangka waktu tertentu\nServer kami bebas dari virus, malware, atau komponen berbahaya lainnya",
+          "items": []
+        },
+        {
+          "number": "13.4",
+          "title": "Penyangkalan Tanggung Jawab atas Layanan Mitra",
+          "content": "Reserva SECARA TEGAS MENYANGKAL TANGGUNG JAWAB atas:\nKualitas, keamanan, atau legalitas layanan yang diberikan oleh Mitra\nKebenaran deskripsi layanan, harga, atau informasi lain yang diunggah Mitra\nKemampuan Mitra untuk memenuhi kewajiban mereka\nHasil perawatan, efek samping, komplikasi, atau konsekuensi lain dari layanan yang diterima\nSengketa antara Pengguna Akhir dan Mitra\nHubungan langsung: Segala klaim terkait layanan yang diterima harus ditujukan kepada Mitra yang bersangkutan.",
+          "items": []
+        },
+        {
+          "number": "13.5",
+          "title": "Batasan Penyangkalan",
+          "content": "Penyangkalan di atas TIDAK mengesampingkan tanggung jawab kami yang secara tegas dinyatakan dalam Syarat ini, termasuk:\nTanggung jawab atas keamanan data pribadi sesuai UU PDP\nTanggung jawab atas kelalaian berat atau kesengajaan kami\nTanggung jawab yang tidak dapat disangkal berdasarkan hukum yang berlaku (misalnya, UU Perlindungan Konsumen)",
+          "items": []
+        },
+        {
+          "number": "13.6",
+          "title": "Konsultasi Profesional",
+          "content": "Kami menyarankan Anda untuk:\nBerkonsultasi dengan profesional kesehatan yang berkualifikasi sebelum menjalani perawatan medis atau estetika\nMemverifikasi kredensial dan lisensi praktisi\nMengungkapkan seluruh kondisi kesehatan yang relevan kepada penyedia layanan\nMemahami risiko yang terkait dengan prosedur yang akan Anda jalani",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 14,
+      "title": "BATASAN TANGGUNG JAWAB",
+      "subsections": [
+        {
+          "number": "14.1",
+          "title": "Pengecualian Kerugian Tertentu",
+          "content": "Sepanjang diizinkan oleh hukum yang berlaku, Reserva, direktur, karyawan, afiliasi, dan penyedia layanan kami TIDAK BERTANGGUNG JAWAB atas:\nA. Kerugian Tidak Langsung dan Konsekuensial:\nKehilangan keuntungan, pendapatan, atau peluang bisnis\nKehilangan data atau kerusakan data\nKehilangan reputasi atau goodwill\nBiaya pengadaan barang atau layanan pengganti\nKerugian tidak langsung, insidental, khusus, eksemplar, atau konsekuensial lainnya\nB. Kerugian yang Timbul dari:\nKetidakmampuan menggunakan atau mengakses Platform\nGangguan atau penghentian layanan\nAkses tidak sah ke akun atau data Anda\nBug, virus, trojan, atau komponen berbahaya yang ditransmisikan melalui Platform oleh pihak ketiga\nKesalahan, ketidakakuratan, atau kelalaian dalam konten Platform\nKehilangan atau kerusakan yang timbul dari penggunaan konten yang diposting, dikirim, atau dibagikan melalui Platform\nTindakan atau kelalaian Mitra atau pengguna lain\nPengecualian ini berlaku bahkan jika Reserva telah diberitahu tentang kemungkinan kerugian tersebut.",
+          "items": []
+        },
+        {
+          "number": "14.2",
+          "title": "Batasan Maksimum Tanggung Jawab",
+          "content": "Jika, terlepas dari ketentuan lain dalam Syarat ini, Reserva ditemukan bertanggung jawab atas kerugian atau kerusakan:\nTotal tanggung jawab kami kepada Anda tidak akan melebihi nilai yang LEBIH BESAR dari:\nRp 1.000.000 (satu juta rupiah), ATAU\nJumlah total yang Anda bayarkan kepada Reserva sebagai biaya layanan (subscription atau transaction fee) dalam 3 bulan terakhir sebelum peristiwa yang menimbulkan klaim\nUntuk Pengguna Akhir (yang tidak membayar biaya langsung kepada Reserva):\nBatasan tanggung jawab maksimum adalah Rp 1.000.000 (satu juta rupiah).",
+          "items": []
+        },
+        {
+          "number": "14.3",
+          "title": "Pengecualian dari Batasan",
+          "content": "Batasan tanggung jawab di atas TIDAK BERLAKU untuk:\nKematian atau cedera pribadi yang disebabkan oleh kelalaian berat atau kesengajaan Reserva\nPenipuan atau misrepresentasi penipuan oleh Reserva\nPelanggaran data pribadi yang disebabkan oleh kelalaian Reserva dalam mengimplementasikan langkah-langkah keamanan yang memadai\nTanggung jawab lain yang secara hukum tidak dapat dibatasi atau dikecualikan berdasarkan hukum Indonesia",
+          "items": []
+        },
+        {
+          "number": "14.4",
+          "title": "Dasar Esensial Perjanjian",
+          "content": "Anda mengakui dan menyetujui bahwa:\nBatasan tanggung jawab ini merupakan alokasi risiko yang fundamental antara Anda dan Reserva\nTanpa batasan ini, Reserva tidak akan dapat menyediakan Layanan Platform dengan model bisnis dan struktur harga saat ini\nBatasan ini telah diperhitungkan dalam penetapan biaya layanan",
+          "items": []
+        },
+        {
+          "number": "14.5",
+          "title": "Asuransi",
+          "content": "Kami menyarankan Pengguna (terutama Mitra) untuk memiliki asuransi yang memadai untuk menutup risiko operasional mereka. Reserva tidak bertanggung jawab atas kerugian yang seharusnya dapat ditanggung oleh asuransi Anda.",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 15,
+      "title": "GANTI RUGI (INDEMNIFIKASI)",
+      "subsections": [
+        {
+          "number": "15.1",
+          "title": "Kewajiban Ganti Rugi oleh Pengguna",
+          "content": "Anda setuju untuk membebaskan, membela, dan mengganti kerugian Reserva, direktur, karyawan, afiliasi, agen, dan mitra kami dari dan terhadap:\nSeluruh klaim, tuntutan, gugatan, atau proses hukum pihak ketiga\nKerugian, kerusakan, denda, penalti, atau biaya (termasuk biaya pengacara yang wajar)\nYang timbul dari atau terkait dengan:\nA. Pelanggaran oleh Anda:\nPelanggaran terhadap Syarat & Ketentuan ini\nPelanggaran terhadap hukum, peraturan, atau hak pihak ketiga (termasuk hak kekayaan intelektual, privasi, atau publisitas)\nB. Konten yang Anda Unggah:\nKonten yang Anda posting, unggah, atau bagikan melalui Platform\nKlaim bahwa konten tersebut melanggar hak pihak ketiga\nC. Penggunaan Platform oleh Anda:\nKelalaian atau kesengajaan Anda dalam menggunakan Platform\nInteraksi Anda dengan pengguna lain atau Mitra\nD. Khusus untuk Mitra:\nLayanan yang Anda berikan kepada Pengguna Akhir\nKesalahan, kelalaian, atau pelanggaran profesional dalam praktik bisnis Anda\nKegagalan mematuhi lisensi, izin, atau peraturan yang berlaku untuk bisnis Anda\nSengketa ketenagakerjaan dengan staf Anda",
+          "items": []
+        },
+        {
+          "number": "15.2",
+          "title": "Batasan Ganti Rugi",
+          "content": "Kewajiban ganti rugi Anda terbatas pada:\nKerugian yang timbul secara langsung dari kelalaian atau kesengajaan Anda\nKerugian yang dapat dibuktikan secara wajar dan masuk akal\nAnda TIDAK berkewajiban mengganti rugi untuk:\nKerugian yang disebabkan semata-mata oleh kelalaian Reserva\nKerugian di luar kendali wajar Anda (Keadaan Kahar)\nKlaim yang timbul dari kepatuhan Anda terhadap instruksi tertulis Reserva",
+          "items": []
+        },
+        {
+          "number": "15.3",
+          "title": "Prosedur Ganti Rugi",
+          "content": "Jika timbul klaim yang memerlukan ganti rugi:\nReserva akan memberitahu Anda secara tertulis tentang klaim tersebut sesegera mungkin\nAnda akan diberikan kesempatan untuk berpartisipasi dalam pembelaan atas klaim\nReserva berhak mengendalikan pembelaan dan penyelesaian klaim (dengan persetujuan Anda yang tidak boleh ditahan secara tidak wajar)\nAnda akan bekerja sama sepenuhnya dan memberikan informasi yang diperlukan\nAnda tidak boleh menyelesaikan klaim tanpa persetujuan tertulis Reserva jika penyelesaian tersebut membebankan kewajiban kepada Reserva",
+          "items": []
+        },
+        {
+          "number": "15.4",
+          "title": "Saling Melindungi (untuk Mitra)",
+          "content": "Dalam perjanjian komersial terpisah, Reserva dan Mitra dapat menyepakati kewajiban ganti rugi timbal balik (mutual indemnification) yang lebih rinci.",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 16,
+      "title": "PENGAKHIRAN",
+      "subsections": [
+        {
+          "number": "16.1",
+          "title": "Pengakhiran oleh Pengguna",
+          "content": "Anda dapat berhenti menggunakan Platform kapan saja dengan cara:\nMenghapus akun melalui pengaturan Aplikasi, atau\nMenghubungi reservaofficialig@gmail.com untuk permintaan penghapusan akun\nKonsekuensi Penghapusan Akun oleh Pengguna Akhir:\nAnda akan kehilangan akses ke riwayat pemesanan dan data akun\nPemesanan yang sedang berjalan tetap berlaku dan harus diselesaikan sesuai syarat\nDeposit atau saldo yang belum digunakan akan dikembalikan sesuai kebijakan pengembalian dana (jika berlaku)\nData pribadi akan dihapus sesuai Kebijakan Privasi kami, kecuali yang wajib disimpan untuk kepatuhan hukum (misalnya, data transaksi untuk keperluan pajak)\nKonsekuensi Penghapusan Akun oleh Mitra:\nMitra harus memberikan pemberitahuan 30 hari sebelumnya untuk menyelesaikan pemesanan yang sudah terjadwal\nBiaya berlangganan yang sudah dibayar tidak dapat dikembalikan (kecuali disepakati lain dalam perjanjian komersial)\nData pelanggan dapat diekspor sebelum penghapusan final",
+          "items": []
+        },
+        {
+          "number": "16.2",
+          "title": "Pengakhiran atau Penangguhan oleh Reserva",
+          "content": "Kami berhak menangguhkan atau mengakhiri akses Anda dengan atau tanpa pemberitahuan sebelumnya jika:\nA. Pelanggaran Material:\nAnda melanggar ketentuan material dalam Syarat ini\nAnda melanggar hukum yang berlaku\nB. Risiko Keamanan atau Operasional:\nAktivitas Anda mengancam keamanan, integritas, atau ketersediaan Platform\nTerdapat indikasi akun Anda telah disusupi atau digunakan untuk aktivitas tidak sah\nC. Penipuan atau Penyalahgunaan:\nTerdapat bukti penipuan, manipulasi sistem, atau penyalahgunaan layanan\nAnda memiliki riwayat pelanggaran berulang meskipun telah diberikan peringatan\nD. Permintaan Pihak Berwajib:\nKami menerima perintah pengadilan atau permintaan dari pihak berwenang yang mengharuskan penangguhan atau pengakhiran akun\nE. Keterlambatan Pembayaran (untuk Mitra):\nKeterlambatan pembayaran biaya berlangganan atau biaya transaksi melebihi 14 hari setelah jatuh tempo\nF. Tidak Aktif Berkepanjangan:\nAkun tidak aktif selama lebih dari 24 bulan berturut-turut (dengan pemberitahuan 30 hari sebelumnya)",
+          "items": []
+        },
+        {
+          "number": "16.3",
+          "title": "Konsekuensi Pengakhiran",
+          "content": "Setelah pengakhiran akun:\nLisensi Anda untuk menggunakan Platform segera berakhir\nAnda harus segera menghentikan seluruh penggunaan Platform\nKami dapat menghapus atau membuat tidak dapat diakses konten dan data Anda, kecuali yang wajib disimpan untuk kepatuhan hukum\nHak dan kewajiban yang secara wajar dimaksudkan untuk tetap berlaku (termasuk Kekayaan Intelektual, Batasan Tanggung Jawab, Ganti Rugi, dan Penyelesaian Sengketa) akan tetap berlaku setelah pengakhiran",
+          "items": []
+        },
+        {
+          "number": "16.4",
+          "title": "Pemulihan Akun",
+          "content": "Jika akun ditangguhkan karena pelanggaran yang dapat diperbaiki, Anda dapat mengajukan pemulihan akun setelah memperbaiki pelanggaran tersebut\nKeputusan untuk memulihkan akun sepenuhnya berada di tangan Reserva\nAkun yang ditutup karena penipuan atau pelanggaran berat umumnya tidak dapat dipulihkan",
+          "items": []
+        },
+        {
+          "number": "16.5",
+          "title": "Tidak Ada Pengembalian Dana Otomatis",
+          "content": "Pengakhiran atau penangguhan akun tidak secara otomatis menghasilkan pengembalian dana untuk biaya yang sudah dibayarkan, kecuali:\nPengakhiran dilakukan oleh Reserva tanpa alasan yang sah\nDitentukan lain dalam perjanjian komersial terpisah\nDiwajibkan oleh hukum yang berlaku",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 17,
+      "title": "HUKUM YANG MENGATUR & PENYELESAIAN SENGKETA",
+      "subsections": [
+        {
+          "number": "17.1",
+          "title": "Hukum yang Mengatur",
+          "content": "Syarat & Ketentuan ini diatur oleh dan ditafsirkan sesuai dengan hukum Republik Indonesia, tanpa memperhatikan prinsip pertentangan hukum (conflict of laws).",
+          "items": []
+        },
+        {
+          "number": "17.2",
+          "title": "Yurisdiksi",
+          "content": "Untuk tujuan litigasi (jika diperlukan), para pihak tunduk pada yurisdiksi eksklusif pengadilan di Jakarta Pusat, Indonesia.",
+          "items": []
+        },
+        {
+          "number": "17.3",
+          "title": "Penyelesaian Sengketa Bertahap",
+          "content": "Langkah 1: Musyawarah (Negosiasi Informal)\nJika timbul sengketa, para pihak terlebih dahulu harus berupaya menyelesaikannya secara musyawarah melalui negosiasi informal\nPihak yang mengalami sengketa harus mengirimkan pemberitahuan tertulis kepada pihak lainnya yang menjelaskan sifat sengketa dan solusi yang diusulkan\nPara pihak akan beritikad baik untuk menyelesaikan sengketa dalam waktu 30 hari kalender sejak pemberitahuan tertulis\nLangkah 2: Mediasi (Opsional)\nJika musyawarah gagal, para pihak dapat sepakat untuk melakukan mediasi melalui mediator independen yang disepakati bersama\nBiaya mediasi akan ditanggung bersama secara proporsional\nMediasi bersifat sukarela dan tidak mengikat\nLangkah 3A: Arbitrase (untuk Sengketa B2B - Mitra) Jika musyawarah/mediasi gagal menyelesaikan sengketa antara **Reserva danMitra** (sengketa bisnis-ke-bisnis):\nSengketa akan diselesaikan secara final dan mengikat melalui arbitrase yang diselenggarakan oleh:\nBadan Arbitrase Nasional Indonesia (BANI) di Jakarta, atau\nLembaga arbitrase lain yang disepakati para pihak secara tertulis\nArbitrase akan dilakukan oleh satu arbiter (untuk sengketa dengan nilai klaim <Rp 500 juta) atau tiga arbiter (untuk sengketa â‰¥Rp 500 juta)\nBahasa arbitrase: Bahasa Indonesia\nHukum yang berlaku: Hukum Republik Indonesia\nPutusan arbitrase bersifat final dan mengikat para pihak dan tidak dapat diajukan banding\nBiaya arbitrase ditanggung sesuai keputusan arbiter\nLangkah 3B: Litigasi (untuk Sengketa dengan Pengguna Akhir/Konsumen) Untuk sengketa antara Reserva dan Pengguna Akhir (konsumen):\nPengguna Akhir memiliki hak untuk memilih antara:\nPenyelesaian melalui arbitrase (seperti dijelaskan di atas), ATAU\nMengajukan gugatan ke pengadilan yang berwenang sesuai dengan UU No. 8 Tahun 1999 tentang Perlindungan Konsumen\nKami tidak akan memaksa Pengguna Akhir untuk menyelesaikan sengketa konsumen melalui arbitrase jika mereka memilih jalur pengadilan\nPengguna Akhir juga dapat mengajukan pengaduan ke Badan Penyelesaian Sengketa Konsumen (BPSK) di wilayah hukum mereka",
+          "items": []
+        },
+        {
+          "number": "17.4",
+          "title": "Pengaduan dan Keluhan",
+          "content": "Sebelum mengajukan sengketa formal, kami mendorong Anda untuk menggunakan mekanisme pengaduan kami:\nUntuk Pengguna Akhir:\nðŸ“§ Email: reservaofficialig@gmail.com\nðŸ• Waktu respons target: 3x24 jam untuk pengaduan standar, 1x24 jam untuk pengaduan mendesak\nUntuk Mitra:\nðŸ“§ Email: reservaofficialig@gmail.com\nðŸ• Waktu respons target: 2 hari kerja\nProsedur Pengaduan:\nSampaikan keluhan Anda secara tertulis dengan detail yang jelas (nomor booking, tanggal, bukti pendukung)\nTim kami akan menyelidiki dan merespons dalam waktu yang ditentukan di atas\nJika tidak puas dengan respons awal, Anda dapat mengeskalasi ke manajer pengaduan senior\nKami akan berupaya menyelesaikan pengaduan dalam 14 hari kerja sejak penerimaan",
+          "items": []
+        },
+        {
+          "number": "17.5",
+          "title": "Pengecualian untuk Upaya Hukum Sementara",
+          "content": "Tidak ada dalam ketentuan penyelesaian sengketa ini yang menghalangi salah satu pihak untuk mengajukan permohonan upaya hukum sementara (injunctive relief) atau tindakan darurat ke pengadilan yang berwenang untuk:\nMencegah pelanggaran hak kekayaan intelektual\nMelindungi kerahasiaan informasi\nMenghentikan aktivitas ilegal yang mendesak",
+          "items": []
+        },
+        {
+          "number": "17.6",
+          "title": "Class Action Waiver (untuk Mitra)",
+          "content": "Untuk sengketa dengan Mitra, para pihak setuju bahwa:\nArbitrase atau litigasi akan dilakukan secara individual, bukan sebagai class action atau gugatan perwakilan kelompok\nKetentuan ini tidak berlaku untuk Pengguna Akhir (konsumen) yang memiliki hak untuk mengajukan gugatan class action sesuai hukum perlindungan konsumen",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 18,
+      "title": "PERUBAHAN SYARAT & KETENTUAN",
+      "subsections": [
+        {
+          "number": "18.1",
+          "title": "Hak Mengubah Syarat",
+          "content": "Kami berhak mengubah, memodifikasi, menambah, atau menghapus bagian dari Syarat & Ketentuan ini dari waktu ke waktu atas kebijakan kami sendiri.",
+          "items": []
+        },
+        {
+          "number": "18.2",
+          "title": "Pemberitahuan Perubahan",
+          "content": "Untuk setiap perubahan material terhadap Syarat ini, kami akan:\nMempublikasikan versi terbaru di Platform dengan tanggal berlaku yang jelas\nMengirimkan pemberitahuan melalui email ke alamat terdaftar Anda (untuk perubahan signifikan)\nDefinisi Perubahan Material: Perubahan yang secara signifikan mempengaruhi hak atau kewajiban Anda, termasuk:\nPerubahan batasan tanggung jawab atau disclaimer\nPerubahan mekanisme penyelesaian sengketa\nPerubahan kebijakan privasi atau penggunaan data yang substansial\nPerubahan struktur biaya untuk Mitra (kenaikan >20%)",
+          "items": []
+        },
+        {
+          "number": "18.3",
+          "title": "Persetujuan atas Perubahan",
+          "content": "Penggunaan Berkelanjutan:\nDengan terus mengakses atau menggunakan Platform setelah tanggal berlaku perubahan, Anda dianggap telah menerima dan menyetujui Syarat yang telah diubah\nHak Menolak (untuk Perubahan Material): Jika Anda tidak setuju dengan perubahan material:\nPengguna Akhir: Anda dapat berhenti menggunakan Platform dan menghapus akun Anda sebelum tanggal berlaku perubahan\nMitra: Anda dapat mengakhiri perjanjian komersial sesuai ketentuan pengakhiran yang berlaku, dan berhak atas pengembalian dana pro-rata untuk biaya berlangganan yang sudah dibayar (untuk periode setelah tanggal berlaku perubahan)",
+          "items": []
+        },
+        {
+          "number": "18.4",
+          "title": "Perubahan Hukum atau Regulasi",
+          "content": "Jika terjadi perubahan hukum, regulasi, atau perintah pengadilan yang mengharuskan kami mengubah Syarat ini:\nKami dapat melakukan perubahan dengan periode pemberitahuan yang lebih singkat atau tanpa pemberitahuan jika diperlukan untuk kepatuhan segera\nKami akan menjelaskan dasar hukum perubahan tersebut dalam pemberitahuan (jika memungkinkan)",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 19,
+      "title": "KETENTUAN UMUM",
+      "subsections": [
+        {
+          "number": "19.1",
+          "title": "Keterpisahan (Severability)",
+          "content": "Jika ada ketentuan dalam Syarat ini yang dinyatakan tidak sah, ilegal, atau tidak dapat dilaksanakan oleh pengadilan yang berwenang, ketentuan tersebut akan:\nDipisahkan dari Syarat ini tanpa mempengaruhi keabsahan ketentuan lainnya\nDiganti dengan ketentuan yang sah dan dapat dilaksanakan yang paling mendekati maksud dan tujuan ekonomi dari ketentuan asli",
+          "items": []
+        },
+        {
+          "number": "19.2",
+          "title": "Keseluruhan Perjanjian",
+          "content": "Syarat & Ketentuan ini (bersama dengan Kebijakan Privasi dan perjanjian tambahan yang dirujuk di sini) merupakan:\nKeseluruhan perjanjian antara Anda dan Reserva terkait penggunaan Platform\nMenggantikan seluruh perjanjian, pemahaman, atau komunikasi sebelumnya, baik lisan maupun tertulis\nUntuk Mitra: Jika terdapat konflik antara Syarat ini dengan perjanjian komersial terpisah yang Anda tandatangani, perjanjian komersial tersebut yang akan berlaku.",
+          "items": []
+        },
+        {
+          "number": "19.3",
+          "title": "Tidak Ada Pengesampingan (No Waiver)",
+          "content": "Kegagalan atau penundaan kami dalam melaksanakan atau menegakkan hak atau ketentuan apa pun dalam Syarat ini tidak akan dianggap sebagai pengesampingan atas hak atau ketentuan tersebut.\nPengesampingan hanya sah jika:\nDilakukan secara tertulis\nDitandatangani oleh pejabat yang berwenang dari Reserva",
+          "items": []
+        },
+        {
+          "number": "19.4",
+          "title": "Pengalihan (Assignment)",
+          "content": "Oleh Anda:\nAnda tidak boleh mengalihkan, mentransfer, atau mendelegasikan hak atau kewajiban Anda berdasarkan Syarat ini tanpa persetujuan tertulis sebelumnya dari Reserva\nSetiap upaya pengalihan yang tidak sah akan dianggap batal demi hukum\nOleh Reserva:\nKami dapat mengalihkan hak dan kewajiban kami berdasarkan Syarat ini kepada afiliasi, penerus, atau pihak ketiga tanpa persetujuan Anda dalam hal:\nMerger, akuisisi, atau penjualan aset\nRestrukturisasi perusahaan\nPengalihan kepada entitas yang mampu melaksanakan kewajiban kami\nKami akan memberitahu Anda tentang pengalihan material melalui email atau notifikasi Platform",
+          "items": []
+        },
+        {
+          "number": "19.5",
+          "title": "Hubungan Para Pihak",
+          "content": "Tidak ada dalam Syarat ini yang:\nMenciptakan kemitraan, joint venture, keagenan, atau hubungan kerja antara Anda dan Reserva\nMemberikan kewenangan kepada Anda untuk mengikat Reserva dalam perjanjian apa pun dengan pihak ketiga\nAnda dan Reserva adalah kontraktor independen.",
+          "items": []
+        },
+        {
+          "number": "19.6",
+          "title": "Pihak Ketiga (Third Party Beneficiaries)",
+          "content": "Kecuali dinyatakan secara tegas dalam Syarat ini:\nTidak ada pihak ketiga yang memiliki hak untuk menegakkan ketentuan apa pun dalam Syarat ini\nDirektur, karyawan, afiliasi, dan penyedia layanan Reserva yang disebutkan dalam Syarat ini berhak untuk menegakkan ketentuan yang memberikan perlindungan kepada mereka (misalnya, batasan tanggung jawab dan ganti rugi)",
+          "items": []
+        },
+        {
+          "number": "19.7",
+          "title": "Kelangsungan Hidup (Survival)",
+          "content": "Ketentuan-ketentuan berikut akan tetap berlaku setelah pengakhiran atau kedaluwarsa Syarat ini:\nDefinisi (Pasal 1)\nHak Kekayaan Intelektual (Pasal 12)\nDisclaimer (Pasal 13)\nBatasan Tanggung Jawab (Pasal 14)\nGanti Rugi (Pasal 15)\nHukum yang Mengatur & Penyelesaian Sengketa (Pasal 17)\nKetentuan Umum (Pasal 19)\nSerta ketentuan lain yang secara wajar dimaksudkan untuk tetap berlaku",
+          "items": []
+        },
+        {
+          "number": "19.8",
+          "title": "Penafsiran",
+          "content": "Dalam Syarat ini:\nJudul pasal hanya untuk kemudahan referensi dan tidak mempengaruhi penafsiran\nKata-kata dalam bentuk tunggal mencakup bentuk jamak dan sebaliknya\nRujukan kepada \"termasuk\" atau \"termasuk namun tidak terbatas pada\" bersifat ilustratif dan tidak membatasi\nRujukan kepada \"hari\" berarti hari kalender kecuali dinyatakan sebagai \"hari kerja\"\n\"Hari kerja\" berarti Senin-Jumat (tidak termasuk hari libur nasional Indonesia)",
+          "items": []
+        },
+        {
+          "number": "19.9",
+          "title": "Bahasa",
+          "content": "Syarat ini tersedia dalam Bahasa Indonesia dan mungkin diterjemahkan ke bahasa lain untuk kemudahan. Jika terdapat inkonsistensi atau perbedaan penafsiran, versi Bahasa Indonesia yang akan berlaku.",
+          "items": []
+        },
+        {
+          "number": "19.10",
+          "title": "Pemberitahuan",
+          "content": "Pemberitahuan kepada Anda akan dikirim melalui:\nEmail ke alamat terdaftar di akun Anda\nNotifikasi push melalui Aplikasi Pelanggan\nPengumuman di Platform\nPemberitahuan kepada Reserva harus dikirim ke: ðŸ“§ Email: reservaofficialig@gmail.com\nPemberitahuan dianggap telah diterima:\nEmail: 24 jam setelah dikirim (kecuali ada notifikasi bounce-back)\nSurat tercatat: 3 hari kerja setelah pengiriman tercatat",
+          "items": []
+        },
+        {
+          "number": "19.11",
+          "title": "Kepatuhan terhadap Hukum",
+          "content": "Anda setuju untuk menggunakan Platform sesuai dengan:\nSyarat & Ketentuan ini\nSeluruh hukum dan peraturan yang berlaku di Indonesia\nStandar etika dan profesional yang relevan untuk industri Anda (khusus untuk Mitra)",
+          "items": []
+        },
+        {
+          "number": "19.12",
+          "title": "Pembaruan Informasi Kontak",
+          "content": "Anda bertanggung jawab untuk:\nMenjaga informasi kontak Anda tetap akurat dan terkini\nMemeriksa email dan notifikasi Platform secara berkala\nMemperbarui informasi jika terjadi perubahan\nKami tidak bertanggung jawab jika pemberitahuan tidak sampai kepada Anda karena informasi kontak yang tidak akurat.",
+          "items": []
+        }
+      ]
+    },
+    {
+      "number": 20,
+      "title": "PERNYATAAN PENUTUP",
+      "subsections": [],
+      "content": "Dengan menggunakan Platform Reserva, Anda mengakui bahwa:\nAnda telah membaca dan memahami Syarat & Ketentuan ini secara keseluruhan\nAnda telah diberi kesempatan yang cukup untuk meninjau Syarat ini dan berkonsultasi dengan penasihat hukum jika diperlukan\nAnda menyetujui untuk terikat pada seluruh ketentuan yang tercantum dalam dokumen ini\nAnda memahami hak dan kewajiban Anda, termasuk batasan tanggung jawab Reserva\nAnda memahami bahwa Reserva adalah platform teknologi dan bukan penyedia layanan profesional yang ditawarkan melalui Platform\nKami berkomitmen untuk menyediakan platform yang aman, andal, dan transparan untuk menghubungkan Pengguna dengan penyedia layanan berkualitas. Terima kasih atas kepercayaan Anda menggunakan Reserva."
+    }
+  ]
+}
