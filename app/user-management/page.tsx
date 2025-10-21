@@ -63,8 +63,12 @@ const ROLES = [
 const EMPLOYMENT_TYPES = [
   { value: "full_time", label: "Full Time" },
   { value: "part_time", label: "Part Time" },
-  { value: "contractor", label: "Contractor" },
+  { value: "contract", label: "Contract" },
+  { value: "freelance", label: "Freelance" },
+  { value: "intern", label: "Intern" },
 ]
+
+
 
 export default function UserManagementPage() {
   const router = useRouter()

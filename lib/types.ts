@@ -24,7 +24,7 @@ export interface Staff {
   phone?: string
   position: string
   role?: string // For backward compatibility
-  employment_type?: 'full_time' | 'part_time' | 'contractor'
+  employment_type?: 'full_time' | 'part_time' | 'contract' | 'freelance' | 'intern'
   employee_id?: string
   hire_date?: string
   birth_date?: string
