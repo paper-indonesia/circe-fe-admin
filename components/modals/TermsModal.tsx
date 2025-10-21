@@ -54,20 +54,6 @@ export function TermsModal({ open, onOpenChange }: TermsModalProps) {
         <div className="flex-1 overflow-hidden bg-gradient-to-b from-gray-50 to-white">
           <div className="h-full overflow-y-auto px-8 py-6">
             <TNCSections />
-
-            {/* Contact Info */}
-            <div className="mt-8 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
-              <h4 className="font-semibold text-gray-900 mb-2">Ada Pertanyaan?</h4>
-              <p className="text-sm text-gray-600 mb-3">
-                Jika ada pertanyaan terkait Terms & Conditions ini, silakan hubungi kami:
-              </p>
-              <a
-                href="mailto:reservaofficialig@gmail.com"
-                className="text-purple-600 hover:text-purple-700 font-semibold text-sm"
-              >
-                reservaofficialig@gmail.com
-              </a>
-            </div>
           </div>
         </div>
 

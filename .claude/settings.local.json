@@ -51,7 +51,14 @@
       "Bash(powershell -Command \"\nGet-Content ''C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\tnc.md'' | Out-File -FilePath ''C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\tnc-raw.txt'' -Encoding UTF8\n\")",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(powershell -Command \"\n# Check if build is still running\nps | Where-Object {$_ProcessName -eq ''node''} | Select-Object Id, ProcessName, StartTime | Format-Table\n\")"
+      "Bash(powershell -Command \"\n# Check if build is still running\nps | Where-Object {$_ProcessName -eq ''node''} | Select-Object Id, ProcessName, StartTime | Format-Table\n\")",
+      "Bash(node --version:*)",
+      "Bash(node scripts/parse-tnc.js:*)",
+      "Bash(node -e:*)",
+      "Bash(git rm:*)",
+      "Bash(cat:*)",
+      "Bash(git restore:*)",
+      "Bash(node scripts/parse-privacy.js:*)"
     ],
     "deny": [],
     "ask": []
