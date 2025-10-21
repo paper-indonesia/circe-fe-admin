@@ -14,14 +14,39 @@
       "number": 2,
       "title": "Data Pribadi yang Kami Kumpulkan",
       "intro": "",
-      "items": [
-        "**Data dari pihak ketiga**",
-        "Penyedia pembayaran: status pembayaran/token, data kartu termasking, status VA, konfirmasi e‑wallet/QRIS (kami tidak menyimpan nomor kartu penuh).",
-        "Penyedia identitas & pesan: status OTP/verifikasi, status pengiriman WhatsApp/SMS.",
-        "Mitra (Outlet): riwayat booking, paket/keanggotaan, invoice/struk, catatan perawatan (sesuai konfigurasi Mitra).",
-        "Data sensitif. Dalam konteks klinis/medis, Mitra dapat mencatat informasi yang diperlukan untuk layanan (mis. kontraindikasi). Mitra bertanggung jawab memperoleh persetujuan yang sah dan mematuhi hukum kesehatan/privasi. Reserva memproses data tersebut hanya atas instruksi Mitra."
-      ],
-      "conclusion": ""
+      "items": [],
+      "conclusion": "",
+      "subsections": [
+        {
+          "letter": "a",
+          "title": "Data yang Anda berikan",
+          "items": [
+            "Data akun: nama, email, nomor ponsel, kata sandi (hash), foto profil, jenis kelamin/tanggal lahir (opsional).",
+            "Data pemesanan: layanan/outlet/staf yang dipilih, tanggal/waktu, catatan/alergi (opsional), berkas/formulir persetujuan (jika diaktifkan).",
+            "Dukungan pelanggan: pesan, lampiran, umpan balik, skor kepuasan.",
+            "Pengguna admin: peran, jabatan, ID karyawan, bidang payroll (opsional), keahlian/sertifikasi, jadwal."
+          ]
+        },
+        {
+          "letter": "b",
+          "title": "Data yang dikumpulkan otomatis",
+          "items": [
+            "Data perangkat & penggunaan: versi aplikasi, OS/peramban, pengenal perangkat, alamat IP, stempel waktu, log crash, metrik fitur.",
+            "Cookie/SDK: cookie sesi, analitik, preferensi; pengenal seluler untuk push notification.",
+            "Lokasi perkiraan: dari IP atau perizinan lokasi untuk fitur seperti outlet terdekat/peta."
+          ]
+        },
+        {
+          "letter": "c",
+          "title": "Data dari pihak ketiga",
+          "items": [
+            "Penyedia pembayaran: status pembayaran/token, data kartu termasking, status VA, konfirmasi e‑wallet/QRIS (kami tidak menyimpan nomor kartu penuh).",
+            "Penyedia identitas & pesan: status OTP/verifikasi, status pengiriman WhatsApp/SMS.",
+            "Mitra (Outlet): riwayat booking, paket/keanggotaan, invoice/struk, catatan perawatan (sesuai konfigurasi Mitra).",
+            "Data sensitif. Dalam konteks klinis/medis, Mitra dapat mencatat informasi yang diperlukan untuk layanan (mis. kontraindikasi). Mitra bertanggung jawab memperoleh persetujuan yang sah dan mematuhi hukum kesehatan/privasi. Reserva memproses data tersebut hanya atas instruksi Mitra."
+          ]
+        }
+      ]
     },
     {
       "number": 3,

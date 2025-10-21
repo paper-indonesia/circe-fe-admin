@@ -121,11 +121,20 @@ for (let i = 0; i < lines.length; i++) {
     // Save previous section
     if (currentSection) {
       if (bufferLines.length > 0) {
-        const rawContent = bufferLines.join('\n').trim();
-        const parsed = parseSectionContent(rawContent);
-        currentSection.intro = parsed.intro;
-        currentSection.items = parsed.items;
-        currentSection.conclusion = parsed.conclusion;
+        if (currentSection.subsections && currentSection.subsections.length > 0) {
+          // Save last subsection content
+          const lastSubsection = currentSection.subsections[currentSection.subsections.length - 1];
+          const rawContent = bufferLines.join('\n').trim();
+          const lines = rawContent.split('\n').map(l => l.trim()).filter(l => l);
+          lastSubsection.items = lines;
+        } else {
+          // No subsections, parse as normal
+          const rawContent = bufferLines.join('\n').trim();
+          const parsed = parseSectionContent(rawContent);
+          currentSection.intro = parsed.intro;
+          currentSection.items = parsed.items;
+          currentSection.conclusion = parsed.conclusion;
+        }
         bufferLines = [];
       }
       privacyData.sections.push(currentSection);
@@ -144,22 +153,37 @@ for (let i = 0; i < lines.length; i++) {
   // Detect subsection (e.g., "a) Data yang Anda berikan", "b) Data yang dikumpulkan")
   const subsectionMatch = line.match(/^([a-z])\)\s+(.+)$/);
   if (subsectionMatch && currentSection) {
-    // If we have a subsection, we need to store it as a separate structure
-    // For simplicity, let's treat subsections as items with titles
-    if (bufferLines.length > 0) {
-      // There's content before this subsection, parse it first
+    // If we have a subsection, save previous content first
+    if (bufferLines.length > 0 && !currentSection.intro && !currentSection.subsections) {
+      // There's intro content before first subsection
       const rawContent = bufferLines.join('\n').trim();
       const parsed = parseSectionContent(rawContent);
-      if (!currentSection.intro) {
-        currentSection.intro = parsed.intro;
-        currentSection.items = parsed.items;
-        currentSection.conclusion = parsed.conclusion;
+      currentSection.intro = parsed.intro;
+      currentSection.items = parsed.items;
+      currentSection.conclusion = parsed.conclusion;
+      bufferLines = [];
+    } else if (bufferLines.length > 0 && currentSection.subsections) {
+      // Save previous subsection content
+      const lastSubsection = currentSection.subsections[currentSection.subsections.length - 1];
+      if (lastSubsection) {
+        const rawContent = bufferLines.join('\n').trim();
+        const lines = rawContent.split('\n').map(l => l.trim()).filter(l => l);
+        lastSubsection.items = lines;
       }
       bufferLines = [];
     }
 
-    // Start collecting subsection content
-    bufferLines.push(`**${subsectionMatch[2]}**`); // Mark as bold heading
+    // Create subsections array if it doesn't exist
+    if (!currentSection.subsections) {
+      currentSection.subsections = [];
+    }
+
+    // Add new subsection
+    currentSection.subsections.push({
+      letter: subsectionMatch[1],
+      title: subsectionMatch[2],
+      items: []
+    });
     continue;
   }
 
@@ -172,11 +196,20 @@ for (let i = 0; i < lines.length; i++) {
 // Save last section
 if (currentSection) {
   if (bufferLines.length > 0) {
-    const rawContent = bufferLines.join('\n').trim();
-    const parsed = parseSectionContent(rawContent);
-    currentSection.intro = parsed.intro;
-    currentSection.items = parsed.items;
-    currentSection.conclusion = parsed.conclusion;
+    if (currentSection.subsections && currentSection.subsections.length > 0) {
+      // Save last subsection content
+      const lastSubsection = currentSection.subsections[currentSection.subsections.length - 1];
+      const rawContent = bufferLines.join('\n').trim();
+      const lines = rawContent.split('\n').map(l => l.trim()).filter(l => l);
+      lastSubsection.items = lines;
+    } else {
+      // No subsections, parse as normal
+      const rawContent = bufferLines.join('\n').trim();
+      const parsed = parseSectionContent(rawContent);
+      currentSection.intro = parsed.intro;
+      currentSection.items = parsed.items;
+      currentSection.conclusion = parsed.conclusion;
+    }
   }
   privacyData.sections.push(currentSection);
 }
@@ -194,9 +227,16 @@ const section2 = privacyData.sections.find(s => s.number === 2);
 if (section2) {
   console.log('\n📋 Sample - Section 2:');
   console.log('Title:', section2.title);
-  console.log('Intro:', section2.intro ? section2.intro.substring(0, 50) + '...' : 'N/A');
-  console.log('Items:', section2.items.length, 'items');
-  if (section2.items.length > 0) {
-    console.log('First item:', section2.items[0].substring(0, 60) + '...');
+  if (section2.subsections && section2.subsections.length > 0) {
+    console.log('Subsections:', section2.subsections.length);
+    section2.subsections.forEach((sub, idx) => {
+      console.log(`  ${sub.letter}) ${sub.title} - ${sub.items.length} items`);
+      if (sub.items.length > 0) {
+        console.log(`     First: ${sub.items[0].substring(0, 50)}...`);
+      }
+    });
+  } else {
+    console.log('Intro:', section2.intro ? section2.intro.substring(0, 50) + '...' : 'N/A');
+    console.log('Items:', section2.items ? section2.items.length : 0, 'items');
   }
 }
