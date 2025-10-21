@@ -27,6 +27,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { Shield, UserPlus, Edit, Trash2, Search, Loader2, Mail, User, Lock, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { motion } from "framer-motion"
 
