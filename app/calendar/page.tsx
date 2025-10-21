@@ -1432,7 +1432,7 @@ export default function CalendarPage() {
                             {dayRevenue > 0 && (
                               <div className="pt-1 mt-1 border-t border-gray-200">
                                 <div className="text-xs font-semibold text-gray-700 flex items-center gap-1">
-                                  <DollarSign className="h-3 w-3" />
+                               
                                   {formatCurrency(dayRevenue)}
                                 </div>
                               </div>
