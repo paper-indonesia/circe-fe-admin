@@ -980,6 +980,8 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
+          {/* HIDDEN: Satisfaction Rate - Will be enabled when customer-side rating system is enhanced */}
+          {false && (
           <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-yellow-500/20 hover:border-yellow-500/40 hover:-translate-y-1">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400/20 to-yellow-600/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-300" />
             <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1013,6 +1015,7 @@ export default function ReportsPage() {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
 
         {/* Main Charts Grid */}
@@ -1164,7 +1167,8 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
-          {/* Staff Performance Matrix */}
+          {/* HIDDEN: Staff Performance Matrix - Not needed yet */}
+          {false && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -1235,6 +1239,7 @@ export default function ReportsPage() {
               )}
             </CardContent>
           </Card>
+          )}
 
           {/* Time Slot Analysis */}
           <Card>
@@ -1277,7 +1282,8 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
-          {/* Customer Demographics */}
+          {/* HIDDEN: Customer Demographics - Not needed yet */}
+          {false && (
           <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10">
             <CardHeader className="bg-gradient-to-r from-orange-50/50 to-yellow-50/50 dark:from-orange-950/20 dark:to-yellow-950/20 rounded-t-lg">
               <CardTitle className="flex items-center gap-2">
@@ -1352,8 +1358,10 @@ export default function ReportsPage() {
               )}
             </CardContent>
           </Card>
+          )}
 
-          {/* Payment Methods */}
+          {/* HIDDEN: Payment Methods - Some CC payments not reflected correctly */}
+          {false && (
           <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10">
             <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-t-lg">
               <CardTitle className="flex items-center gap-2">
@@ -1430,9 +1438,11 @@ export default function ReportsPage() {
               )}
             </CardContent>
           </Card>
+          )}
         </div>
 
-        {/* Quick Stats */}
+        {/* HIDDEN: Performance Metrics Overall - Hide until needed */}
+        {false && (
         <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1487,6 +1497,7 @@ export default function ReportsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Export Section */}
         <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/50">
@@ -1524,6 +1535,8 @@ export default function ReportsPage() {
                 </div>
               </Button>
 
+              {/* HIDDEN: Staff Report Export - No rating system yet */}
+              {false && (
               <Button
                 onClick={() => handleExport("staff")}
                 className="h-auto py-4 flex flex-col items-center gap-2"
@@ -1535,6 +1548,7 @@ export default function ReportsPage() {
                   <p className="text-xs text-muted-foreground">Individual metrics</p>
                 </div>
               </Button>
+              )}
               
               <div className="flex gap-2">
                 <Button
@@ -1558,8 +1572,8 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        {/* Customer Analytics Summary */}
-        {!loadingCustomerStats && customerStatistics && (
+        {/* HIDDEN: Customer Analytics Summary - Data not fetching correctly yet */}
+        {false && !loadingCustomerStats && customerStatistics && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Customer Analytics</h2>
