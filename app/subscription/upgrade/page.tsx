@@ -131,9 +131,13 @@ export default function UpgradePage() {
     const planId = plan.plan
 
     if (planId === "enterprise") {
+      // Redirect to WhatsApp for Enterprise plan inquiry
+      const whatsappUrl = "https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20tertarik%20untuk%20enterprise%20plan"
+      window.open(whatsappUrl, '_blank')
+
       toast({
-        title: "Contact Sales",
-        description: "Please contact our sales team for Enterprise pricing.",
+        title: "Opening WhatsApp",
+        description: "Redirecting you to our sales team on WhatsApp...",
       })
       return
     }
@@ -498,7 +502,14 @@ export default function UpgradePage() {
               <p className="text-gray-600 mb-4">
                 Our team is here to help you find the perfect plan for your business needs.
               </p>
-              <Button variant="outline" className="border-[#C8B6FF] text-[#B8C0FF] hover:bg-[#C8B6FF]/10">
+              <Button
+                variant="outline"
+                className="border-[#C8B6FF] text-[#B8C0FF] hover:bg-[#C8B6FF]/10"
+                onClick={() => {
+                  const whatsappUrl = "https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20tertarik%20untuk%20enterprise%20plan"
+                  window.open(whatsappUrl, '_blank')
+                }}
+              >
                 Contact Support
               </Button>
             </div>
