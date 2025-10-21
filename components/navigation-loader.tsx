@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { PageLoader } from './ui/page-loader'
+import { LoadingOverlay } from './ui/loading-overlay'
 
 export function NavigationLoader() {
   const pathname = usePathname()
@@ -32,6 +32,12 @@ export function NavigationLoader() {
       setLoadingText('Loading Withdrawal')
     } else if (pathname.includes('/settings')) {
       setLoadingText('Loading Settings')
+    } else if (pathname.includes('/user-management')) {
+      setLoadingText('Loading Users')
+    } else if (pathname.includes('/outlet-management')) {
+      setLoadingText('Loading Outlets')
+    } else if (pathname.includes('/availability')) {
+      setLoadingText('Loading Availability')
     } else {
       setLoadingText('Loading')
     }
@@ -39,12 +45,10 @@ export function NavigationLoader() {
     // Hide loader after a short delay to allow page to render
     const timer = setTimeout(() => {
       setIsLoading(false)
-    }, 500)
+    }, 400)
 
     return () => clearTimeout(timer)
   }, [pathname])
 
-  if (!isLoading) return null
-
-  return <PageLoader text={loadingText} />
+  return <LoadingOverlay show={isLoading} text={loadingText} />
 }
