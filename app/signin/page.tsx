@@ -12,6 +12,7 @@ import Link from "next/link"
 import GradientLoading from "@/components/gradient-loading"
 import { TermsModal } from "@/components/modals/TermsModal"
 import { PrivacyModal } from "@/components/modals/PrivacyModal"
+import { getBusinessTypeTemplates } from "@/lib/business-type-templates"
 
 interface Tenant {
   id: string
@@ -38,6 +39,102 @@ export default function SignInPage() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Helper function to setup business type templates on first login
+  const setupBusinessTypeTemplates = async (tenantId: string, outlets: any[]) => {
+    try {
+      // First login detection: Check if user has NO outlets yet
+      // If user has outlets, they've already completed onboarding
+      if (outlets && outlets.length > 0) {
+        console.log('User already has outlets, skipping template setup')
+        localStorage.removeItem('pending_template_setup') // Cleanup if exists
+        return
+      }
+
+      console.log('First login detected (no outlets yet), checking for business type...')
+
+      // Try to get business type from localStorage (if signup was recent)
+      const pendingSetup = localStorage.getItem('pending_template_setup')
+      let businessType = null
+
+      if (pendingSetup) {
+        const setupData = JSON.parse(pendingSetup)
+
+        // Check if this is within 30 days of registration (extended window)
+        const setupTimestamp = new Date(setupData.timestamp).getTime()
+        const now = new Date().getTime()
+        const daysSinceSignup = (now - setupTimestamp) / (1000 * 60 * 60 * 24)
+
+        if (daysSinceSignup <= 30) {
+          businessType = setupData.business_type
+          console.log('Found business type from recent signup:', businessType)
+        } else {
+          // Expired, clean up
+          localStorage.removeItem('pending_template_setup')
+          console.log('Signup data expired (>30 days), skipping template setup')
+          return
+        }
+      }
+
+      // If no business type found, fetch from tenant settings
+      if (!businessType) {
+        console.log('No business type in localStorage, fetching from tenant...')
+        try {
+          const tenantResponse = await fetch('/api/tenants/current', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          })
+
+          if (tenantResponse.ok) {
+            const tenantData = await tenantResponse.json()
+            businessType = tenantData.settings?.business_type || tenantData.business_type
+            console.log('Found business type from tenant:', businessType)
+          }
+        } catch (err) {
+          console.error('Failed to fetch tenant business type:', err)
+        }
+      }
+
+      // If still no business type, skip setup
+      if (!businessType) {
+        console.log('No business type available, skipping template setup')
+        return
+      }
+
+      // Get templates for business type
+      const templates = getBusinessTypeTemplates(businessType)
+
+      console.log('Setting up business type templates for:', businessType)
+      console.log('Templates:', templates)
+
+      // Update tenant with templates using internal API route (handles auth automatically)
+      const updateResponse = await fetch('/api/tenants/current', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          settings: {
+            staff_position_templates: templates.staff_position_templates,
+            service_category_templates: templates.service_category_templates,
+          },
+        }),
+      })
+
+      if (updateResponse.ok) {
+        console.log('✅ Successfully setup business type templates')
+        // Clean up after successful setup
+        localStorage.removeItem('pending_template_setup')
+      } else {
+        const errorText = await updateResponse.text()
+        console.error('❌ Failed to setup templates:', errorText)
+      }
+    } catch (error) {
+      console.error('Error setting up templates:', error)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -81,6 +178,11 @@ export default function SignInPage() {
         }
 
         console.log("Login successful! User:", data.user, "Tenant:", data.tenant)
+
+        // Setup business type templates if this is first login (no outlets yet)
+        if (data.tenant?.id) {
+          await setupBusinessTypeTemplates(data.tenant.id, data.outlets || [])
+        }
 
         console.log("Redirecting to dashboard")
 
@@ -129,6 +231,12 @@ export default function SignInPage() {
         }
 
         console.log("Login successful with tenant:", data.tenant)
+
+        // Setup business type templates if this is first login (no outlets yet)
+        if (data.tenant?.id) {
+          await setupBusinessTypeTemplates(data.tenant.id, data.outlets || [])
+        }
+
         window.location.replace('/dashboard')
       } else {
         setError(data.error || "Failed to complete login")

@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Check, ChevronRight, ChevronLeft, Building2, Users, Package, Calendar } from "lucide-react"
+import { Check, ChevronRight, ChevronLeft, Building2, Users, Package, Calendar, Briefcase, Layers } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
 import { OutletSetupStep } from "./onboarding-steps/outlet-setup"
@@ -170,7 +170,7 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
               <h2 className="text-2xl font-bold text-gray-900 truncate">
                 Setup Awal Sistem
               </h2>
-              <p className="text-sm text-gray-600 mt-1 truncate">Lengkapi 3 langkah berikut agar siap melakukan booking</p>
+              <p className="text-sm text-gray-600 mt-1 truncate">Lengkapi {STEPS.length} langkah berikut agar siap melakukan booking</p>
             </div>
 
             {/* Center: Stepper (one line on desktop) */}

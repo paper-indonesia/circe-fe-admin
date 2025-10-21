@@ -17,63 +17,85 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { TermsModal } from "@/components/modals/TermsModal"
 import { PrivacyModal } from "@/components/modals/PrivacyModal"
+import { getBusinessTypeTemplates } from "@/lib/business-type-templates"
 
 const BUSINESS_TYPES = [
   {
-    value: "beauty",
-    label: "Beauty & Wellness",
+    value: "beauty_salon",
+    label: "Beauty Salon",
     icon: Sparkles,
     gradient: "from-pink-500 via-rose-500 to-pink-600",
-    description: "Clinics & wellness centers"
+    description: "Salon kecantikan"
   },
   {
-    value: "education",
-    label: "Education",
-    icon: GraduationCap,
-    gradient: "from-blue-500 via-cyan-500 to-blue-600",
-    description: "Tutoring & learning centers"
-  },
-  {
-    value: "consulting",
-    label: "Consulting",
-    icon: Briefcase,
-    gradient: "from-purple-500 via-indigo-500 to-purple-600",
-    description: "Professional services"
-  },
-  {
-    value: "fitness",
-    label: "Fitness",
-    icon: Dumbbell,
-    gradient: "from-orange-500 via-amber-500 to-orange-600",
-    description: "Gyms & training studios"
-  },
-  {
-    value: "healthcare",
-    label: "Healthcare",
-    icon: Heart,
-    gradient: "from-green-500 via-emerald-500 to-green-600",
-    description: "Medical & health services"
-  },
-  {
-    value: "salon",
-    label: "Salon",
+    value: "hair_salon",
+    label: "Hair Salon",
     icon: Scissors,
     gradient: "from-fuchsia-500 via-pink-500 to-fuchsia-600",
-    description: "Hair & beauty salons"
+    description: "Salon rambut"
   },
   {
     value: "spa",
     label: "Spa & Massage",
     icon: Waves,
     gradient: "from-teal-500 via-cyan-500 to-teal-600",
-    description: "Spa & relaxation"
+    description: "Spa & pijat"
   },
   {
-    value: "custom",
+    value: "nail_salon",
+    label: "Nail Salon",
+    icon: Sparkles,
+    gradient: "from-purple-500 via-indigo-500 to-purple-600",
+    description: "Salon kuku & nail art"
+  },
+  {
+    value: "barber_shop",
+    label: "Barber Shop",
+    icon: Scissors,
+    gradient: "from-orange-500 via-amber-500 to-orange-600",
+    description: "Pangkas rambut pria"
+  },
+  {
+    value: "medical_spa",
+    label: "Medical Spa",
+    icon: Heart,
+    gradient: "from-green-500 via-emerald-500 to-green-600",
+    description: "Klinik kecantikan"
+  },
+  {
+    value: "aesthetic_clinic",
+    label: "Aesthetic Clinic",
+    icon: Heart,
+    gradient: "from-blue-500 via-cyan-500 to-blue-600",
+    description: "Klinik estetika"
+  },
+  {
+    value: "wellness_center",
+    label: "Wellness Center",
+    icon: Dumbbell,
+    gradient: "from-emerald-500 via-green-500 to-emerald-600",
+    description: "Pusat kesehatan"
+  },
+  {
+    value: "makeup_studio",
+    label: "Makeup Studio",
+    icon: Sparkles,
+    gradient: "from-rose-500 via-pink-500 to-rose-600",
+    description: "Studio makeup"
+  },
+  {
+    value: "tattoo_studio",
+    label: "Tattoo & Piercing",
+    icon: Briefcase,
+    gradient: "from-gray-700 via-slate-700 to-gray-800",
+    description: "Studio tattoo & piercing"
+  },
+  {
+    value: "other",
     label: "Other",
     icon: Settings2,
     gradient: "from-gray-500 via-slate-500 to-gray-600",
-    description: "Custom business type"
+    description: "Tipe bisnis lainnya"
   },
 ]
 
@@ -412,7 +434,7 @@ export default function SignUpPage() {
     setSuccess("")
 
     try {
-      // Call FastAPI registration endpoint
+      // Step 1: Call FastAPI registration endpoint
       const response = await fetch('https://circe-fastapi-backend-740443181568.europe-west1.run.app/api/v1/public/register', {
         method: 'POST',
         headers: {
@@ -439,6 +461,16 @@ export default function SignUpPage() {
       const data = await response.json()
 
       if (response.ok) {
+        // Store business type and tenant info for first login setup
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('pending_template_setup', JSON.stringify({
+            business_type: formData.business_type,
+            tenant_id: data.tenant_id,
+            email: formData.business_email,
+            timestamp: new Date().toISOString()
+          }))
+        }
+
         setSuccess(data.message || "Registration successful! Redirecting to sign in...")
 
         // Redirect to sign in page after 2 seconds

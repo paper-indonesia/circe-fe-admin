@@ -47,12 +47,22 @@ interface AvailabilityData {
   recurrence_days?: number[]
 }
 
+interface TemplateData {
+  id: string
+  name: string
+  description?: string
+  is_default?: boolean
+  is_selected?: boolean
+}
+
 interface OnboardingProgress {
   outlets: OutletData[]
   users: UserData[]
   products: ProductData[]
   staff: StaffData[]
   availabilities: AvailabilityData[]
+  staffPositionTemplates: TemplateData[]
+  serviceCategoryTemplates: TemplateData[]
   currentStep: number
   isCompleted: boolean
 }
@@ -64,6 +74,8 @@ interface OnboardingContextType {
   addProduct: (product: ProductData) => void
   addStaff: (staff: StaffData) => void
   addAvailability: (availability: AvailabilityData) => void
+  setStaffPositionTemplates: (templates: TemplateData[]) => void
+  setServiceCategoryTemplates: (templates: TemplateData[]) => void
   setCurrentStep: (step: number) => void
   completeOnboarding: () => Promise<void>
   resetOnboarding: () => void
@@ -83,6 +95,8 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
     products: [],
     staff: [],
     availabilities: [],
+    staffPositionTemplates: [],
+    serviceCategoryTemplates: [],
     currentStep: 1,
     isCompleted: false,
   })
@@ -162,6 +176,20 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
     }))
   }
 
+  const setStaffPositionTemplates = (templates: TemplateData[]) => {
+    setProgress((prev) => ({
+      ...prev,
+      staffPositionTemplates: templates,
+    }))
+  }
+
+  const setServiceCategoryTemplates = (templates: TemplateData[]) => {
+    setProgress((prev) => ({
+      ...prev,
+      serviceCategoryTemplates: templates,
+    }))
+  }
+
   const setCurrentStep = (step: number) => {
     setProgress((prev) => ({
       ...prev,
@@ -199,6 +227,8 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
       products: [],
       staff: [],
       availabilities: [],
+      staffPositionTemplates: [],
+      serviceCategoryTemplates: [],
       currentStep: 1,
       isCompleted: false,
     })
@@ -244,6 +274,8 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
         addProduct,
         addStaff,
         addAvailability,
+        setStaffPositionTemplates,
+        setServiceCategoryTemplates,
         setCurrentStep,
         completeOnboarding,
         resetOnboarding,
