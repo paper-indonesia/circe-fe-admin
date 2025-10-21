@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { FileText, ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { TNC_FULL_CONTENT } from "@/lib/tnc-full-content"
+import { TNCSections } from "@/components/tnc-sections"
 
 export default function TermsPage() {
   const [mounted, setMounted] = useState(false)
@@ -52,13 +52,9 @@ export default function TermsPage() {
               Mohon baca dengan saksama sebelum menggunakan layanan kami. Dengan menggunakan Platform Reserva, Anda menyatakan telah membaca, memahami, dan menyetujui seluruh isi dokumen ini.
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="h-[600px] overflow-y-auto px-6 py-6">
-              <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-sm">
-                  {TNC_FULL_CONTENT}
-                </div>
-              </div>
+          <CardContent className="p-6">
+            <div className="max-h-[70vh] overflow-y-auto">
+              <TNCSections />
             </div>
           </CardContent>
         </Card>

@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { FileText, X } from "lucide-react"
-import { TNC_FULL_CONTENT } from "@/lib/tnc-full-content"
+import { TNCSections } from "@/components/tnc-sections"
 
 interface TermsModalProps {
   open: boolean
@@ -53,9 +53,7 @@ export function TermsModal({ open, onOpenChange }: TermsModalProps) {
         {/* Scrollable Content */}
         <div className="flex-1 overflow-hidden bg-gradient-to-b from-gray-50 to-white">
           <div className="h-full overflow-y-auto px-8 py-6">
-            <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-sm">
-              {TNC_FULL_CONTENT}
-            </div>
+            <TNCSections />
 
             {/* Contact Info */}
             <div className="mt-8 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
