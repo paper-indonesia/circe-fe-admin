@@ -37,6 +37,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { Building, Plus, Edit, Trash2, Search, Loader2, MapPin, Phone, Clock, AlertCircle, Mail, Globe, Users, Briefcase, Calendar, X, Save, Sparkles, FileText, Link2, MessageSquare, Activity, Home, MapPinned, Package, Crown } from "lucide-react"
 
 interface BusinessHour {
