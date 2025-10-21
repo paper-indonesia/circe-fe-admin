@@ -70,31 +70,27 @@ export function TNCSections() {
                     </h4>
                   )}
 
-                  {/* Subsection Content */}
-                  {subsection.content && (
-                    <div className="text-sm text-gray-700 leading-relaxed pl-6">
-                      {/* Split by newlines and render as list or paragraphs */}
-                      {subsection.content.split('\n').length > 1 ? (
-                        <ul className="space-y-1.5 list-disc list-inside">
-                          {subsection.content.split('\n').map((line: string, lineIdx: number) => {
-                            const trimmed = line.trim()
-                            if (!trimmed) return null
+                  {/* Subsection Content - Structured with intro, items, conclusion */}
+                  <div className="text-sm text-gray-700 leading-relaxed pl-6">
+                    {/* Intro text */}
+                    {subsection.intro && (
+                      <p className="mb-2">{subsection.intro}</p>
+                    )}
 
-                            // Check if line looks like a list item (starts with dash, bullet, or letter)
-                            const isListItem = /^[•\-–—A-Z]\.|^[•\-–—]/.test(trimmed)
+                    {/* List items */}
+                    {subsection.items && subsection.items.length > 0 && (
+                      <ul className="space-y-1.5 list-disc list-inside mb-2">
+                        {subsection.items.map((item: string, itemIdx: number) => (
+                          <li key={itemIdx}>{item}</li>
+                        ))}
+                      </ul>
+                    )}
 
-                            return (
-                              <li key={lineIdx} className={isListItem ? '' : 'list-none -ml-5'}>
-                                {trimmed.replace(/^[•\-–—]\s*/, '')}
-                              </li>
-                            )
-                          })}
-                        </ul>
-                      ) : (
-                        <p>{subsection.content}</p>
-                      )}
-                    </div>
-                  )}
+                    {/* Conclusion text */}
+                    {subsection.conclusion && (
+                      <p className="mt-2">{subsection.conclusion}</p>
+                    )}
+                  </div>
                 </div>
               ))}
 
