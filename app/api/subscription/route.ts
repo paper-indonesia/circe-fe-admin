@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
+export const revalidate = 0 // Disable caching completely
 
 const FASTAPI_URL = process.env.FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'
 
@@ -15,12 +16,18 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const response = await fetch(`${FASTAPI_URL}/api/v1/subscriptions/current`, {
+    // Add cache-busting query parameter
+    const timestamp = Date.now()
+    const response = await fetch(`${FASTAPI_URL}/api/v1/subscriptions/current?t=${timestamp}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       },
+      cache: 'no-store', // Disable fetch cache
     })
 
     const data = await response.json()
@@ -33,7 +40,14 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    return NextResponse.json(data)
+    // Return with anti-cache headers
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    })
   } catch (error) {
     console.error('Subscription fetch error:', error)
     return NextResponse.json(
