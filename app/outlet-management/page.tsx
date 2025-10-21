@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { useSubscription } from "@/lib/subscription-context"
 import { useToast } from "@/hooks/use-toast"
-import { MainLayout } from "@/components/layout/main-layout"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -487,7 +486,7 @@ export default function OutletManagementPage() {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -1330,6 +1329,6 @@ export default function OutletManagementPage() {
           ]}
         />
       </div>
-    </MainLayout>
+    </>
   )
 }

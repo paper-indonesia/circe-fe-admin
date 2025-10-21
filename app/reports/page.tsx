@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -556,11 +555,11 @@ export default function ReportsPage() {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex min-h-[600px] w-full items-center justify-center">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
@@ -573,7 +572,7 @@ export default function ReportsPage() {
 
   if (hasNoData) {
     return (
-      <MainLayout>
+      <>
         <div className="space-y-6 pb-8">
           {/* Header */}
           <div className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 rounded-xl p-8 shadow-lg border border-primary/20 relative overflow-hidden">
@@ -657,12 +656,12 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
         </div>
-      </MainLayout>
+      </>
     )
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6 pb-8">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 rounded-xl p-6 lg:p-8 shadow-lg border border-primary/20 relative overflow-hidden">
@@ -1816,6 +1815,6 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
-    </MainLayout>
+    </>
   )
 }

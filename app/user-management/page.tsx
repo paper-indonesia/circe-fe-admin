@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import { MainLayout } from "@/components/layout/main-layout"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -493,7 +492,7 @@ export default function UserManagementPage() {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -1144,6 +1143,6 @@ export default function UserManagementPage() {
         ]}
       />
       </div>
-    </MainLayout>
+    </>
   )
 }

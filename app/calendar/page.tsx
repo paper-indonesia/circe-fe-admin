@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { useSearchParams } from "next/navigation"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -1183,16 +1182,16 @@ export default function CalendarPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex items-center justify-center h-[60vh]">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6 pb-8">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -3521,6 +3520,6 @@ export default function CalendarPage() {
           />
         )}
       </div>
-    </MainLayout>
+    </>
   )
 }

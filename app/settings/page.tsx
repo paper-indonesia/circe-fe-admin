@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -353,11 +352,11 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex items-center justify-center min-h-[600px]">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
@@ -391,7 +390,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-8 pb-8">
         {/* Page Header */}
         <div className="border-b pb-6">
@@ -1397,6 +1396,6 @@ export default function SettingsPage() {
 
         </div>
       </div>
-    </MainLayout>
+    </>
   )
 }

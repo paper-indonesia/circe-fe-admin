@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -451,11 +450,11 @@ export default function TreatmentsPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex min-h-[600px] w-full items-center justify-center">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
@@ -463,7 +462,7 @@ export default function TreatmentsPage() {
   const hasNoData = !loading && (!treatments || treatments.length === 0)
 
   return (
-    <MainLayout>
+    <>
       {hasNoData ? (
         <EmptyState
           icon={Star}
@@ -1098,6 +1097,6 @@ export default function TreatmentsPage() {
           "Product data can be restored within 10 seconds"
         ]}
       />
-    </MainLayout>
+    </>
   )
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -203,16 +202,16 @@ export default function AvailabilityCalendarPage() {
 
   if (staffLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex items-center justify-center h-screen">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -495,6 +494,6 @@ export default function AvailabilityCalendarPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </MainLayout>
+    </>
   )
 }

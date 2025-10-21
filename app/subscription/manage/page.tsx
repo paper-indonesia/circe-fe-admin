@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -328,29 +327,29 @@ export default function ManageSubscriptionPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex items-center justify-center h-[60vh]">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
   if (!subscription) {
     return (
-      <MainLayout>
+      <>
         <div className="text-center py-12">
           <p className="text-gray-600">No subscription found</p>
           <Button onClick={() => router.push('/subscription/upgrade')} className="mt-4">
             View Plans
           </Button>
         </div>
-      </MainLayout>
+      </>
     )
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6 pb-8">
         {/* Header */}
         <div>
@@ -1097,6 +1096,6 @@ export default function ManageSubscriptionPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </MainLayout>
+    </>
   )
 }
