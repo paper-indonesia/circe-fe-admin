@@ -1,0 +1,156 @@
+{
+  "title": "Kebijakan Privasi — Reserva",
+  "sections": [
+    {
+      "number": 1,
+      "title": "Ruang Lingkup & Siapa Kami",
+      "intro": "Kebijakan ini menjelaskan cara kami mengumpulkan, menggunakan, mengungkapkan, dan melindungi data pribadi saat Anda menggunakan:",
+      "items": [
+        "Aplikasi/Website Pelanggan untuk menjelajah, memesan, dan membayar layanan; dan"
+      ],
+      "conclusion": "Konsol Admin yang digunakan Mitra (klinik/salon/spa) untuk mengelola outlet, staf, jadwal, produk/layanan, dan transaksi. Reserva menyediakan platform yang menghubungkan Pengguna Akhir (pelanggan) dengan Mitra (outlet). Kecuali dinyatakan lain, untuk operasi platform kami bertindak sebagai Pengendali Data. Untuk data yang diunggah/diinput Mitra tentang pelanggannya di Konsol Admin, Reserva umumnya bertindak sebagai Pemroses Data atas instruksi Mitra (sebagai Pengendali Data)."
+    },
+    {
+      "number": 2,
+      "title": "Data Pribadi yang Kami Kumpulkan",
+      "intro": "",
+      "items": [],
+      "conclusion": "",
+      "subsections": [
+        {
+          "letter": "a",
+          "title": "Data yang Anda berikan",
+          "items": [
+            "Data akun: nama, email, nomor ponsel, kata sandi (hash), foto profil, jenis kelamin/tanggal lahir (opsional).",
+            "Data pemesanan: layanan/outlet/staf yang dipilih, tanggal/waktu, catatan/alergi (opsional), berkas/formulir persetujuan (jika diaktifkan).",
+            "Dukungan pelanggan: pesan, lampiran, umpan balik, skor kepuasan.",
+            "Pengguna admin: peran, jabatan, ID karyawan, bidang payroll (opsional), keahlian/sertifikasi, jadwal."
+          ]
+        },
+        {
+          "letter": "b",
+          "title": "Data yang dikumpulkan otomatis",
+          "items": [
+            "Data perangkat & penggunaan: versi aplikasi, OS/peramban, pengenal perangkat, alamat IP, stempel waktu, log crash, metrik fitur.",
+            "Cookie/SDK: cookie sesi, analitik, preferensi; pengenal seluler untuk push notification.",
+            "Lokasi perkiraan: dari IP atau perizinan lokasi untuk fitur seperti outlet terdekat/peta."
+          ]
+        },
+        {
+          "letter": "c",
+          "title": "Data dari pihak ketiga",
+          "items": [
+            "Penyedia pembayaran: status pembayaran/token, data kartu termasking, status VA, konfirmasi e‑wallet/QRIS (kami tidak menyimpan nomor kartu penuh).",
+            "Penyedia identitas & pesan: status OTP/verifikasi, status pengiriman WhatsApp/SMS.",
+            "Mitra (Outlet): riwayat booking, paket/keanggotaan, invoice/struk, catatan perawatan (sesuai konfigurasi Mitra).",
+            "Data sensitif. Dalam konteks klinis/medis, Mitra dapat mencatat informasi yang diperlukan untuk layanan (mis. kontraindikasi). Mitra bertanggung jawab memperoleh persetujuan yang sah dan mematuhi hukum kesehatan/privasi. Reserva memproses data tersebut hanya atas instruksi Mitra."
+          ]
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "title": "Tujuan Pemrosesan & Dasar Hukum",
+      "intro": "Kami memproses data pribadi untuk tujuan berikut (dan jika relevan dasar hukumnya):",
+      "items": [],
+      "conclusion": "Menyediakan layanan: pembuatan akun, autentikasi, pemesanan, pembayaran, pengingat/notifikasi. (Perjanjian; Kepentingan sah) Mengoperasikan Konsol Admin: set‑up outlet/staf/produk, kalender, pelaporan, audit log. (Perjanjian; Kepentingan sah) Komunikasi transaksional: konfirmasi, pengingat, struk melalui email/SMS/WhatsApp/push. (Perjanjian; Kepentingan sah) Dukungan & keamanan: pemecahan masalah, pencegahan penipuan/penyalahgunaan, penyelesaian sengketa. (Kepentingan sah; Kewajiban hukum) Peningkatan produk & analitik: metrik penggunaan, A/B testing, crash, kualitas layanan. (Kepentingan sah; Persetujuan untuk cookie/SDK non‑esensial bila diwajibkan) Pemasaran dengan persetujuan: newsletter, promo, survei. (Persetujuan; Dapat memilih keluar) Kepatuhan: catatan pajak/keuangan, permintaan yang sah, ketentuan regulator. (Kewajiban hukum)"
+    },
+    {
+      "number": 4,
+      "title": "Cookie & Teknologi Serupa",
+      "intro": "Kami menggunakan cookie/SDK untuk mempertahankan sesi, mengingat preferensi, dan mengukur penggunaan. Jika diwajibkan, kami meminta persetujuan untuk cookie non‑esensial. Anda dapat mengelola cookie di pengaturan peramban/perangkat; pemblokiran cookie tertentu dapat memengaruhi fitur.",
+      "items": [],
+      "conclusion": ""
+    },
+    {
+      "number": 5,
+      "title": "Berbagi & Pengungkapan",
+      "intro": "Kami dapat membagikan data pribadi dengan:",
+      "items": [
+        "Mitra (Outlet): untuk memenuhi pemesanan dan proses purna layanan.",
+        "Penyedia layanan: komputasi awan, analitik, pembayaran, komunikasi (email/SMS/WhatsApp), alat dukungan.",
+        "Afiliasi & penasihat profesional.",
+        "Penegak hukum/regulator: bila diwajibkan hukum atau untuk melindungi hak, keselamatan, dan properti.",
+        "Transfer bisnis: sehubungan dengan merger, akuisisi, atau penjualan aset dengan perlindungan yang berkelanjutan.",
+        "Kami tidak menjual data pribadi Anda."
+      ],
+      "conclusion": ""
+    },
+    {
+      "number": 6,
+      "title": "Transfer Internasional",
+      "intro": "Data Anda dapat diproses di negara lain selain tempat tinggal Anda. Kami menerapkan pengaman yang sesuai (mis. klausul kontraktual, kontrol akses, enkripsi) untuk melindungi data lintas batas.",
+      "items": [],
+      "conclusion": ""
+    },
+    {
+      "number": 7,
+      "title": "Retensi",
+      "intro": "Kami menyimpan data pribadi hanya selama diperlukan untuk tujuan di atas, termasuk untuk memenuhi kewajiban hukum/akuntansi/pelaporan.",
+      "items": [],
+      "conclusion": ""
+    },
+    {
+      "number": 8,
+      "title": "Keamanan",
+      "intro": "Kami menerapkan langkah administratif, teknis, dan organisasi yang sesuai risiko, termasuk enkripsi saat transit, kontrol akses berbasis peran, audit log, cadangan/DR, dan praktik pengembangan aman. Namun tidak ada metode transmisi/penyimpanan yang 100% aman.",
+      "items": [],
+      "conclusion": ""
+    },
+    {
+      "number": 9,
+      "title": "Hak Anda",
+      "intro": "Tunduk pada hukum yang berlaku, Anda berhak untuk: mengakses, memperbaiki, menghapus dalam kondisi tertentu, membatasi/mengajukan keberatan atas pemrosesan, portabilitas data, menarik persetujuan, dan mengajukan keluhan ke regulator.",
+      "items": [],
+      "conclusion": ""
+    },
+    {
+      "number": 10,
+      "title": "Cara Mengajukan Permintaan",
+      "intro": "Kirim permintaan ke kontak Pelindungan Data melalui email: reservaofficialig@gmail.com. Kami dapat meminta informasi tambahan untuk memverifikasi identitas. Target waktu respons {{30}} hari. Beberapa permintaan mungkin dibatasi oleh hukum atau peran kami sebagai pemroses data untuk Mitra (dalam hal ini kami dapat mengarahkan Anda ke Mitra terkait).",
+      "items": [],
+      "conclusion": ""
+    },
+    {
+      "number": 11,
+      "title": "Anak‑Anak",
+      "intro": "Layanan tidak ditujukan untuk anak di bawah {{13/16/18}} tahun. Jika Anda meyakini anak mengirimkan data tanpa persetujuan yang semestinya, hubungi kami untuk penghapusan.",
+      "items": [],
+      "conclusion": ""
+    },
+    {
+      "number": 12,
+      "title": "Tautan & Integrasi Pihak Ketiga",
+      "intro": "Aplikasi kami dapat berisi tautan atau integrasi pihak ketiga (mis. pembayaran). Praktik privasi mereka diatur oleh kebijakan masing‑masing.",
+      "items": [],
+      "conclusion": ""
+    },
+    {
+      "number": 13,
+      "title": "WhatsApp/SMS & Komunikasi",
+      "intro": "Dengan memberikan nomor ponsel, Anda setuju kami dan/atau Mitra yang dipilih dapat mengirim pesan transaksional (konfirmasi, pengingat). Anda dapat mengatur preferensi pemasaran di aplikasi atau mengikuti instruksi opt‑out pada pesan.",
+      "items": [],
+      "conclusion": ""
+    },
+    {
+      "number": 14,
+      "title": "Tanggung Jawab Mitra (Konsol Admin)",
+      "intro": "Sebagai pengendali data atas pelanggan mereka, Mitra wajib:",
+      "items": [
+        "memperoleh persetujuan/dasar hukum yang diperlukan;",
+        "mengonfigurasi retensi & kontrol akses;",
+        "menjaga keakuratan & legalitas konten;",
+        "merespons permintaan hak subjek data; dan",
+        "menandatangani Perjanjian Pemrosesan Data (DPA) dengan Reserva bila diperlukan."
+      ],
+      "conclusion": ""
+    },
+    {
+      "number": 15,
+      "title": "Perubahan Kebijakan",
+      "intro": "Kami dapat memperbarui Kebijakan ini dari waktu ke waktu.",
+      "items": [],
+      "conclusion": ""
+    }
+  ]
+}

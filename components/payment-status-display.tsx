@@ -219,14 +219,6 @@ export default function PaymentStatusDisplay({
                 <div className="font-bold text-red-700">{formatCurrency(paymentStatus.remaining_balance)}</div>
               </div>
             )}
-            {paymentStatus.platform_fee > 0 && (
-              <div className="col-span-2 pt-2 border-t border-blue-200">
-                <div className="text-gray-600 text-xs mb-1">
-                  Platform Fee ({paymentStatus.platform_fee_percentage}%)
-                </div>
-                <div className="font-semibold text-gray-700">{formatCurrency(paymentStatus.platform_fee)}</div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -299,11 +291,6 @@ export default function PaymentStatusDisplay({
             <div className="bg-red-50 rounded-lg p-4">
               <div className="text-sm text-gray-600 mb-1">Remaining</div>
               <div className="text-xl font-bold text-red-700">{formatCurrency(paymentStatus.remaining_balance)}</div>
-            </div>
-            <div className="bg-purple-50 rounded-lg p-4">
-              <div className="text-sm text-gray-600 mb-1">Platform Fee</div>
-              <div className="text-xl font-bold text-purple-700">{formatCurrency(paymentStatus.platform_fee)}</div>
-              <div className="text-xs text-purple-600 mt-1">{paymentStatus.platform_fee_percentage}%</div>
             </div>
           </div>
         </CardContent>

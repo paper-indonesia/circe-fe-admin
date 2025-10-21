@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -132,9 +131,13 @@ export default function UpgradePage() {
     const planId = plan.plan
 
     if (planId === "enterprise") {
+      // Redirect to WhatsApp for Enterprise plan inquiry
+      const whatsappUrl = "https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20tertarik%20untuk%20enterprise%20plan"
+      window.open(whatsappUrl, '_blank')
+
       toast({
-        title: "Contact Sales",
-        description: "Please contact our sales team for Enterprise pricing.",
+        title: "Opening WhatsApp",
+        description: "Redirecting you to our sales team on WhatsApp...",
       })
       return
     }
@@ -259,16 +262,16 @@ export default function UpgradePage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex items-center justify-center h-[60vh]">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-8 pb-8">
         {/* Header */}
         <div>
@@ -499,7 +502,14 @@ export default function UpgradePage() {
               <p className="text-gray-600 mb-4">
                 Our team is here to help you find the perfect plan for your business needs.
               </p>
-              <Button variant="outline" className="border-[#C8B6FF] text-[#B8C0FF] hover:bg-[#C8B6FF]/10">
+              <Button
+                variant="outline"
+                className="border-[#C8B6FF] text-[#B8C0FF] hover:bg-[#C8B6FF]/10"
+                onClick={() => {
+                  const whatsappUrl = "https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20subscription%20di%20reserva"
+                  window.open(whatsappUrl, '_blank')
+                }}
+              >
                 Contact Support
               </Button>
             </div>
@@ -599,6 +609,6 @@ export default function UpgradePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </MainLayout>
+    </>
   )
 }

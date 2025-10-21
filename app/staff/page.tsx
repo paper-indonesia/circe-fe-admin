@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { useStaff, useBookings, useTreatments } from "@/lib/context"
 import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
@@ -1119,11 +1119,11 @@ export default function StaffPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex min-h-[600px] w-full items-center justify-center">
           <GradientLoading text="Loading Staff" />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
@@ -1131,7 +1131,7 @@ export default function StaffPage() {
   const hasNoData = !loading && (!staff || staff.length === 0)
 
   return (
-    <MainLayout>
+    <>
       {hasNoData ? (
         <EmptyState
           icon={Users}
@@ -3182,6 +3182,6 @@ export default function StaffPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-    </MainLayout>
+    </>
   )
 }

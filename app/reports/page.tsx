@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -556,11 +555,11 @@ export default function ReportsPage() {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex min-h-[600px] w-full items-center justify-center">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
@@ -573,7 +572,7 @@ export default function ReportsPage() {
 
   if (hasNoData) {
     return (
-      <MainLayout>
+      <>
         <div className="space-y-6 pb-8">
           {/* Header */}
           <div className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 rounded-xl p-8 shadow-lg border border-primary/20 relative overflow-hidden">
@@ -657,12 +656,12 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
         </div>
-      </MainLayout>
+      </>
     )
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6 pb-8">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 rounded-xl p-6 lg:p-8 shadow-lg border border-primary/20 relative overflow-hidden">
@@ -980,6 +979,37 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
+          {/* Completion Rate */}
+          <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-purple-500/20 hover:border-purple-500/40 hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-purple-600/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-300" />
+            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Completion Rate</CardTitle>
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
+                <CheckCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{data.summary.completionRate}%</div>
+              <div className="flex items-center text-xs text-purple-600 dark:text-purple-400 mt-1">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                <span>Successfully completed</span>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500"
+                    style={{ width: `${data.summary.completionRate}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
+                  {data.summary.completionRate}%
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* HIDDEN: Satisfaction Rate - Will be enabled when customer-side rating system is enhanced */}
+          {false && (
           <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-yellow-500/20 hover:border-yellow-500/40 hover:-translate-y-1">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400/20 to-yellow-600/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-300" />
             <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1013,6 +1043,7 @@ export default function ReportsPage() {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
 
         {/* Main Charts Grid */}
@@ -1164,7 +1195,8 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
-          {/* Staff Performance Matrix */}
+          {/* HIDDEN: Staff Performance Matrix - Not needed yet */}
+          {false && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -1235,39 +1267,59 @@ export default function ReportsPage() {
               )}
             </CardContent>
           </Card>
+          )}
 
           {/* Time Slot Analysis */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
-                Peak Hours Analysis
-              </CardTitle>
+          <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10">
+            <CardHeader className="bg-gradient-to-r from-teal-50/50 to-cyan-50/50 dark:from-teal-950/20 dark:to-cyan-950/20 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <div className="p-2 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg">
+                    <Clock className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent font-semibold">Peak Hours Analysis</span>
+                </CardTitle>
+                <Badge className="bg-gradient-to-r from-teal-500/10 to-cyan-500/10 text-cyan-700 border-cyan-200">Hourly</Badge>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={data.timeSlotAnalysis || []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="time" fontSize={12} />
-                  <YAxis fontSize={12} />
-                  <Tooltip content={<CustomTooltip />} />
+                  <defs>
+                    <linearGradient id="timeSlotGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#14B8A6" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#14B8A6" stopOpacity={0.2}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
+                  <XAxis dataKey="time" fontSize={11} stroke="#6B7280" />
+                  <YAxis fontSize={11} stroke="#6B7280" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
                   <Area
                     type="monotone"
                     dataKey="bookings"
-                    stroke="#10B981"
-                    fill="#10B981"
-                    fillOpacity={0.6}
+                    stroke="#14B8A6"
+                    fill="url(#timeSlotGradient)"
                     name={"Bookings"}
+                    strokeWidth={2}
+                    animationDuration={1000}
                   />
                 </AreaChart>
               </ResponsiveContainer>
-              <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+              <div className="mt-4 p-3 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/20 dark:to-cyan-950/20 rounded-lg border border-teal-200 dark:border-teal-800">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Peak Time</p>
-                    <p className="text-xs text-muted-foreground">Most bookings</p>
+                    <p className="text-sm font-medium text-teal-900 dark:text-teal-100">Peak Time</p>
+                    <p className="text-xs text-teal-600 dark:text-teal-400">Most bookings</p>
                   </div>
-                  <Badge>
+                  <Badge className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white border-0">
                     {data.timeSlotAnalysis && data.timeSlotAnalysis.length > 0
                       ? data.timeSlotAnalysis.reduce((max: any, slot: any) => slot.bookings > max.bookings ? slot : max).time
                       : 'N/A'}
@@ -1277,7 +1329,78 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
 
-          {/* Customer Demographics */}
+          {/* Booking Trends by Day */}
+          <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10">
+            <CardHeader className="bg-gradient-to-r from-orange-50/50 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/20 rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <div className="p-2 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg">
+                    <BarChart3 className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent font-semibold">Weekly Trends</span>
+                </CardTitle>
+                <Badge className="bg-gradient-to-r from-orange-500/10 to-amber-500/10 text-amber-700 border-amber-200">Last 7 Days</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.dailyRevenue?.slice(-7) || []}>
+                  <defs>
+                    <linearGradient id="bookingTrendGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F97316" stopOpacity={0.9}/>
+                      <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.7}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.5} />
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(value) => {
+                      const date = new Date(value)
+                      return format(date, "EEE")
+                    }}
+                    fontSize={11}
+                    stroke="#6B7280"
+                  />
+                  <YAxis fontSize={11} stroke="#6B7280" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                    }}
+                    labelFormatter={(value) => format(new Date(value), "EEEE, MMM d")}
+                  />
+                  <Bar
+                    dataKey="bookings"
+                    fill="url(#bookingTrendGradient)"
+                    name={"Bookings"}
+                    radius={[8, 8, 0, 0]}
+                    animationDuration={1000}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="p-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">Total Bookings</p>
+                  <p className="text-lg font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                    {data.dailyRevenue?.slice(-7).reduce((sum: number, day: any) => sum + day.bookings, 0) || 0}
+                  </p>
+                </div>
+                <div className="p-3 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">Busiest Day</p>
+                  <p className="text-lg font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                    {data.dailyRevenue && data.dailyRevenue.length > 0
+                      ? format(new Date(data.dailyRevenue.slice(-7).reduce((max: any, day: any) => day.bookings > max.bookings ? day : max, data.dailyRevenue.slice(-7)[0]).date), "EEE")
+                      : 'N/A'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* HIDDEN: Customer Demographics - Not needed yet */}
+          {false && (
           <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10">
             <CardHeader className="bg-gradient-to-r from-orange-50/50 to-yellow-50/50 dark:from-orange-950/20 dark:to-yellow-950/20 rounded-t-lg">
               <CardTitle className="flex items-center gap-2">
@@ -1352,8 +1475,10 @@ export default function ReportsPage() {
               )}
             </CardContent>
           </Card>
+          )}
 
-          {/* Payment Methods */}
+          {/* HIDDEN: Payment Methods - Some CC payments not reflected correctly */}
+          {false && (
           <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10">
             <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-t-lg">
               <CardTitle className="flex items-center gap-2">
@@ -1430,9 +1555,11 @@ export default function ReportsPage() {
               )}
             </CardContent>
           </Card>
+          )}
         </div>
 
-        {/* Quick Stats */}
+        {/* HIDDEN: Performance Metrics Overall - Hide until needed */}
+        {false && (
         <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1487,79 +1614,10 @@ export default function ReportsPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
-        {/* Export Section */}
-        <Card className="hover:shadow-lg transition-shadow duration-300 border-primary/10 bg-gradient-to-br from-gray-50/50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 bg-gradient-to-r from-gray-600 to-gray-700 rounded-lg">
-                <Download className="h-4 w-4 text-white" />
-              </div>
-              <span className="bg-gradient-to-r from-gray-700 to-gray-800 bg-clip-text text-transparent font-semibold">Export & Actions</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Button 
-                onClick={() => handleExport("comprehensive")}
-                className="group h-auto py-4 flex flex-col items-center gap-2 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border-gray-200 dark:border-gray-700"
-                variant="outline"
-              >
-                <FileText className="h-5 w-5 group-hover:scale-110 transition-transform duration-300 text-gray-600 dark:text-gray-400" />
-                <div>
-                  <p className="font-medium">Comprehensive Report</p>
-                  <p className="text-xs text-muted-foreground">All metrics & data</p>
-                </div>
-              </Button>
-              
-              <Button
-                onClick={() => handleExport("treatments")}
-                className="h-auto py-4 flex flex-col items-center gap-2"
-                variant="outline"
-              >
-                <Activity className="h-5 w-5" />
-                <div>
-                  <p className="font-medium">{"Products"} Report</p>
-                  <p className="text-xs text-muted-foreground">Performance analysis</p>
-                </div>
-              </Button>
-
-              <Button
-                onClick={() => handleExport("staff")}
-                className="h-auto py-4 flex flex-col items-center gap-2"
-                variant="outline"
-              >
-                <Users className="h-5 w-5" />
-                <div>
-                  <p className="font-medium">{"Staff"} Report</p>
-                  <p className="text-xs text-muted-foreground">Individual metrics</p>
-                </div>
-              </Button>
-              
-              <div className="flex gap-2">
-                <Button
-                  onClick={handlePrint}
-                  size="icon"
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <Printer className="h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={handleEmailReport}
-                  size="icon"
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <Mail className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Customer Analytics Summary */}
-        {!loadingCustomerStats && customerStatistics && (
+        {/* HIDDEN: Customer Analytics Summary - Data not fetching correctly yet */}
+        {false && !loadingCustomerStats && customerStatistics && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Customer Analytics</h2>
@@ -1802,6 +1860,6 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
-    </MainLayout>
+    </>
   )
 }

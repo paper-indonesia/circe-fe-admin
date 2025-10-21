@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -754,11 +753,11 @@ export default function ClientsPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex min-h-[600px] w-full items-center justify-center">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
@@ -766,7 +765,7 @@ export default function ClientsPage() {
   const hasNoData = !loading && (!customers || customers.length === 0)
 
   return (
-    <MainLayout>
+    <>
       {hasNoData ? (
         <EmptyState
           icon={Users}
@@ -2238,6 +2237,6 @@ export default function ClientsPage() {
             )}
           </DialogContent>
         </Dialog>
-    </MainLayout>
+    </>
   )
 }

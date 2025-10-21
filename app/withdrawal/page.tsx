@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -195,7 +194,7 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
   const quickAmounts = [100000, 250000, 500000, 1000000]
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -573,6 +572,6 @@ export default function WithdrawalPage({ params }: { params: { tenant: string } 
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </MainLayout>
+    </>
   )
 }

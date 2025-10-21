@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import { MainLayout } from "@/components/layout/main-layout"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,6 +26,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { Shield, UserPlus, Edit, Trash2, Search, Loader2, Mail, User, Lock, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { motion } from "framer-motion"
 
@@ -63,8 +63,12 @@ const ROLES = [
 const EMPLOYMENT_TYPES = [
   { value: "full_time", label: "Full Time" },
   { value: "part_time", label: "Part Time" },
-  { value: "contractor", label: "Contractor" },
+  { value: "contract", label: "Contract" },
+  { value: "freelance", label: "Freelance" },
+  { value: "intern", label: "Intern" },
 ]
+
+
 
 export default function UserManagementPage() {
   const router = useRouter()
@@ -492,7 +496,7 @@ export default function UserManagementPage() {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -1143,6 +1147,6 @@ export default function UserManagementPage() {
         ]}
       />
       </div>
-    </MainLayout>
+    </>
   )
 }

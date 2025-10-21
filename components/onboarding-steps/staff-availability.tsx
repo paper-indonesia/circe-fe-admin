@@ -32,7 +32,9 @@ const WEEKDAYS = [
 const EMPLOYMENT_TYPES = [
   { value: "full_time", label: "Full Time" },
   { value: "part_time", label: "Part Time" },
-  { value: "contractor", label: "Contractor" },
+  { value: "contract", label: "Contract" },
+  { value: "freelance", label: "Freelance" },
+  { value: "intern", label: "Intern" },
 ]
 
 export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepProps) {
@@ -49,7 +51,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     email: "",
     phone: "",
     position: "",
-    employment_type: "full_time" as "full_time" | "part_time" | "contractor",
+    employment_type: "full_time" as "full_time" | "part_time" | "contract" | "freelance" | "intern",
     outlet_id: "",
     employee_id: "",
     hire_date: "",

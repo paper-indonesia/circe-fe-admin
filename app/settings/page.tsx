@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { MainLayout } from "@/components/layout/main-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -353,11 +352,11 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex items-center justify-center min-h-[600px]">
           <GradientLoading />
         </div>
-      </MainLayout>
+      </>
     )
   }
 
@@ -391,7 +390,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-8 pb-8">
         {/* Page Header */}
         <div className="border-b pb-6">
@@ -891,7 +890,7 @@ export default function SettingsPage() {
                         </Label>
                         <div className="flex gap-2">
                           <Input
-                            value={`${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`}
+                            value={`${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`}
                             readOnly
                             className="font-mono text-sm bg-gray-50"
                           />
@@ -899,7 +898,7 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`
+                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`
                               navigator.clipboard.writeText(link)
                               toast({
                                 title: "Copied!",
@@ -913,7 +912,7 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`
+                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`
                               window.open(link, '_blank')
                             }}
                           >
@@ -933,7 +932,7 @@ export default function SettingsPage() {
                         </Label>
                         <div className="flex gap-2">
                           <Input
-                            value={`${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`}
+                            value={`${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`}
                             readOnly
                             className="font-mono text-sm bg-gray-50"
                           />
@@ -941,7 +940,7 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`
+                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`
                               navigator.clipboard.writeText(link)
                               toast({
                                 title: "Copied!",
@@ -955,7 +954,7 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_BASE_URL_RESERVA_CUSTOMER || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`
+                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`
                               window.open(link, '_blank')
                             }}
                           >
@@ -1332,7 +1331,7 @@ export default function SettingsPage() {
                       </p>
                       <div className="flex gap-2">
                         <Input
-                          value={`${process.env.NEXT_PUBLIC_API_URL_RESERVA || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`}
+                          value={`${process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`}
                           readOnly
                           className="font-mono text-sm bg-gray-50"
                         />
@@ -1340,7 +1339,7 @@ export default function SettingsPage() {
                           variant="outline"
                           size="icon"
                           onClick={() => {
-                            const webhookUrl = `${process.env.NEXT_PUBLIC_API_URL_RESERVA || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`
+                            const webhookUrl = `${process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`
                             navigator.clipboard.writeText(webhookUrl)
                             toast({
                               title: "Copied!",
@@ -1397,6 +1396,6 @@ export default function SettingsPage() {
 
         </div>
       </div>
-    </MainLayout>
+    </>
   )
 }

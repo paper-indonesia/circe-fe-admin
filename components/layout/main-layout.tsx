@@ -64,14 +64,13 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div
           className="transition-all duration-300"
           style={{
-            position: 'relative',
             minHeight: '100vh',
             paddingLeft: isMobile ? '0' : (isCollapsed ? '80px' : '256px'),
             transition: 'padding-left 300ms cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         >
-          <NavigationLoader />
-          <main className="py-6 px-4 lg:px-8">
+          <main className="relative py-6 px-4 lg:px-8">
+            <NavigationLoader />
             {children}
           </main>
         </div>
