@@ -60,7 +60,8 @@
       "Bash(git restore:*)",
       "Bash(node scripts/parse-privacy.js:*)",
       "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; echo ''Cleaned up node processes''\")",
-      "Bash(powershell -Command \"if (Test-Path ''.next'') { Remove-Item -Path ''.next'' -Recurse -Force }; echo ''Cache cleared''\")"
+      "Bash(powershell -Command \"if (Test-Path ''.next'') { Remove-Item -Path ''.next'' -Recurse -Force }; echo ''Cache cleared''\")",
+      "Bash(powershell -Command \"Remove-Item -Path ''.next'' -Recurse -Force -ErrorAction SilentlyContinue; echo ''Cache cleared''\")"
     ],
     "deny": [],
     "ask": []
