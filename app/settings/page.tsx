@@ -855,7 +855,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">Customer Access</h2>
-                      <p className="text-sm text-gray-600">Share registration and login links with your customers</p>
+                      <p className="text-sm text-gray-600">Share customer portal link with your customers</p>
                     </div>
                   </div>
                   <div className="p-2">
@@ -873,24 +873,24 @@ export default function SettingsPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Link2 className="h-5 w-5 text-purple-600" />
-                      Customer Portal Links
+                      Customer Portal Link
                     </CardTitle>
                   <CardDescription>
-                    Share these links with your customers for registration and login
+                    Share this link with your customers to access your services
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {tenantInfo?.slug ? (
                     <>
-                      {/* Register Link */}
+                      {/* Customer Portal Link */}
                       <div className="space-y-2">
                         <Label className="flex items-center gap-2 text-sm font-semibold">
-                          <UserPlus className="h-4 w-4 text-green-600" />
-                          Registration Link
+                          <Globe className="h-4 w-4 text-purple-600" />
+                          Customer Portal URL
                         </Label>
                         <div className="flex gap-2">
                           <Input
-                            value={`${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`}
+                            value={`${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/${tenantInfo.slug}`}
                             readOnly
                             className="font-mono text-sm bg-gray-50"
                           />
@@ -898,11 +898,11 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`
+                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/${tenantInfo.slug}`
                               navigator.clipboard.writeText(link)
                               toast({
                                 title: "Copied!",
-                                description: "Registration link copied to clipboard"
+                                description: "Customer portal link copied to clipboard"
                               })
                             }}
                           >
@@ -912,7 +912,7 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/register/${tenantInfo.slug}`
+                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/${tenantInfo.slug}`
                               window.open(link, '_blank')
                             }}
                           >
@@ -920,49 +920,7 @@ export default function SettingsPage() {
                           </Button>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          New customers can use this link to create an account
-                        </p>
-                      </div>
-
-                      {/* Login Link */}
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2 text-sm font-semibold">
-                          <LogIn className="h-4 w-4 text-blue-600" />
-                          Login Link
-                        </Label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={`${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`}
-                            readOnly
-                            className="font-mono text-sm bg-gray-50"
-                          />
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`
-                              navigator.clipboard.writeText(link)
-                              toast({
-                                title: "Copied!",
-                                description: "Login link copied to clipboard"
-                              })
-                            }}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/login/${tenantInfo.slug}`
-                              window.open(link, '_blank')
-                            }}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Existing customers can use this link to access their account
+                          Customers can use this link to view services, book appointments, and manage their account
                         </p>
                       </div>
 
@@ -970,7 +928,7 @@ export default function SettingsPage() {
                       <Alert className="bg-purple-50 border-purple-200">
                         <AlertCircle className="h-4 w-4 text-purple-600" />
                         <AlertDescription className="text-purple-800 text-sm">
-                          <span className="font-medium">Share these links:</span> Include them in your marketing materials, social media, or send directly to customers via email or WhatsApp.
+                          <span className="font-medium">Share this link:</span> Include it in your marketing materials, social media, website, or send directly to customers via email or WhatsApp.
                         </AlertDescription>
                       </Alert>
                     </>
@@ -1331,7 +1289,7 @@ export default function SettingsPage() {
                       </p>
                       <div className="flex gap-2">
                         <Input
-                          value={`${process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`}
+                          value={`${process.env.NEXT_PUBLIC_FASTAPI_URL }/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`}
                           readOnly
                           className="font-mono text-sm bg-gray-50"
                         />
@@ -1339,7 +1297,7 @@ export default function SettingsPage() {
                           variant="outline"
                           size="icon"
                           onClick={() => {
-                            const webhookUrl = `${process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`
+                            const webhookUrl = `${process.env.NEXT_PUBLIC_FASTAPI_URL }/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`
                             navigator.clipboard.writeText(webhookUrl)
                             toast({
                               title: "Copied!",
