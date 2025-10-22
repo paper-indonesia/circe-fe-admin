@@ -23,13 +23,15 @@ interface SubscriptionWarningBannerProps {
   debugMode?: boolean
   debugDaysUntilExpiry?: number
   debugStatus?: 'active' | 'expired' | 'cancelled'
+  debugPlan?: 'free' | 'starter' | 'professional' | 'enterprise'
 }
 
 export function SubscriptionWarningBanner({
   className,
   debugMode = false,
   debugDaysUntilExpiry,
-  debugStatus
+  debugStatus,
+  debugPlan
 }: SubscriptionWarningBannerProps) {
   const router = useRouter()
   const { subscription } = useSubscription()
@@ -45,6 +47,13 @@ export function SubscriptionWarningBanner({
   const status = debugMode && debugStatus
     ? debugStatus
     : subscription?.status
+
+  const plan = debugMode && debugPlan
+    ? debugPlan
+    : subscription?.plan
+
+  // Check if user is on Free plan
+  const isFreeplan = plan?.toLowerCase() === 'free'
 
   // Reset dismissed state when days change significantly
   useEffect(() => {
@@ -84,20 +93,24 @@ export function SubscriptionWarningBanner({
       icon: XCircle,
       bgClass: 'bg-red-50 border-red-300',
       iconColor: 'text-red-600',
-      title: 'Subscription Expired',
-      message: 'Your subscription has expired. Renew now to restore full access to premium features.',
-      ctaText: 'Renew Now',
+      title: isFreeplan ? 'Upgrade to Premium' : 'Subscription Expired',
+      message: isFreeplan
+        ? 'You are currently on the Free plan. Upgrade now to unlock premium features and grow your business.'
+        : 'Your subscription has expired. Renew now to restore full access to premium features.',
+      ctaText: isFreeplan ? 'Upgrade Now' : 'Renew Now',
       ctaPrimary: true,
-      dismissable: false
+      dismissable: isFreeplan
     },
     critical: {
       variant: 'destructive' as const,
       icon: AlertTriangle,
       bgClass: 'bg-red-50 border-red-400',
       iconColor: 'text-red-600',
-      title: '⚠️ Critical: Subscription Expires Tomorrow!',
-      message: `Your ${subscription?.plan || 'Professional'} plan expires tomorrow (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Renew immediately to avoid service interruption.`,
-      ctaText: 'Renew Immediately',
+      title: isFreeplan ? 'Upgrade to Premium' : '⚠️ Critical: Subscription Expires Tomorrow!',
+      message: isFreeplan
+        ? 'Unlock advanced features, unlimited appointments, and multi-outlet management. Upgrade today!'
+        : `Your ${subscription?.plan || 'Professional'} plan expires tomorrow (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Renew immediately to avoid service interruption.`,
+      ctaText: isFreeplan ? 'Upgrade to Pro' : 'Renew Immediately',
       ctaPrimary: true,
       dismissable: false
     },
@@ -106,9 +119,11 @@ export function SubscriptionWarningBanner({
       icon: AlertTriangle,
       bgClass: 'bg-orange-50 border-orange-400',
       iconColor: 'text-orange-600',
-      title: 'Subscription Expiring Soon',
-      message: `Your ${subscription?.plan || 'Professional'} plan expires in ${daysUntilExpiry} day${daysUntilExpiry === 1 ? '' : 's'} (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Renew now to continue enjoying premium features.`,
-      ctaText: 'Renew Subscription',
+      title: isFreeplan ? 'Upgrade Your Plan' : 'Subscription Expiring Soon',
+      message: isFreeplan
+        ? 'Take your clinic to the next level with premium features. Upgrade now and get 20% off your first month!'
+        : `Your ${subscription?.plan || 'Professional'} plan expires in ${daysUntilExpiry} day${daysUntilExpiry === 1 ? '' : 's'} (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Renew now to continue enjoying premium features.`,
+      ctaText: isFreeplan ? 'View Plans' : 'Renew Subscription',
       ctaPrimary: true,
       dismissable: false
     },
@@ -117,9 +132,11 @@ export function SubscriptionWarningBanner({
       icon: Clock,
       bgClass: 'bg-yellow-50 border-yellow-300',
       iconColor: 'text-yellow-700',
-      title: 'Subscription Renewal Reminder',
-      message: `Your ${subscription?.plan || 'Professional'} plan expires in ${daysUntilExpiry} days (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Renew early to ensure uninterrupted service.`,
-      ctaText: 'Renew Now',
+      title: isFreeplan ? 'Discover Premium Features' : 'Subscription Renewal Reminder',
+      message: isFreeplan
+        ? 'Grow faster with unlimited appointments, advanced reports, and multi-outlet support. See what you\'re missing!'
+        : `Your ${subscription?.plan || 'Professional'} plan expires in ${daysUntilExpiry} days (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Renew early to ensure uninterrupted service.`,
+      ctaText: isFreeplan ? 'Explore Plans' : 'Renew Now',
       ctaPrimary: false,
       dismissable: true
     },
@@ -128,9 +145,11 @@ export function SubscriptionWarningBanner({
       icon: Calendar,
       bgClass: 'bg-blue-50 border-blue-200',
       iconColor: 'text-blue-600',
-      title: 'Subscription Renewal Reminder',
-      message: `Your ${subscription?.plan || 'Professional'} plan expires in ${daysUntilExpiry} days (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Consider renewing early.`,
-      ctaText: 'View Subscription',
+      title: isFreeplan ? 'Ready to Grow?' : 'Subscription Renewal Reminder',
+      message: isFreeplan
+        ? 'See how premium features can help you manage more clients, track performance, and increase revenue.'
+        : `Your ${subscription?.plan || 'Professional'} plan expires in ${daysUntilExpiry} days (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Consider renewing early.`,
+      ctaText: isFreeplan ? 'Compare Plans' : 'View Subscription',
       ctaPrimary: false,
       dismissable: true
     }
@@ -149,7 +168,12 @@ export function SubscriptionWarningBanner({
   }
 
   const handleRenew = () => {
-    router.push('/subscription/manage')
+    // Free plan users go to upgrade page, paid users go to manage page
+    if (isFreeplan) {
+      router.push('/subscription/upgrade')
+    } else {
+      router.push('/subscription/manage')
+    }
   }
 
   return (

@@ -13,7 +13,8 @@ import {
   Calendar,
   AlertTriangle,
   XCircle,
-  Clock
+  Clock,
+  Crown
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -23,17 +24,29 @@ interface TestScenario {
   description: string
   daysUntilExpiry: number
   status: 'active' | 'expired' | 'cancelled'
+  plan: 'free' | 'professional'
   icon: any
   color: string
 }
 
 const TEST_SCENARIOS: TestScenario[] = [
   {
+    id: 'free-plan',
+    name: 'FREE PLAN (Upgrade)',
+    description: 'Free plan user - shows upgrade message',
+    daysUntilExpiry: 7,
+    status: 'active',
+    plan: 'free',
+    icon: Crown,
+    color: 'bg-purple-100 border-purple-300 text-purple-700'
+  },
+  {
     id: 'expired',
-    name: 'EXPIRED',
+    name: 'EXPIRED (Paid)',
     description: 'Subscription has already expired',
     daysUntilExpiry: -1,
     status: 'expired',
+    plan: 'professional',
     icon: XCircle,
     color: 'bg-red-100 border-red-300 text-red-700'
   },
@@ -43,6 +56,7 @@ const TEST_SCENARIOS: TestScenario[] = [
     description: 'Expires tomorrow - most urgent',
     daysUntilExpiry: 1,
     status: 'active',
+    plan: 'professional',
     icon: AlertTriangle,
     color: 'bg-red-100 border-red-300 text-red-700'
   },
@@ -52,6 +66,7 @@ const TEST_SCENARIOS: TestScenario[] = [
     description: 'Very urgent warning',
     daysUntilExpiry: 3,
     status: 'active',
+    plan: 'professional',
     icon: AlertTriangle,
     color: 'bg-orange-100 border-orange-300 text-orange-700'
   },
@@ -61,6 +76,7 @@ const TEST_SCENARIOS: TestScenario[] = [
     description: 'Standard warning period',
     daysUntilExpiry: 7,
     status: 'active',
+    plan: 'professional',
     icon: Clock,
     color: 'bg-yellow-100 border-yellow-300 text-yellow-700'
   },
@@ -70,6 +86,7 @@ const TEST_SCENARIOS: TestScenario[] = [
     description: 'Early reminder, dismissable',
     daysUntilExpiry: 14,
     status: 'active',
+    plan: 'professional',
     icon: Calendar,
     color: 'bg-blue-100 border-blue-300 text-blue-700'
   },
@@ -79,6 +96,7 @@ const TEST_SCENARIOS: TestScenario[] = [
     description: 'More than 14 days left',
     daysUntilExpiry: 30,
     status: 'active',
+    plan: 'professional',
     icon: Eye,
     color: 'bg-green-100 border-green-300 text-green-700'
   }
@@ -226,6 +244,7 @@ export function SubscriptionWarningDebugPanel() {
             debugMode={true}
             debugDaysUntilExpiry={selectedScenario.daysUntilExpiry}
             debugStatus={selectedScenario.status}
+            debugPlan={selectedScenario.plan}
           />
         </div>
       )}
