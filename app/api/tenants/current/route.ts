@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'
+const FASTAPI_URL = process.env.FASTAPI_URL || process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.asia-southeast2.run.app' 
 
 export async function GET() {
   try {
@@ -29,7 +29,7 @@ export async function GET() {
 
     // Fallback: get tenant_id from /api/v1/users/me
     if (!tenantId) {
-      const userResponse = await fetch(`${BACKEND_URL}/api/v1/users/me`, {
+      const userResponse = await fetch(`${FASTAPI_URL}/api/v1/users/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken.value}`,
@@ -50,7 +50,7 @@ export async function GET() {
     }
 
     // Get full tenant details from backend
-    const response = await fetch(`${BACKEND_URL}/api/v1/tenants/${tenantId}`, {
+    const response = await fetch(`${FASTAPI_URL}/api/v1/tenants/${tenantId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authToken.value}`,
@@ -59,8 +59,31 @@ export async function GET() {
     })
 
     if (!response.ok) {
-      const error = await response.json()
-      return NextResponse.json({ error: error.detail || 'Failed to fetch tenant' }, { status: response.status })
+      const contentType = response.headers.get('content-type')
+      console.error(`Failed to fetch tenant ${tenantId}:`, {
+        status: response.status,
+        statusText: response.statusText,
+        contentType,
+        url: `${FASTAPI_URL}/api/v1/tenants/${tenantId}`
+      })
+
+      // Try to parse error, but handle HTML response
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json()
+          return NextResponse.json({ error: error.detail || 'Failed to fetch tenant' }, { status: response.status })
+        } else {
+          const text = await response.text()
+          console.error('Non-JSON response:', text.substring(0, 500))
+          return NextResponse.json({
+            error: `Failed to fetch tenant: ${response.statusText}`,
+            details: 'Backend returned non-JSON response'
+          }, { status: response.status })
+        }
+      } catch (e) {
+        console.error('Error parsing error response:', e)
+        return NextResponse.json({ error: 'Failed to fetch tenant' }, { status: response.status })
+      }
     }
 
     const data = await response.json()
@@ -95,7 +118,7 @@ export async function PUT(request: Request) {
 
     // Fallback: get tenant_id from /api/v1/users/me
     if (!tenantId) {
-      const userResponse = await fetch(`${BACKEND_URL}/api/v1/users/me`, {
+      const userResponse = await fetch(`${FASTAPI_URL}/api/v1/users/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken.value}`,
@@ -118,7 +141,7 @@ export async function PUT(request: Request) {
     const body = await request.json()
 
     // Update tenant via backend
-    const response = await fetch(`${BACKEND_URL}/api/v1/tenants/${tenantId}`, {
+    const response = await fetch(`${FASTAPI_URL}/api/v1/tenants/${tenantId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${authToken.value}`,
