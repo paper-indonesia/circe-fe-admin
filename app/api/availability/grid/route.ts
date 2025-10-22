@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const FASTAPI_URL = process.env.FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'
+const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL 
 
 export async function GET(req: NextRequest) {
   try {
@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
+      cache: 'no-store', // Disable caching for real-time availability
+      next: { revalidate: 0 } // Force fresh data every request
     })
 
     const data = await response.json()
@@ -59,7 +61,14 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    return NextResponse.json(data)
+    // Return with no-cache headers to prevent browser caching
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    })
   } catch (error) {
     console.error('Availability grid error:', error)
     return NextResponse.json(
