@@ -116,9 +116,25 @@ export default function ManageSubscriptionPage() {
         const response = await fetch('/api/subscription/payments?payment_type=subscription&skip=0&limit=20')
         if (response.ok) {
           const data = await response.json()
-          console.log('[Billing History] Loaded:', data)
-          // Data is already filtered by payment_type=subscription from API
-          setBillingHistory(data)
+          console.log('[Billing History] Raw API response:', data)
+
+          // Handle different response structures
+          let payments = []
+          if (Array.isArray(data)) {
+            // Direct array response (old API format)
+            payments = data
+          } else if (data.items && Array.isArray(data.items)) {
+            // Paginated response with items array (new API format)
+            payments = data.items
+          } else if (data.data && Array.isArray(data.data)) {
+            // Alternative structure with data array
+            payments = data.data
+          } else {
+            console.warn('[Billing History] Unexpected response structure:', data)
+          }
+
+          console.log('[Billing History] Parsed payments:', payments)
+          setBillingHistory(payments)
         }
       } catch (error) {
         console.error("Failed to fetch billing history:", error)
@@ -613,7 +629,7 @@ export default function ManageSubscriptionPage() {
               <div className="flex items-center justify-center py-8">
                 <GradientLoading />
               </div>
-            ) : billingHistory.length === 0 ? (
+            ) : !Array.isArray(billingHistory) || billingHistory.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Receipt className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                 <p className="text-sm font-medium">No billing history available</p>
@@ -635,7 +651,7 @@ export default function ManageSubscriptionPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {billingHistory.map((payment) => (
+                      {Array.isArray(billingHistory) && billingHistory.map((payment) => (
                         <tr
                           key={payment._id}
                           className="border-b border-gray-50 hover:bg-blue-50 transition-colors cursor-pointer"
@@ -693,7 +709,7 @@ export default function ManageSubscriptionPage() {
 
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
-                  {billingHistory.map((payment) => (
+                  {Array.isArray(billingHistory) && billingHistory.map((payment) => (
                     <Card
                       key={payment._id}
                       className="border border-gray-200 cursor-pointer hover:border-blue-400 transition-colors"
