@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching completely
 
-const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.asia-southeast2.run.app'
+const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL 
 
 export async function GET(req: NextRequest) {
   try {
