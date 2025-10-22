@@ -24,23 +24,18 @@ export async function GET(req: NextRequest) {
     // Get query parameters
     const { searchParams } = new URL(req.url)
     const limit = searchParams.get('limit') || '20'
-    const offset = searchParams.get('offset') || '0'
-    const status = searchParams.get('status') || 'completed'
-    const payment_type = searchParams.get('payment_type') // 'subscription' or 'appointment'
+    const skip = searchParams.get('skip') || searchParams.get('offset') || '0'
+    const payment_type = searchParams.get('payment_type') || 'subscription' // Default to 'subscription'
 
-    // Build query params
+    // Build query params for new API endpoint
     const queryParams = new URLSearchParams({
+      payment_type,
+      skip,
       limit,
-      offset,
-      status,
     })
 
-    if (payment_type) {
-      queryParams.append('payment_type', payment_type)
-    }
-
     const response = await fetch(
-      `${FASTAPI_URL}/api/v1/subscriptions/payments?${queryParams.toString()}`,
+      `${FASTAPI_URL}/api/v1/customer/payments/history?${queryParams.toString()}`,
       {
         method: 'GET',
         headers: {
