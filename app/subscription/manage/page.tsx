@@ -112,22 +112,44 @@ export default function ManageSubscriptionPage() {
     const fetchBillingHistory = async () => {
       try {
         setBillingLoading(true)
-        const response = await fetch('/api/subscription/payments?limit=20&offset=0&status=completed')
+        // Use new API endpoint: /api/v1/customer/payments/history
+        const response = await fetch('/api/subscription/payments?payment_type=subscription&skip=0&limit=20')
         if (response.ok) {
           const data = await response.json()
-          // Filter only subscription payments
-          const subscriptionPayments = data.filter((payment: any) => payment.payment_type === 'subscription')
-          setBillingHistory(subscriptionPayments)
+          console.log('[Billing History] Raw API response:', data)
+
+          // Handle different response structures
+          let payments = []
+          if (Array.isArray(data)) {
+            // Direct array response (old API format)
+            payments = data
+          } else if (data.items && Array.isArray(data.items)) {
+            // Paginated response with items array (new API format)
+            payments = data.items
+          } else if (data.data && Array.isArray(data.data)) {
+            // Alternative structure with data array
+            payments = data.data
+          } else {
+            console.warn('[Billing History] Unexpected response structure:', data)
+          }
+
+          console.log('[Billing History] Parsed payments:', payments)
+          setBillingHistory(payments)
         }
       } catch (error) {
         console.error("Failed to fetch billing history:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load billing history",
+          variant: "destructive"
+        })
       } finally {
         setBillingLoading(false)
       }
     }
 
     fetchBillingHistory()
-  }, [])
+  }, [toast])
 
   const handleCancelSubscription = async () => {
     if (!confirm("Are you sure you want to cancel your subscription? You'll lose access to premium features at the end of your billing period.")) {
@@ -421,16 +443,7 @@ export default function ManageSubscriptionPage() {
               </div>
             </div>
 
-            {subscription.auto_renew !== undefined && (
-              <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-blue-600" />
-                <span className="text-sm text-blue-900">
-                  {subscription.auto_renew
-                    ? "Auto-renewal is enabled"
-                    : "Auto-renewal is disabled"}
-                </span>
-              </div>
-            )}
+
           </CardContent>
         </Card>
 
@@ -480,7 +493,7 @@ export default function ManageSubscriptionPage() {
           </Card>
         )}
 
-        {/* Scheduled Downgrade Warning */}
+        {/* Scheduled Downgrade Warning
         {subscription.scheduled_changes?.target_plan && (
           <Card className="border-orange-200 bg-orange-50/50">
             <CardContent className="pt-6">
@@ -519,7 +532,7 @@ export default function ManageSubscriptionPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        )} */}
 
         {/* Actions */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -572,7 +585,7 @@ export default function ManageSubscriptionPage() {
           )}
 
           {/* Only show Downgrade button for paid plans with available lower tiers */}
-          {subscription.plan !== "free" && getAvailableDowngradePlans().length > 0 && (
+          {/* {subscription.plan !== "free" && getAvailableDowngradePlans().length > 0 && (
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center gap-3">
@@ -595,7 +608,7 @@ export default function ManageSubscriptionPage() {
                 </Button>
               </CardContent>
             </Card>
-          )}
+          )} */}
         </div>
 
         {/* Billing History */}
@@ -616,7 +629,7 @@ export default function ManageSubscriptionPage() {
               <div className="flex items-center justify-center py-8">
                 <GradientLoading />
               </div>
-            ) : billingHistory.length === 0 ? (
+            ) : !Array.isArray(billingHistory) || billingHistory.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Receipt className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                 <p className="text-sm font-medium">No billing history available</p>
@@ -638,7 +651,7 @@ export default function ManageSubscriptionPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {billingHistory.map((payment) => (
+                      {Array.isArray(billingHistory) && billingHistory.map((payment) => (
                         <tr
                           key={payment._id}
                           className="border-b border-gray-50 hover:bg-blue-50 transition-colors cursor-pointer"
@@ -696,7 +709,7 @@ export default function ManageSubscriptionPage() {
 
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
-                  {billingHistory.map((payment) => (
+                  {Array.isArray(billingHistory) && billingHistory.map((payment) => (
                     <Card
                       key={payment._id}
                       className="border border-gray-200 cursor-pointer hover:border-blue-400 transition-colors"
@@ -753,7 +766,7 @@ export default function ManageSubscriptionPage() {
           </CardContent>
         </Card>
 
-        {/* Danger Zone */}
+        {/* Danger Zone
         {subscription.plan !== "free" && !subscription.cancel_at_period_end && (
           <Card className="border-red-200 bg-red-50/50">
             <CardHeader>
@@ -783,7 +796,7 @@ export default function ManageSubscriptionPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        )} */}
 
         {/* Payment Dialog for Renewal */}
         <AlertDialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>

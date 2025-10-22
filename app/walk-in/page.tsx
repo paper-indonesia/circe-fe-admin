@@ -81,7 +81,11 @@ export default function WalkInPage() {
   const loading = patientsLoading || staffLoading || treatmentsLoading || bookingsLoading
 
   // Redirect to calendar with query params to auto-open create booking dialog
+  // Set redirecting flag to prevent any API calls before redirect
+  const [isRedirecting, setIsRedirecting] = useState(true)
+
   useEffect(() => {
+    // Immediate redirect to calendar
     router.push('/calendar?action=create&source=walk-in')
   }, [router])
 
@@ -243,7 +247,13 @@ export default function WalkInPage() {
   }, [showClientSearch])
 
   // Fetch availability when service, staff, or week start changes
+  // Skip if redirecting to calendar (prevents duplicate API calls)
   useEffect(() => {
+    if (isRedirecting) {
+      console.log('[Walk-In] Skipping availability fetch - redirecting to calendar')
+      return
+    }
+
     if (formData.treatmentId && formData.staffId && outletId) {
       // Use today's date or week start, whichever is later (don't use past dates)
       const today = startOfDay(new Date())
@@ -251,9 +261,14 @@ export default function WalkInPage() {
       const startDate = weekStartDay < today ? today : weekStartDay
       const startDateStr = format(startDate, 'yyyy-MM-dd')
 
+      console.log('[Walk-In] Fetching availability grid:', {
+        serviceId: formData.treatmentId,
+        staffId: formData.staffId,
+        startDate: startDateStr
+      })
       fetchAvailabilityGrid(formData.treatmentId, formData.staffId, startDateStr)
     }
-  }, [formData.treatmentId, formData.staffId, weekStart, outletId])
+  }, [formData.treatmentId, formData.staffId, weekStart, outletId, isRedirecting])
 
   // API Integration - Cleanup debounce on unmount
   useEffect(() => {

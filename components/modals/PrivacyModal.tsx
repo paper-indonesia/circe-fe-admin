@@ -81,3 +81,4 @@ export function PrivacyModal({ open, onOpenChange }: PrivacyModalProps) {
     </Dialog>
   )
 }
+

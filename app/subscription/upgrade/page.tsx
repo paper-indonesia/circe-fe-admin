@@ -86,14 +86,24 @@ export default function UpgradePage() {
   const [pendingUpgradePlan, setPendingUpgradePlan] = useState<any>(null)
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [paymentUrl, setPaymentUrl] = useState<string>("")
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [processingStartTime, setProcessingStartTime] = useState<number | null>(null)
+  const [checkAttempts, setCheckAttempts] = useState(0)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch plans and current subscription in parallel
+        // Fetch plans and current subscription in parallel with cache-busting
+        const timestamp = Date.now()
         const [plansRes, currentSubRes] = await Promise.all([
-          fetch('/api/subscription/plans'),
-          fetch('/api/subscription')
+          fetch(`/api/subscription/plans?t=${timestamp}`, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+          }),
+          fetch(`/api/subscription?t=${timestamp}`, {
+            cache: 'no-store',
+            headers: { 'Cache-Control': 'no-cache' }
+          })
         ])
 
         if (plansRes.ok) {
@@ -126,6 +136,66 @@ export default function UpgradePage() {
 
     fetchData()
   }, [toast])
+
+  // Auto-check subscription status when payment is processing
+  useEffect(() => {
+    if (!isProcessingPayment) return
+
+    const checkSubscriptionStatus = async () => {
+      try {
+        // Add cache-busting parameter
+        const response = await fetch(`/api/subscription?t=${Date.now()}`, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
+          cache: 'no-store'
+        })
+        if (response.ok) {
+          const subData = await response.json()
+
+          console.log('Checking subscription status:', subData)
+          console.log('Expected plan:', pendingUpgradePlan?.plan)
+          console.log('Current plan:', subData.plan)
+
+          // Check if subscription has been updated
+          if (subData.plan?.toLowerCase() === pendingUpgradePlan?.plan?.toLowerCase()) {
+            // Success! Subscription updated
+            setIsProcessingPayment(false)
+            setShowPaymentDialog(false)
+
+            toast({
+              title: "✅ Payment Confirmed!",
+              description: `Your subscription has been upgraded to ${subData.plan}.`,
+            })
+
+            // Refresh page to show updated plan
+            setTimeout(() => {
+              window.location.reload()
+            }, 2000)
+          } else {
+            // Still processing, increment attempts
+            setCheckAttempts(prev => prev + 1)
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check subscription status:', error)
+      }
+    }
+
+    // Poll every 5 seconds, max 24 attempts (2 minutes)
+    if (checkAttempts < 24) {
+      const intervalId = setInterval(checkSubscriptionStatus, 5000)
+      return () => clearInterval(intervalId)
+    } else {
+      // Timeout after 2 minutes
+      setIsProcessingPayment(false)
+      toast({
+        title: "⏱️ Taking Longer Than Expected",
+        description: "Your payment is still being processed. Please refresh the page in a few moments.",
+      })
+    }
+  }, [isProcessingPayment, checkAttempts, pendingUpgradePlan, toast])
 
   const initiateUpgrade = (plan: any) => {
     const planId = plan.plan
@@ -172,7 +242,7 @@ export default function UpgradePage() {
         body: JSON.stringify({
           target_plan: planId,
           billing_period: billingPeriod,
-          prorate_charges: true
+          prorate_charges: false
         })
       })
 
@@ -518,38 +588,149 @@ export default function UpgradePage() {
       </div>
 
       {/* Payment Link Dialog */}
-      <AlertDialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+      <AlertDialog open={showPaymentDialog} onOpenChange={(open) => {
+        if (!isProcessingPayment) {
+          setShowPaymentDialog(open)
+        }
+      }}>
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-amber-500" />
-              Complete Your Payment
+              {isProcessingPayment ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-purple-500 border-t-transparent" />
+                  Processing Payment...
+                </>
+              ) : (
+                <>
+                  <Crown className="h-5 w-5 text-amber-500" />
+                  Complete Your Payment
+                </>
+              )}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-4 pt-4">
-              <div className="bg-gradient-to-br from-[#FFD6FF]/20 to-[#C8B6FF]/20 border border-[#C8B6FF]/30 rounded-lg p-4">
-                <p className="text-sm text-gray-700 mb-3">
-                  Your upgrade request has been processed. Click the button below to complete your payment.
-                </p>
-                <Button
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                  onClick={() => {
-                    window.open(paymentUrl, '_blank', 'noopener,noreferrer')
-                    setShowPaymentDialog(false)
-                  }}
-                >
-                  <Crown className="h-4 w-4 mr-2" />
-                  Open Payment Page
-                </Button>
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs text-blue-800">
-                  <strong>Note:</strong> Your subscription will be activated automatically once payment is confirmed.
-                </p>
-              </div>
+              {isProcessingPayment ? (
+                <>
+                  {/* Processing State */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-6">
+                    <div className="flex flex-col items-center text-center space-y-4">
+                      <div className="animate-pulse">
+                        <Crown className="h-12 w-12 text-purple-500" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-2">
+                          Confirming Your Payment
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3">
+                          We're checking your payment status. This usually takes 1-2 minutes.
+                        </p>
+                        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-purple-400 border-t-transparent" />
+                          Auto-checking every 5 seconds...
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min((checkAttempts / 24) * 100, 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Attempt {checkAttempts} of 24 (max 2 minutes)
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-xs text-amber-800">
+                      <strong>💡 Tip:</strong> Don't close this window. We'll notify you once payment is confirmed.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Payment Button State */}
+                  <div className="bg-gradient-to-br from-[#FFD6FF]/20 to-[#C8B6FF]/20 border border-[#C8B6FF]/30 rounded-lg p-4">
+                    <p className="text-sm text-gray-700 mb-3">
+                      Your upgrade request has been processed. Click the button below to complete your payment.
+                    </p>
+                    <Button
+                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                      onClick={() => {
+                        window.open(paymentUrl, '_blank', 'noopener,noreferrer')
+                      }}
+                    >
+                      <Crown className="h-4 w-4 mr-2" />
+                      Open Payment Page
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full mt-3 border-purple-200 text-purple-600 hover:bg-purple-50"
+                      onClick={() => {
+                        setIsProcessingPayment(true)
+                        setProcessingStartTime(Date.now())
+                        setCheckAttempts(0)
+                      }}
+                    >
+                      ✓ I've Completed Payment
+                    </Button>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs text-blue-800">
+                      <strong>📝 SLA:</strong> Payment confirmation usually takes 1-2 minutes. Your subscription will be activated automatically once confirmed.
+                    </p>
+                  </div>
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>I'll Pay Later</AlertDialogCancel>
+            {!isProcessingPayment && (
+              <AlertDialogCancel onClick={() => {
+                setShowPaymentDialog(false)
+                toast({
+                  title: "Payment Pending",
+                  description: "You can complete your payment later from the Subscription page.",
+                })
+              }}>
+                I'll Pay Later
+              </AlertDialogCancel>
+            )}
+            {isProcessingPayment && (
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  setIsProcessingPayment(false)
+                  setCheckAttempts(0)
+
+                  // Manual refresh with cache-busting
+                  const response = await fetch(`/api/subscription?t=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: {
+                      'Cache-Control': 'no-cache, no-store, must-revalidate',
+                      'Pragma': 'no-cache'
+                    }
+                  })
+                  if (response.ok) {
+                    const subData = await response.json()
+                    console.log('Manual refresh - subscription data:', subData)
+                    if (subData.plan?.toLowerCase() === pendingUpgradePlan?.plan?.toLowerCase()) {
+                      toast({
+                        title: "✅ Payment Confirmed!",
+                        description: `Your subscription has been upgraded to ${subData.plan}.`,
+                      })
+                      setTimeout(() => window.location.reload(), 1500)
+                    } else {
+                      toast({
+                        title: "Still Processing",
+                        description: "Payment is still being confirmed. Please wait a moment.",
+                      })
+                    }
+                  }
+                }}
+              >
+                🔄 Refresh Status
+              </Button>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

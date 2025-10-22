@@ -66,18 +66,16 @@ export function BookingDateTime({
   className,
   disableNavigation = false
 }: BookingDateTimeProps) {
-  // Always start from today
-  const [weekStart, setWeekStart] = useState(startOfDay(new Date()))
   const [selectedDate, setSelectedDate] = useState<string>("")
   const [selectedTime, setSelectedTime] = useState<string>("")
 
-  // Sync weekStart with availabilityGrid data from API
-  useEffect(() => {
+  // Use weekStart directly from availabilityGrid (controlled by parent)
+  const weekStart = useMemo(() => {
     if (availabilityGrid && availabilityGrid.start_date) {
-      const gridStartDate = startOfDay(new Date(availabilityGrid.start_date))
-      setWeekStart(gridStartDate)
-      console.log('[BookingDateTime] Synced weekStart with grid:', format(gridStartDate, 'yyyy-MM-dd'))
+      return startOfDay(new Date(availabilityGrid.start_date))
     }
+    // Fallback to today if no grid data
+    return startOfDay(new Date())
   }, [availabilityGrid])
 
   // Generate week days (7 days from weekStart)
