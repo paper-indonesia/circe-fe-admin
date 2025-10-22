@@ -242,7 +242,7 @@ export default function UpgradePage() {
         body: JSON.stringify({
           target_plan: planId,
           billing_period: billingPeriod,
-          prorate_charges: true
+          prorate_charges: false
         })
       })
 
