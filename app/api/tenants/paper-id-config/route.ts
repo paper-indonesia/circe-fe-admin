@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL 
 
 // GET /api/tenants/paper-id-config
 export async function GET() {
