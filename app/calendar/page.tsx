@@ -209,9 +209,6 @@ export default function CalendarPage() {
   const [outletId, setOutletId] = useState<string | null>(null)
   const [weekStart, setWeekStart] = useState(startOfDay(new Date()))
 
-  // Cache for availability grids (key: "startDate_serviceId_staffId")
-  const [availabilityCache, setAvailabilityCache] = useState<Record<string, any>>({})
-
   // Customer API state (for booking flow)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loadingCustomers, setLoadingCustomers] = useState(false)
@@ -342,19 +339,9 @@ export default function CalendarPage() {
     }
   }, [bookings, treatments, startDate, endDate])
 
-  // Fetch availability grid from API (with caching)
+  // Fetch availability grid from API (real-time, no caching)
   const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string) => {
     if (!serviceId || !staffId || !outletId) return
-
-    // Generate cache key
-    const cacheKey = `${startDate}_${serviceId}_${staffId}`
-
-    // Check cache first
-    if (availabilityCache[cacheKey]) {
-      console.log('[Calendar] Using cached availability grid for:', cacheKey)
-      setAvailabilityGrid(availabilityCache[cacheKey])
-      return
-    }
 
     // Get selected treatment to use its duration
     const selectedTreatment = treatments.find(t => t.id === serviceId)
@@ -362,7 +349,13 @@ export default function CalendarPage() {
 
     setLoadingNewBookingAvailability(true)
     try {
-      console.log('[Calendar] Fetching from API (not in cache):', cacheKey)
+      console.log('[Calendar] Fetching availability grid from API (real-time):', {
+        serviceId,
+        staffId,
+        startDate,
+        slotInterval
+      })
+
       const response = await fetch(
         `/api/availability/grid?` +
         `service_id=${serviceId}&` +
@@ -379,17 +372,7 @@ export default function CalendarPage() {
       }
 
       const data = await response.json()
-      console.log('[Calendar] Availability grid loaded from API:', data)
-
-      // Save to cache
-      setAvailabilityCache(prev => {
-        const newCache = {
-          ...prev,
-          [cacheKey]: data
-        }
-        console.log('[Calendar] Cache updated. Total cached entries:', Object.keys(newCache).length)
-        return newCache
-      })
+      console.log('[Calendar] Availability grid loaded (real-time):', data)
 
       setAvailabilityGrid(data)
     } catch (error: any) {
