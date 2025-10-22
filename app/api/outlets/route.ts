@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'
+const FASTAPI_URL = process.env.FASTAPI_URL || process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.asia-southeast2.run.app' 
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     if (searchParams.get('sort_order')) params.append('sort_order', searchParams.get('sort_order')!)
 
     const queryString = params.toString()
-    const url = `${BACKEND_URL}/api/v1/outlets${queryString ? '?' + queryString : ''}`
+    const url = `${FASTAPI_URL}/api/v1/outlets${queryString ? '?' + queryString : ''}`
 
     const response = await fetch(url, {
       method: 'GET',
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
-    const response = await fetch(`${BACKEND_URL}/api/v1/outlets`, {
+    const response = await fetch(`${FASTAPI_URL}/api/v1/outlets`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken.value}`,

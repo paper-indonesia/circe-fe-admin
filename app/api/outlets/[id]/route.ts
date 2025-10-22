@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'
+const FASTAPI_URL = process.env.FASTAPI_URL || process.env.NEXT_PUBLIC_FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.asia-southeast2.run.app' 
 
 export async function PUT(
   request: NextRequest,
@@ -20,7 +20,7 @@ export async function PUT(
 
     const body = await request.json()
 
-    const response = await fetch(`${BACKEND_URL}/api/v1/outlets/${id}`, {
+    const response = await fetch(`${FASTAPI_URL}/api/v1/outlets/${id}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${authToken.value}`,
@@ -63,7 +63,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const response = await fetch(`${BACKEND_URL}/api/v1/outlets/${id}`, {
+    const response = await fetch(`${FASTAPI_URL}/api/v1/outlets/${id}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${authToken.value}`,
