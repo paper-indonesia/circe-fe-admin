@@ -435,7 +435,8 @@ export default function SignUpPage() {
 
     try {
       // Step 1: Call FastAPI registration endpoint
-      const response = await fetch('https://circe-fastapi-backend-740443181568.europe-west1.run.app/api/v1/public/register', {
+      const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL 
+      const response = await fetch(`${FASTAPI_URL}/api/v1/public/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

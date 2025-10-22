@@ -7,8 +7,8 @@ export async function GET(req: NextRequest) {
     const envCheck = {
       NODE_ENV: process.env.NODE_ENV,
       FASTAPI_URL: {
-        exists: !!process.env.FASTAPI_URL,
-        value: process.env.FASTAPI_URL || 'NOT SET'
+        exists: !!process.env.NEXT_PUBLIC_FASTAPI_URL,
+        value: process.env.NEXT_PUBLIC_FASTAPI_URL || 'NOT SET'
       },
       usingDummyData: true,
       timestamp: new Date().toISOString()

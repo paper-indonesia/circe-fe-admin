@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const FASTAPI_URL = process.env.FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.europe-west1.run.app'
+const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL_FASTAPI_URL || 'https://circe-fastapi-backend-740443181568.asia-southeast2.run.app'
 
 // Get auth token from cookies
 function getAuthToken(req: NextRequest) {
