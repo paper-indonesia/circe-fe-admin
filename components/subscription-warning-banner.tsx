@@ -170,13 +170,23 @@ export function SubscriptionWarningBanner({
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn(
+      "fixed top-4 left-4 right-4 z-50 mx-auto",
+      "max-w-6xl",
+      severity === 'critical' || severity === 'expired'
+        ? "animate-[slideDown_0.5s_ease-out,shake_0.5s_ease-in-out_0.5s]"
+        : "animate-[slideDown_0.3s_ease-out]",
+      className
+    )}>
       <Alert
         variant={config.variant}
         className={cn(
-          "relative overflow-hidden border-2",
+          "relative overflow-hidden",
           config.bgClass,
-          "shadow-md"
+          severity === 'critical' || severity === 'expired'
+            ? "shadow-2xl animate-pulse border-4 border-red-600 ring-4 ring-red-300 ring-opacity-50"
+            : "shadow-lg border-2",
+          "backdrop-blur-sm bg-opacity-95"
         )}
       >
         {/* Background Pattern */}
@@ -184,8 +194,18 @@ export function SubscriptionWarningBanner({
           <Crown className="h-32 w-32 -mr-8 -mt-8" />
         </div>
 
+        {/* Critical: Flashing border effect */}
+        {(severity === 'critical' || severity === 'expired') && (
+          <div className="absolute inset-0 border-4 border-red-600 animate-pulse pointer-events-none rounded-lg"></div>
+        )}
+
         {/* Icon */}
-        <Icon className={cn("h-5 w-5", config.iconColor)} />
+        <Icon className={cn(
+          severity === 'critical' || severity === 'expired'
+            ? "h-6 w-6 animate-bounce"
+            : "h-5 w-5",
+          config.iconColor
+        )} />
 
         {/* Content */}
         <div className="flex-1">
@@ -229,7 +249,8 @@ export function SubscriptionWarningBanner({
               variant={config.ctaPrimary ? "default" : "outline"}
               size="sm"
               className={cn(
-                config.ctaPrimary && "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                config.ctaPrimary && "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700",
+                (severity === 'critical' || severity === 'expired') && "animate-pulse shadow-lg"
               )}
             >
               {config.ctaText}
