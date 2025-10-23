@@ -385,7 +385,7 @@ export default function ManageSubscriptionPage() {
           </Button>
 
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-[#C8B6FF] to-[#B8C0FF] rounded-xl">
+            <div className="p-3 bg-gradient-to-br from-[#8B5CF6] to-[#A78BFA] rounded-xl">
               <Crown className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -400,7 +400,7 @@ export default function ManageSubscriptionPage() {
         </div>
 
         {/* Current Plan Card */}
-        <Card className="border-2 border-[#C8B6FF] bg-gradient-to-br from-[#FFD6FF]/20 to-[#C8B6FF]/20">
+        <Card className="border-2 border-[#8B5CF6] bg-gradient-to-br from-[#FCD6F5]/20 to-[#8B5CF6]/20">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -409,7 +409,7 @@ export default function ManageSubscriptionPage() {
                   Your current subscription plan
                 </CardDescription>
               </div>
-              <Badge className="bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] text-white">
+              <Badge className="bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] text-white">
                 {subscription.status === "active" ? "Active" : subscription.status}
               </Badge>
             </div>
@@ -417,7 +417,7 @@ export default function ManageSubscriptionPage() {
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div className="flex items-start gap-3 p-4 bg-white/50 rounded-lg">
-                <Calendar className="h-5 w-5 text-[#B8C0FF] mt-0.5" />
+                <Calendar className="h-5 w-5 text-[#A78BFA] mt-0.5" />
                 <div>
                   <p className="text-sm text-gray-600">Start Date</p>
                   <p className="font-semibold text-gray-900">
@@ -429,7 +429,7 @@ export default function ManageSubscriptionPage() {
               </div>
 
               <div className="flex items-start gap-3 p-4 bg-white/50 rounded-lg">
-                <Calendar className="h-5 w-5 text-[#B8C0FF] mt-0.5" />
+                <Calendar className="h-5 w-5 text-[#A78BFA] mt-0.5" />
                 <div>
                   <p className="text-sm text-gray-600">
                     {subscription.status === "active" ? "Renewal Date" : "End Date"}
@@ -539,8 +539,8 @@ export default function ManageSubscriptionPage() {
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-purple-600" />
+                <div className="p-2 bg-[#EDE9FE] rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-[#8B5CF6]" />
                 </div>
                 <div>
                   <CardTitle className="text-lg">Upgrade Plan</CardTitle>
@@ -550,7 +550,7 @@ export default function ManageSubscriptionPage() {
             </CardHeader>
             <CardContent>
               <Button
-                className="w-full bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] hover:from-[#B8B0EF] hover:to-[#A8A0DF] text-white"
+                className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] hover:from-[#B8B0EF] hover:to-[#A8A0DF] text-white"
                 onClick={() => router.push('/subscription/upgrade')}
               >
                 View Available Plans

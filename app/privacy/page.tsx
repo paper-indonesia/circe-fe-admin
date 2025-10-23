@@ -173,7 +173,7 @@ Terakhir diperbarui: ${new Date().toLocaleDateString('id-ID', { year: 'numeric',
             </Button>
           </Link>
           <Link href="/signup">
-            <Button className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90">
+            <Button>
               I Accept - Create Account
             </Button>
           </Link>

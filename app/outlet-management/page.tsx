@@ -38,6 +38,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { Building, Plus, Edit, Trash2, Search, Loader2, MapPin, Phone, Clock, AlertCircle, Mail, Globe, Users, Briefcase, Calendar, X, Save, Sparkles, FileText, Link2, MessageSquare, Activity, Home, MapPinned, Package, Crown } from "lucide-react"
+import { AddButton } from "@/components/ui/add-button"
 
 interface BusinessHour {
   day: number
@@ -515,17 +516,16 @@ export default function OutletManagementPage() {
               <p className="text-gray-600 mt-1">Manage your business locations and outlets</p>
             </div>
           </div>
-          <Button
+          <AddButton
             onClick={() => {
               resetForm()
               setIsAddDialogOpen(true)
             }}
             disabled={usage?.usage?.outlets && (usage.usage.outlets.status === 'exceeded' || usage.usage.outlets.status === 'at_limit')}
-            className="gap-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus className="h-4 w-4" />
             Add Outlet
-          </Button>
+          </AddButton>
         </div>
 
         {/* Approaching Limit Warning */}
@@ -1233,7 +1233,7 @@ export default function OutletManagementPage() {
                   <div className="border rounded-lg p-5 bg-gradient-to-br from-purple-50 to-pink-50">
                     <div className="mb-4">
                       <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-purple-600" />
+                        <Clock className="h-4 w-4 text-[#8B5CF6]" />
                         General Settings
                       </h3>
                       <p className="text-xs text-gray-500 mt-1">Other outlet configurations</p>

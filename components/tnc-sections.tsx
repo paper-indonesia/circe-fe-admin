@@ -29,8 +29,8 @@ export function TNCSections() {
           className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
         >
           {/* Section Header */}
-          <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
-            <span className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-700 text-sm font-bold">
+          <h3 className="text-lg font-bold text-[#6D28D9] mb-4 flex items-center gap-2">
+            <span className="w-8 h-8 bg-[#EDE9FE] rounded-lg flex items-center justify-center text-[#6D28D9] text-sm font-bold">
               {section.number}
             </span>
             {section.title}
@@ -44,7 +44,7 @@ export function TNCSections() {
                   key={idx}
                   className="bg-gray-50 rounded-lg p-4 border border-gray-100"
                 >
-                  <dt className="font-semibold text-purple-700 text-sm mb-1">
+                  <dt className="font-semibold text-[#6D28D9] text-sm mb-1">
                     {item.term}
                   </dt>
                   <dd className="text-sm text-gray-700 leading-relaxed">
@@ -63,7 +63,7 @@ export function TNCSections() {
                   {/* Subsection Title */}
                   {subsection.number && subsection.title && (
                     <h4 className="font-semibold text-gray-900 text-sm flex items-baseline gap-2">
-                      <span className="text-purple-600 font-bold">
+                      <span className="text-[#8B5CF6] font-bold">
                         {subsection.number}
                       </span>
                       {subsection.title}
@@ -106,13 +106,13 @@ export function TNCSections() {
       ))}
 
       {/* Contact Information Footer */}
-      <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6 text-center">
+      <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-[#C4B5FD] rounded-xl p-6 text-center">
         <p className="text-sm text-gray-600 mb-2">
           Jika ada pertanyaan terkait Terms & Conditions ini, silakan hubungi:
         </p>
         <a
           href="mailto:reservaofficialig@gmail.com"
-          className="text-purple-600 hover:text-purple-700 font-semibold text-sm"
+          className="text-[#8B5CF6] hover:text-[#6D28D9] font-semibold text-sm"
         >
           reservaofficialig@gmail.com
         </a>

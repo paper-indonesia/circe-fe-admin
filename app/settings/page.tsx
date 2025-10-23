@@ -864,8 +864,8 @@ export default function SettingsPage() {
                   onClick={() => toggleSection('customerAccess')}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <UserPlus className="h-6 w-6 text-purple-700" />
+                    <div className="p-2 bg-[#EDE9FE] rounded-lg">
+                      <UserPlus className="h-6 w-6 text-[#6D28D9]" />
                     </div>
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">Customer Access</h2>
@@ -886,7 +886,7 @@ export default function SettingsPage() {
                 <Card className="shadow-sm border-gray-200">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
-                      <Link2 className="h-5 w-5 text-purple-600" />
+                      <Link2 className="h-5 w-5 text-[#8B5CF6]" />
                       Customer Portal Link
                     </CardTitle>
                   <CardDescription>
@@ -899,7 +899,7 @@ export default function SettingsPage() {
                       {/* Customer Portal Link */}
                       <div className="space-y-2">
                         <Label className="flex items-center gap-2 text-sm font-semibold">
-                          <Globe className="h-4 w-4 text-purple-600" />
+                          <Globe className="h-4 w-4 text-[#8B5CF6]" />
                           Customer Portal URL
                         </Label>
                         <div className="flex gap-2">
@@ -957,9 +957,9 @@ export default function SettingsPage() {
                       </div>
 
                       {/* Info Box */}
-                      <Alert className="bg-purple-50 border-purple-200">
-                        <AlertCircle className="h-4 w-4 text-purple-600" />
-                        <AlertDescription className="text-purple-800 text-sm">
+                      <Alert className="bg-[#EDE9FE] border-[#C4B5FD]">
+                        <AlertCircle className="h-4 w-4 text-[#8B5CF6]" />
+                        <AlertDescription className="text-[#6D28D9] text-sm">
                           <span className="font-medium">Share this link:</span> Include it in your marketing materials, social media, website, or send directly to customers via email or WhatsApp.
                         </AlertDescription>
                       </Alert>

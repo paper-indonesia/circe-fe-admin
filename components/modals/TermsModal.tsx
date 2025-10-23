@@ -15,7 +15,7 @@ export function TermsModal({ open, onOpenChange }: TermsModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[85vh] p-0 gap-0 overflow-hidden">
         {/* Header with Gradient */}
-        <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-purple-700 px-8 py-6">
+        <div className="relative bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-purple-700 px-8 py-6">
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS1vcGFjaXR5PSIwLjEiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
           <div className="relative flex items-center gap-4">
             <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-lg">
@@ -64,7 +64,7 @@ export function TermsModal({ open, onOpenChange }: TermsModalProps) {
           </p>
           <Button
             onClick={() => onOpenChange(false)}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white px-6"
+            className="bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:opacity-90 text-white px-6"
           >
             Close
           </Button>

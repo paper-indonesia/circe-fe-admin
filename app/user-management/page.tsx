@@ -29,6 +29,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 import { Shield, UserPlus, Edit, Trash2, Search, Loader2, Mail, User, Lock, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { motion } from "framer-motion"
+import { AddButton } from "@/components/ui/add-button"
 
 interface OutletInfo {
   id: string
@@ -485,7 +486,7 @@ export default function UserManagementPage() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#8B5CF6]" />
       </div>
     )
   }
@@ -501,7 +502,7 @@ export default function UserManagementPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#8B5CF6] to-[#EC4899] flex items-center justify-center">
             <Shield className="h-6 w-6 text-white" />
           </div>
           <div>
@@ -509,13 +510,12 @@ export default function UserManagementPage() {
             <p className="text-gray-600 mt-1">Manage users and their permissions</p>
           </div>
         </div>
-        <Button
+        <AddButton
           onClick={() => setIsAddDialogOpen(true)}
-          className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"
+          icon={UserPlus}
         >
-          <UserPlus className="h-4 w-4" />
           Add User
-        </Button>
+        </AddButton>
       </div>
 
       {/* Alerts */}
@@ -597,7 +597,7 @@ export default function UserManagementPage() {
           {/* Users Table */}
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#8B5CF6]" />
             </div>
           ) : users.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
@@ -932,7 +932,7 @@ export default function UserManagementPage() {
             }}>
               Cancel
             </Button>
-            <Button onClick={handleAddUser} className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+            <Button onClick={handleAddUser}>
               Create User
             </Button>
           </DialogFooter>
@@ -1119,7 +1119,7 @@ export default function UserManagementPage() {
             }}>
               Cancel
             </Button>
-            <Button onClick={handleUpdateUser} className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+            <Button onClick={handleUpdateUser}>
               Update User
             </Button>
           </DialogFooter>

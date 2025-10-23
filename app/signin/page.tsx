@@ -250,7 +250,7 @@ export default function SignInPage() {
   }
 
   const getGradient = () => {
-    return 'from-purple-600 to-pink-600'
+    return 'from-[#8B5CF6] to-[#EC4899]'
   }
 
   if (pageLoading) {
@@ -292,7 +292,7 @@ export default function SignInPage() {
                       key={tenant.id}
                       onClick={() => handleTenantSelection(tenant.slug)}
                       disabled={isLoading}
-                      className="w-full p-4 rounded-xl border-2 border-gray-200 hover:border-purple-600 hover:bg-purple-50 transition-all duration-200 text-left group disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full p-4 rounded-xl border-2 border-gray-200 hover:border-purple-600 hover:bg-[#EDE9FE] transition-all duration-200 text-left group disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="flex items-center gap-3">
                         <div className={`p-3 rounded-lg bg-gradient-to-r ${getGradient()} group-hover:scale-110 transition-transform`}>
@@ -302,7 +302,7 @@ export default function SignInPage() {
                           <h3 className="font-semibold text-gray-900">{tenant.name}</h3>
                           <p className="text-sm text-gray-500">@{tenant.slug}</p>
                         </div>
-                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-[#8B5CF6] group-hover:translate-x-1 transition-all" />
                       </div>
                     </button>
                   ))}
@@ -388,7 +388,7 @@ export default function SignInPage() {
                     Email Address
                   </Label>
                   <div className="relative group">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-purple-600 transition-colors" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-[#8B5CF6] transition-colors" />
                     <Input
                       id="email"
                       type="email"
@@ -407,7 +407,7 @@ export default function SignInPage() {
                     Password
                   </Label>
                   <div className="relative group">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-purple-600 transition-colors" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 group-focus-within:text-[#8B5CF6] transition-colors" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
@@ -434,12 +434,12 @@ export default function SignInPage() {
 
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" className="rounded border-gray-300 text-purple-600 focus:ring-purple-600" />
+                    <input type="checkbox" className="rounded border-gray-300 text-[#8B5CF6] focus:ring-purple-600" />
                     <span className="text-sm text-gray-600">Remember me</span>
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors"
+                    className="text-sm text-[#8B5CF6] hover:text-[#6D28D9] font-medium transition-colors"
                   >
                     Forgot password?
                   </Link>
@@ -469,7 +469,7 @@ export default function SignInPage() {
                   Don't have an account?{" "}
                   <Link
                     href="/signup"
-                    className="text-purple-600 hover:text-purple-700 font-semibold transition-colors"
+                    className="text-[#8B5CF6] hover:text-[#6D28D9] font-semibold transition-colors"
                   >
                     Create an account
                   </Link>
@@ -499,7 +499,7 @@ export default function SignInPage() {
                   <button
                     type="button"
                     onClick={() => setShowTermsModal(true)}
-                    className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                    className="text-[#8B5CF6] hover:text-[#6D28D9] font-semibold underline underline-offset-2"
                   >
                     Terms of Service
                   </button>
@@ -507,7 +507,7 @@ export default function SignInPage() {
                   <button
                     type="button"
                     onClick={() => setShowPrivacyModal(true)}
-                    className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                    className="text-[#8B5CF6] hover:text-[#6D28D9] font-semibold underline underline-offset-2"
                   >
                     Privacy Policy
                   </button>

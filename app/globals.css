@@ -12,7 +12,7 @@
   --card-foreground: #1f2937;
   --popover: #ffffff;
   --popover-foreground: #1f2937;
-  
+
   /* Pastel Colors - Updated from palete.pdf */
   --primary: #C8B6FF;
   --primary-hover: #B8A6EF;
@@ -33,7 +33,7 @@
   --success: #BBD0FF;
   --success-hover: #ABC0EF;
   --success-foreground: #1f2937;
-  
+
   /* Utility colors */
   --muted: #f8f9fa;
   --muted-foreground: #4b5563;
@@ -41,13 +41,13 @@
   --destructive-foreground: #ffffff;
   --warning: #f59e0b;
   --warning-foreground: #ffffff;
-  
+
   /* Borders and inputs */
   --border: #e5e7eb;
   --input: #ffffff;
   --ring: #C8B6FF;
   --radius: 0.75rem;
-  
+
   /* Charts */
   --chart-1: #C8B6FF;
   --chart-2: #FFD6FF;
@@ -63,38 +63,38 @@
   --card-foreground: #f1f5f9;
   --popover: #1e293b;
   --popover-foreground: #f1f5f9;
-  
+
   --primary: #C8B6FF;
   --primary-hover: #B8A6EF;
   --primary-foreground: #0f172a;
-  
+
   --secondary: #FFD6FF;
   --secondary-hover: #FFCCFF;
   --secondary-foreground: #0f172a;
-  
+
   --accent: #E7C6FF;
   --accent-hover: #DDC0F5;
   --accent-foreground: #0f172a;
-  
+
   --info: #B8C0FF;
   --info-hover: #A8B0EF;
   --info-foreground: #0f172a;
-  
+
   --success: #BBD0FF;
   --success-hover: #ABC0EF;
   --success-foreground: #0f172a;
-  
+
   --muted: #1e293b;
   --muted-foreground: #94a3b8;
   --destructive: #f87171;
   --destructive-foreground: #0f172a;
   --warning: #fbbf24;
   --warning-foreground: #0f172a;
-  
+
   --border: #334155;
   --input: #1e293b;
   --ring: #C8B6FF;
-  
+
   --chart-1: #C8B6FF;
   --chart-2: #FFD6FF;
   --chart-3: #E7C6FF;
@@ -131,125 +131,146 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  
+
   /* Define custom pastel colors */
   --color-pastel-purple: #C8B6FF;
   --color-pastel-pink: #FFD6FF;
   --color-pastel-lavender: #E7C6FF;
   --color-pastel-periwinkle: #B8C0FF;
   --color-pastel-blue: #BBD0FF;
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+  @keyframes shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+    }
+  }
+  @keyframes spin-around {
+  0% {
+    transform: translateZ(0) rotate(0);
+    }
+  15%, 35% {
+    transform: translateZ(0) rotate(90deg);
+    }
+  65%, 85% {
+    transform: translateZ(0) rotate(270deg);
+    }
+  100% {
+    transform: translateZ(0) rotate(360deg);
+    }
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
-  
+
   body {
     @apply bg-background text-foreground antialiased;
   }
-  
+
   /* Pastel color utilities */
   .bg-pastel-purple { background-color: #C8B6FF; }
   .bg-pastel-pink { background-color: #FFD6FF; }
   .bg-pastel-lavender { background-color: #E7C6FF; }
   .bg-pastel-periwinkle { background-color: #B8C0FF; }
   .bg-pastel-blue { background-color: #BBD0FF; }
-  
+
   .text-pastel-purple { color: #C8B6FF; }
   .text-pastel-pink { color: #FFD6FF; }
   .text-pastel-lavender { color: #E7C6FF; }
   .text-pastel-periwinkle { color: #B8C0FF; }
   .text-pastel-blue { color: #BBD0FF; }
-  
+
   .border-pastel-purple { border-color: #C8B6FF; }
   .border-pastel-pink { border-color: #FFD6FF; }
   .border-pastel-lavender { border-color: #E7C6FF; }
   .border-pastel-periwinkle { border-color: #B8C0FF; }
   .border-pastel-blue { border-color: #BBD0FF; }
-  
+
   /* Gradient utilities */
   .gradient-purple-lavender {
     background: linear-gradient(135deg, #C8B6FF 0%, #E7C6FF 100%);
   }
-  
+
   .gradient-pink-lavender {
     background: linear-gradient(135deg, #FFD6FF 0%, #E7C6FF 100%);
   }
-  
+
   .gradient-periwinkle-blue {
     background: linear-gradient(135deg, #B8C0FF 0%, #BBD0FF 100%);
   }
-  
+
   /* Modern components */
   .btn-primary {
     background-color: #C8B6FF;
     color: #1f2937;
     transition: all 0.2s;
   }
-  
+
   .btn-primary:hover {
     background-color: #B8A6EF;
   }
-  
+
   .btn-secondary {
     background-color: #FFD6FF;
     color: #1f2937;
     transition: all 0.2s;
   }
-  
+
   .btn-secondary:hover {
     background-color: #FFCCFF;
   }
-  
+
   /* Card styles */
   .card-modern {
     @apply bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow;
   }
-  
+
   /* Input styles */
   .input-modern {
     @apply bg-input border border-border rounded-md px-3 py-2 transition-all;
   }
-  
+
   .input-modern:focus {
     border-color: #C8B6FF;
     box-shadow: 0 0 0 3px rgba(200, 182, 255, 0.1);
   }
-  
+
   /* Scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-  
+
   ::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 4px;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
   }
-  
+
   .dark ::-webkit-scrollbar-thumb {
     background: #475569;
   }
-  
+
   .dark ::-webkit-scrollbar-thumb:hover {
     background: #64748b;
   }
-  
+
   /* Focus styles */
   :focus-visible {
     outline: 2px solid #C8B6FF;
     outline-offset: 2px;
   }
-  
+
   /* Selection */
   ::selection {
     background: #E7C6FF;
@@ -294,5 +315,14 @@
   /* Prevent text overflow in collapsed state */
   aside[class*="fixed"][class*="inset-y-0"] > div > * {
     max-width: 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }

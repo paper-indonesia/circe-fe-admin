@@ -180,7 +180,7 @@ export function BookingDateTime({
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50">
         <Avatar className="h-12 w-12">
           <AvatarImage src={provider.avatarUrl} alt={provider.name} />
-          <AvatarFallback className="bg-[#C8B6FF] text-white font-semibold text-base">
+          <AvatarFallback className="bg-[#8B5CF6] text-white font-semibold text-base">
             {provider.name.charAt(0)}
           </AvatarFallback>
         </Avatar>
@@ -304,7 +304,7 @@ export function BookingDateTime({
                         className={cn(
                           "flex-1 min-w-[80px] h-10 px-2 rounded-lg text-xs font-medium transition-all",
                           isSelected
-                            ? "bg-[#C8B6FF] text-white shadow-md ring-2 ring-[#B8A6EF] ring-offset-1"
+                            ? "bg-[#8B5CF6] text-white shadow-md ring-2 ring-[#B8A6EF] ring-offset-1"
                             : isAvailable
                               ? "bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300"
                               : isPast
@@ -327,12 +327,12 @@ export function BookingDateTime({
       {selectedDate && selectedTime && (
         <div className="border-t border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-3">
           <div className="flex items-center justify-center gap-2 text-sm">
-            <Calendar className="h-4 w-4 text-[#C8B6FF] flex-shrink-0" />
+            <Calendar className="h-4 w-4 text-[#8B5CF6] flex-shrink-0" />
             <span className="font-semibold text-gray-900">
               {format(new Date(selectedDate), 'EEE, MMM d, yyyy')}
             </span>
             <span className="text-gray-400 mx-1">·</span>
-            <Clock className="h-4 w-4 text-[#C8B6FF] flex-shrink-0" />
+            <Clock className="h-4 w-4 text-[#8B5CF6] flex-shrink-0" />
             <span className="font-semibold text-gray-900">{selectedTime}</span>
           </div>
         </div>

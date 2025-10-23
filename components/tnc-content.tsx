@@ -12,7 +12,7 @@ export function TNCContent() {
 
       {/* 1. DEFINISI */}
       <div>
-        <h3 className="text-lg font-bold text-purple-900 mb-3">1. DEFINISI</h3>
+        <h3 className="text-lg font-bold text-[#6D28D9] mb-3">1. DEFINISI</h3>
         <div className="space-y-2">
           <p><strong>Aplikasi Pelanggan:</strong> Aplikasi mobile dan/atau situs web yang digunakan Pengguna Akhir untuk membuat akun, menelusuri layanan, dan melakukan Pemesanan.</p>
           <p><strong>Konsol Admin:</strong> Dashboard berbasis web untuk Mitra mengelola outlet, staf, jadwal, produk/layanan, dan transaksi.</p>
@@ -30,7 +30,7 @@ export function TNCContent() {
 
       {/* 2. RUANG LINGKUP & PERSETUJUAN */}
       <div>
-        <h3 className="text-lg font-bold text-purple-900 mb-3">2. RUANG LINGKUP & PERSETUJUAN</h3>
+        <h3 className="text-lg font-bold text-[#6D28D9] mb-3">2. RUANG LINGKUP & PERSETUJUAN</h3>
         <div className="space-y-3">
           <div>
             <h4 className="font-semibold mb-1">2.1 Persetujuan Syarat</h4>

@@ -607,7 +607,7 @@ export default function ReportsPage() {
             <CardContent className="flex flex-col items-center justify-center py-16 px-4">
               <div className="relative mb-6">
                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-                  <BarChart3 className="h-12 w-12 text-purple-600" />
+                  <BarChart3 className="h-12 w-12 text-[#8B5CF6]" />
                 </div>
                 <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg">
                   <AlertCircle className="h-5 w-5 text-yellow-900" />
@@ -622,7 +622,7 @@ export default function ReportsPage() {
               <div className="flex flex-wrap gap-3 justify-center">
                 <Button
                   onClick={() => router.push('/calendar')}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+                  className="bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:opacity-90"
                 >
                   <Calendar className="h-4 w-4 mr-2" />
                   Go to Calendar
@@ -637,8 +637,8 @@ export default function ReportsPage() {
               </div>
 
               <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
-                <div className="bg-purple-50 rounded-lg p-4 text-center">
-                  <Calendar className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                <div className="bg-[#EDE9FE] rounded-lg p-4 text-center">
+                  <Calendar className="h-8 w-8 text-[#8B5CF6] mx-auto mb-2" />
                   <p className="font-semibold text-sm text-gray-900">Create {"Bookings"}</p>
                   <p className="text-xs text-muted-foreground mt-1">Schedule appointments</p>
                 </div>
@@ -847,7 +847,7 @@ export default function ReportsPage() {
           <Card className="bg-gradient-to-br from-purple-500/5 to-blue-500/5 border-purple-500/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-purple-600" />
+                <Activity className="h-5 w-5 text-[#8B5CF6]" />
                 {"Products"} Analysis: {selectedTreatment}
               </CardTitle>
             </CardHeader>
@@ -863,7 +863,7 @@ export default function ReportsPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">Total Revenue</p>
-                      <p className="text-lg font-semibold text-purple-600">
+                      <p className="text-lg font-semibold text-[#8B5CF6]">
                         {formatCurrency(treatment.revenue)}
                       </p>
                     </div>
@@ -984,13 +984,13 @@ export default function ReportsPage() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-purple-600/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-300" />
             <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Completion Rate</CardTitle>
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
-                <CheckCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              <div className="p-2 bg-[#EDE9FE] dark:bg-purple-900/30 rounded-lg group-hover:bg-[#C4B5FD] dark:group-hover:bg-purple-900/50 transition-colors">
+                <CheckCircle className="h-4 w-4 text-[#8B5CF6] dark:text-purple-400" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">{data.summary.completionRate}%</div>
-              <div className="flex items-center text-xs text-purple-600 dark:text-purple-400 mt-1">
+              <div className="flex items-center text-xs text-[#8B5CF6] dark:text-purple-400 mt-1">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 <span>Successfully completed</span>
               </div>
@@ -1001,7 +1001,7 @@ export default function ReportsPage() {
                     style={{ width: `${data.summary.completionRate}%` }}
                   />
                 </div>
-                <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
+                <span className="text-xs font-medium text-[#8B5CF6] dark:text-purple-400">
                   {data.summary.completionRate}%
                 </span>
               </div>
@@ -1058,7 +1058,7 @@ export default function ReportsPage() {
                   </div>
                   <span className="bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent font-semibold">Revenue Trend</span>
                 </CardTitle>
-                <Badge className="bg-gradient-to-r from-pink-500/10 to-purple-500/10 text-purple-700 border-purple-200">Daily View</Badge>
+                <Badge className="bg-gradient-to-r from-pink-500/10 to-purple-500/10 text-[#6D28D9] border-[#C4B5FD]">Daily View</Badge>
               </div>
             </CardHeader>
             <CardContent className="pt-6">
@@ -1595,8 +1595,8 @@ export default function ReportsPage() {
                 <div className="absolute top-0 right-0 w-20 h-20 bg-purple-300/20 rounded-full -translate-y-10 translate-x-10 group-hover:scale-125 transition-transform duration-300" />
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-2">
-                    <Target className="h-4 w-4 text-purple-600" />
-                    <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Avg Value</span>
+                    <Target className="h-4 w-4 text-[#8B5CF6]" />
+                    <span className="text-sm font-medium text-[#6D28D9] dark:text-purple-100">Avg Value</span>
                   </div>
                   <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-purple-700 bg-clip-text text-transparent">{formatCurrency(data.summary.avgBookingValue)}</p>
                 </div>
@@ -1667,18 +1667,18 @@ export default function ReportsPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-[#C4B5FD]">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-purple-600 uppercase">Total Appointments</p>
-                      <p className="text-2xl font-bold text-purple-900 mt-1">{(customerStatistics.total_appointments || 0).toLocaleString()}</p>
-                      <p className="text-xs text-purple-600 mt-2">
+                      <p className="text-xs font-medium text-[#8B5CF6] uppercase">Total Appointments</p>
+                      <p className="text-2xl font-bold text-[#6D28D9] mt-1">{(customerStatistics.total_appointments || 0).toLocaleString()}</p>
+                      <p className="text-xs text-[#8B5CF6] mt-2">
                         Avg: {(customerStatistics.avg_appointments_per_customer || 0).toFixed(1)}/customer
                       </p>
                     </div>
-                    <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                      <Calendar className="h-6 w-6 text-purple-600" />
+                    <div className="h-12 w-12 rounded-full bg-[#EDE9FE] flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-[#8B5CF6]" />
                     </div>
                   </div>
                 </CardContent>
@@ -1715,9 +1715,9 @@ export default function ReportsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-[#EDE9FE] rounded-lg">
                         <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-purple-600" />
+                          <Award className="h-4 w-4 text-[#8B5CF6]" />
                           <span className="font-medium text-sm">VIP Customers</span>
                         </div>
                         <Badge className="bg-purple-600">{customerStatistics.customer_segments.vip || 0}</Badge>

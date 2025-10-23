@@ -177,14 +177,14 @@ export function CategoryTemplatesStep({ onValidChange }: CategoryTemplatesStepPr
           </div>
         </Card>
 
-        <Card className="p-5 border-purple-200 bg-purple-50 min-h-[130px] flex max-w-full">
+        <Card className="p-5 border-[#C4B5FD] bg-[#EDE9FE] min-h-[130px] flex max-w-full">
           <div className="flex items-start gap-3 min-w-0 w-full">
-            <div className="bg-purple-100 rounded-lg p-2 flex-shrink-0">
-              <CheckCircle2 className="h-5 w-5 text-purple-600" />
+            <div className="bg-[#EDE9FE] rounded-lg p-2 flex-shrink-0">
+              <CheckCircle2 className="h-5 w-5 text-[#8B5CF6]" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-purple-900 mb-2 truncate">Kenapa ini berguna</h3>
-              <p className="text-sm text-purple-700 leading-relaxed break-words">
+              <h3 className="font-semibold text-[#6D28D9] mb-2 truncate">Kenapa ini berguna</h3>
+              <p className="text-sm text-[#6D28D9] leading-relaxed break-words">
                 Kategori membantu mengorganisir layanan Anda, mempermudah navigasi pelanggan, dan laporan bisnis lebih terstruktur.
               </p>
             </div>
@@ -257,7 +257,7 @@ export function CategoryTemplatesStep({ onValidChange }: CategoryTemplatesStepPr
                         transition={{ delay: index * 0.03 }}
                         className={`flex items-start gap-3 p-4 border rounded-lg transition-all ${
                           template.is_selected
-                            ? "bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200"
+                            ? "bg-gradient-to-br from-purple-50 to-pink-50 border-[#C4B5FD]"
                             : "bg-white border-gray-200 hover:border-gray-300"
                         }`}
                       >

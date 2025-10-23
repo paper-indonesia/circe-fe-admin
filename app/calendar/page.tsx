@@ -64,6 +64,7 @@ import {
   UserPlus,
   RefreshCw,
 } from "lucide-react"
+import { AddButton } from "@/components/ui/add-button"
 import GradientLoading from "@/components/gradient-loading"
 import {
   Sheet,
@@ -1191,13 +1192,9 @@ export default function CalendarPage() {
               <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
               {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </Button>
-            <Button
-              onClick={handleNewBookingFromButton}
-              className="bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900"
-            >
-              <Plus className="h-4 w-4 mr-2" />
+            <AddButton onClick={handleNewBookingFromButton}>
               New Booking
-            </Button>
+            </AddButton>
           </div>
         </div>
 
@@ -1355,19 +1352,19 @@ export default function CalendarPage() {
                       className={cn(
                         "min-h-[120px] p-3 rounded-lg border transition-all hover:shadow-lg hover:scale-[1.02] relative overflow-hidden group",
                         isCurrentMonth ? "bg-white" : "bg-gray-50",
-                        isCurrentDay && "ring-2 ring-[#C8B6FF]",
-                        selectedDate && isSameDay(day, selectedDate) && "bg-gradient-to-br from-[#FFD6FF]/30 to-[#E7C6FF]/30 shadow-md"
+                        isCurrentDay && "ring-2 ring-[#8B5CF6]",
+                        selectedDate && isSameDay(day, selectedDate) && "bg-gradient-to-br from-[#FCD6F5]/30 to-[#EDE9FE]/30 shadow-md"
                       )}
                     >
                       {/* Gradient overlay on hover */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#FFD6FF]/0 to-[#E7C6FF]/0 group-hover:from-[#FFD6FF]/10 group-hover:to-[#E7C6FF]/10 transition-all" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#FCD6F5]/0 to-[#EDE9FE]/0 group-hover:from-[#FCD6F5]/10 group-hover:to-[#EDE9FE]/10 transition-all" />
 
                       <div className="relative">
                         {/* Date header */}
                         <div className="flex items-center justify-between mb-2">
                           <span className={cn(
                             "text-sm font-semibold",
-                            isCurrentDay ? "bg-[#C8B6FF] text-white px-2.5 py-1 rounded-full" : "text-gray-700",
+                            isCurrentDay ? "bg-[#8B5CF6] text-white px-2.5 py-1 rounded-full" : "text-gray-700",
                             !isCurrentMonth && "text-gray-400"
                           )}>
                             {format(day, "d")}
@@ -1440,7 +1437,7 @@ export default function CalendarPage() {
             <CardContent className="p-6">
               {/* Bulk Actions */}
               {selectedBookings.length > 0 && (
-                <div className="flex items-center gap-2 mb-4 p-3 bg-[#BBD0FF]/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-4 p-3 bg-[#C4B5FD]/20 rounded-lg">
                   <span className="text-sm font-medium">{selectedBookings.length} selected</span>
                   <Button
                     size="sm"
@@ -1536,7 +1533,7 @@ export default function CalendarPage() {
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center text-sm font-semibold">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center text-sm font-semibold">
                                 {patient?.name?.charAt(0) || "?"}
                               </div>
                               <span className="text-sm font-medium">{patient?.name || "Unknown"}</span>
@@ -1606,7 +1603,7 @@ export default function CalendarPage() {
                             size="sm"
                             className={cn(
                               "w-8 h-8 p-0",
-                              tablePage === pageNum && "bg-[#C8B6FF] hover:bg-[#B8A6EF]"
+                              tablePage === pageNum && "bg-[#8B5CF6] hover:bg-[#B8A6EF]"
                             )}
                             onClick={() => setTablePage(pageNum)}
                           >
@@ -1644,14 +1641,14 @@ export default function CalendarPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-500">Total Bookings</p>
-                  <p className="text-2xl font-bold text-[#C8B6FF]">
+                  <p className="text-2xl font-bold text-[#8B5CF6]">
                     {selectedDate && getBookingsForDate(selectedDate).length}
                   </p>
                 </div>
               </div>
               <Button
                 onClick={() => selectedDate && handleNewBookingFromCalendar(selectedDate)}
-                className="w-full bg-[#C8B6FF] hover:bg-[#B8A6EF] text-white h-11 font-medium"
+                className="w-full bg-[#8B5CF6] hover:bg-[#B8A6EF] text-white h-11 font-medium"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add New Booking
@@ -1686,11 +1683,11 @@ export default function CalendarPage() {
                       <div
                         className={cn(
                           "flex items-center gap-4 px-5 py-4 rounded-2xl bg-white border cursor-pointer transition-all",
-                          isExpanded ? "border-[#C8B6FF] shadow-lg mb-2" : "border-gray-100 hover:border-gray-200 hover:shadow-md"
+                          isExpanded ? "border-[#8B5CF6] shadow-lg mb-2" : "border-gray-100 hover:border-gray-200 hover:shadow-md"
                         )}
                       >
                         {/* Time Badge */}
-                        <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-[#FFD6FF]/40 to-[#E7C6FF]/40 flex-shrink-0">
+                        <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-[#FCD6F5]/40 to-[#EDE9FE]/40 flex-shrink-0">
                           <div className="text-center">
                             <div className="text-lg font-bold text-gray-900">{time.split(':')[0]}</div>
                             <div className="text-[10px] text-gray-500 font-medium">{time.split(':')[1]}</div>
@@ -1711,7 +1708,7 @@ export default function CalendarPage() {
                             return (
                               <div
                                 key={idx}
-                                className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center border-2 border-white text-xs font-bold text-gray-700 shadow-sm"
+                                className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center border-2 border-white text-xs font-bold text-gray-700 shadow-sm"
                               >
                                 {booking.patientName?.charAt(0)?.toUpperCase() || "?"}
                               </div>
@@ -1726,7 +1723,7 @@ export default function CalendarPage() {
 
                         <ChevronRight className={cn(
                           "h-5 w-5 text-gray-400 transition-all duration-200 flex-shrink-0",
-                          isExpanded && "rotate-90 text-[#C8B6FF]"
+                          isExpanded && "rotate-90 text-[#8B5CF6]"
                         )} />
                       </div>
 
@@ -1784,13 +1781,13 @@ export default function CalendarPage() {
 
                                   {/* Card */}
                                   <Card
-                                    className="flex-1 bg-white border border-gray-100 hover:border-[#E7C6FF] cursor-pointer hover:shadow-lg transition-all"
+                                    className="flex-1 bg-white border border-gray-100 hover:border-[#EDE9FE] cursor-pointer hover:shadow-lg transition-all"
                                     onClick={() => handleOpenDetails(booking)}
                                   >
                                     <CardContent className="p-4">
                                       {/* Header */}
                                       <div className="flex items-start gap-3 mb-3">
-                                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center flex-shrink-0 text-sm font-bold text-gray-700 shadow">
+                                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center flex-shrink-0 text-sm font-bold text-gray-700 shadow">
                                           {patient?.name?.charAt(0)?.toUpperCase() || "?"}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -1810,7 +1807,7 @@ export default function CalendarPage() {
                                       {/* Details Grid */}
                                       <div className="grid grid-cols-2 gap-3 text-xs">
                                         <div className="flex items-center gap-2">
-                                          <Star className="h-3.5 w-3.5 text-[#C8B6FF] flex-shrink-0" />
+                                          <Star className="h-3.5 w-3.5 text-[#8B5CF6] flex-shrink-0" />
                                           <div className="min-w-0">
                                             <p className="text-gray-400 text-[10px]">Treatment</p>
                                             <p className="font-medium text-gray-900 truncate">{treatment?.name || "Unknown"}</p>
@@ -1960,9 +1957,9 @@ export default function CalendarPage() {
 
                   <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
                     {/* Patient Info Card */}
-                    <div className="bg-gradient-to-br from-[#FFD6FF]/10 to-[#E7C6FF]/10 rounded-xl p-4 border border-[#FFD6FF]/30">
+                    <div className="bg-gradient-to-br from-[#FCD6F5]/10 to-[#EDE9FE]/10 rounded-xl p-4 border border-[#FCD6F5]/30">
                       <div className="flex items-start gap-3">
-                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center text-xl font-bold text-gray-700 shadow flex-shrink-0">
+                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center text-xl font-bold text-gray-700 shadow flex-shrink-0">
                           {patient?.name?.charAt(0)?.toUpperCase() || "?"}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1986,8 +1983,8 @@ export default function CalendarPage() {
                     <div className="space-y-3">
                       {/* Treatment */}
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
-                          <Star className="h-4 w-4 text-[#C8B6FF]" />
+                        <div className="w-10 h-10 rounded-lg bg-[#EDE9FE] flex items-center justify-center flex-shrink-0">
+                          <Star className="h-4 w-4 text-[#8B5CF6]" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Treatment</p>
@@ -2057,7 +2054,7 @@ export default function CalendarPage() {
                     {/* General Info Section */}
                     <div>
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-1 h-3 bg-[#C8B6FF] rounded-full"></div>
+                        <div className="w-1 h-3 bg-[#8B5CF6] rounded-full"></div>
                         <h3 className="text-xs font-bold text-gray-900">General Info</h3>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -2084,7 +2081,7 @@ export default function CalendarPage() {
                     {(selectedBooking.notes || isEditMode) && (
                       <div>
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1 h-3 bg-[#C8B6FF] rounded-full"></div>
+                          <div className="w-1 h-3 bg-[#8B5CF6] rounded-full"></div>
                           <h3 className="text-xs font-bold text-gray-900">Notes</h3>
                         </div>
                         {isEditMode ? (
@@ -2116,7 +2113,7 @@ export default function CalendarPage() {
                           Cancel
                         </Button>
                         <Button
-                          className="flex-1 h-10 bg-[#C8B6FF] hover:bg-[#B8A6EF] text-white text-sm font-medium"
+                          className="flex-1 h-10 bg-[#8B5CF6] hover:bg-[#B8A6EF] text-white text-sm font-medium"
                           onClick={handleSaveChanges}
                           disabled={isSaving}
                         >
@@ -2153,7 +2150,7 @@ export default function CalendarPage() {
                           No Show
                         </Button>
                         <Button
-                          className="flex-1 h-10 bg-[#C8B6FF] hover:bg-[#B8A6EF] text-white text-sm font-medium"
+                          className="flex-1 h-10 bg-[#8B5CF6] hover:bg-[#B8A6EF] text-white text-sm font-medium"
                           onClick={handleFinishBooking}
                           disabled={['completed', 'cancelled', 'no-show'].includes(selectedBooking.status)}
                         >
@@ -2513,7 +2510,7 @@ export default function CalendarPage() {
                               filtered.map((treatment) => (
                                 <SelectItem key={treatment.id} value={treatment.id} className="group relative text-sm py-2.5">
                                   <div className="flex items-center gap-2.5">
-                                    <Star className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                                    <Star className="h-4 w-4 text-[#8B5CF6] flex-shrink-0" />
                                     <div className="flex-1 min-w-0">
                                       <p className="font-medium truncate text-sm">{treatment.name}</p>
                                       <p className="text-xs text-gray-500">
@@ -2558,15 +2555,15 @@ export default function CalendarPage() {
                   ) : (() => {
                     const selected = treatments.find(t => t.id === newBookingData.treatmentId)
                     return selected && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-purple-50/60 border border-purple-200 rounded-lg">
-                        <Star className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                      <div className="flex items-center gap-2 px-3 py-2 bg-[#EDE9FE]/60 border border-[#C4B5FD] rounded-lg">
+                        <Star className="h-4 w-4 text-[#8B5CF6] flex-shrink-0" />
                         <span className="text-sm text-gray-900 flex-1 truncate">
-                          {selected.name} · <span className="text-purple-600">{formatCurrency(selected.price)}</span> · {selected.duration || selected.durationMin} min
+                          {selected.name} · <span className="text-[#8B5CF6]">{formatCurrency(selected.price)}</span> · {selected.duration || selected.durationMin} min
                         </span>
                         <button
                           type="button"
                           onClick={() => setNewBookingData({ ...newBookingData, treatmentId: "", staffId: "", date: "", time: "" })}
-                          className="text-xs font-medium text-purple-600 hover:text-purple-700 hover:underline flex-shrink-0"
+                          className="text-xs font-medium text-[#8B5CF6] hover:text-[#6D28D9] hover:underline flex-shrink-0"
                         >
                           Change
                         </button>

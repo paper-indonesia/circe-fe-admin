@@ -33,7 +33,7 @@ export function LoadingOverlay({ show, text = "Loading", className }: LoadingOve
               <div
                 className="absolute inset-0 rounded-xl blur-lg"
                 style={{
-                  background: 'linear-gradient(135deg, #FFD6FF 0%, #C8B6FF 50%, #B8C0FF 100%)',
+                  background: 'linear-gradient(135deg, #FCD6F5 0%, #8B5CF6 50%, #A78BFA 100%)',
                   animation: `glow${index} 1.6s ease-in-out infinite`,
                   opacity: 0
                 }}
@@ -43,7 +43,7 @@ export function LoadingOverlay({ show, text = "Loading", className }: LoadingOve
               <div
                 className="absolute inset-0 rounded-xl p-[2px]"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(200, 182, 255, 0.3) 0%, rgba(184, 192, 255, 0.3) 100%)'
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(167, 139, 250, 0.3) 100%)'
                 }}
               >
                 <div className="w-full h-full bg-white/50 backdrop-blur-sm rounded-lg" />
@@ -53,9 +53,9 @@ export function LoadingOverlay({ show, text = "Loading", className }: LoadingOve
               <div
                 className="absolute inset-0 rounded-xl shadow-lg"
                 style={{
-                  background: 'linear-gradient(135deg, #FFD6FF 0%, #C8B6FF 50%, #B8C0FF 100%)',
+                  background: 'linear-gradient(135deg, #FCD6F5 0%, #8B5CF6 50%, #A78BFA 100%)',
                   animation: `fillBox${index} 1.6s ease-in-out infinite`,
-                  boxShadow: '0 4px 16px rgba(200, 182, 255, 0.3)'
+                  boxShadow: '0 4px 16px rgba(139, 92, 246, 0.3)'
                 }}
               />
             </div>
@@ -65,7 +65,7 @@ export function LoadingOverlay({ show, text = "Loading", className }: LoadingOve
         {/* Loading Text */}
         <div className="mt-4 text-center">
           <p
-            className="text-sm font-medium bg-gradient-to-r from-[#FFD6FF] via-[#C8B6FF] to-[#B8C0FF] bg-clip-text text-transparent"
+            className="text-sm font-medium bg-gradient-to-r from-[#FCD6F5] via-[#8B5CF6] to-[#A78BFA] bg-clip-text text-transparent"
             style={{
               animation: 'pulse-text 1.6s ease-in-out infinite'
             }}
@@ -76,7 +76,7 @@ export function LoadingOverlay({ show, text = "Loading", className }: LoadingOve
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="w-1.5 h-1.5 rounded-full bg-[#C8B6FF]"
+                className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]"
                 style={{
                   animation: `dot${i} 1.6s ease-in-out infinite`
                 }}

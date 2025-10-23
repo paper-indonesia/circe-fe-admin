@@ -16,6 +16,7 @@ import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, Banknote, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp } from "lucide-react"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
+import { AddButton } from "@/components/ui/add-button"
 
 export default function TreatmentsPage() {
   const { toast } = useToast()
@@ -496,13 +497,9 @@ export default function TreatmentsPage() {
             <h1 className="text-3xl font-bold text-foreground">Products & Services</h1>
             <p className="text-muted-foreground">Manage your product catalog and service offerings</p>
           </div>
-          <Button
-            onClick={openAddDialog}
-            className="bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-gray-800 hover:from-[#E7C6FF] hover:to-[#C8B6FF] border-0"
-          >
-            <Plus className="h-4 w-4 mr-2" />
+          <AddButton onClick={openAddDialog}>
             Add Product
-          </Button>
+          </AddButton>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -544,7 +541,7 @@ export default function TreatmentsPage() {
             <div className="bg-white rounded-lg border overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF]">
+                  <thead className="bg-gradient-to-r from-[#FCD6F5] to-[#EDE9FE]">
                     <tr>
                       <th className="text-left p-4 font-semibold text-gray-800">Product</th>
                       <th className="text-left p-4 font-semibold text-gray-800">Category</th>
@@ -558,11 +555,11 @@ export default function TreatmentsPage() {
                     {paginatedTreatments.map((treatment, index) => (
                       <tr
                         key={treatment.id}
-                        className={`border-b hover:bg-gradient-to-r hover:from-[#FFD6FF]/10 hover:to-[#E7C6FF]/10 transition-colors ${index % 2 === 0 ? "bg-gray-50/50" : "bg-white"}`}
+                        className={`border-b hover:bg-gradient-to-r hover:from-[#FCD6F5]/10 hover:to-[#EDE9FE]/10 transition-colors ${index % 2 === 0 ? "bg-gray-50/50" : "bg-white"}`}
                       >
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center">
                               <img
                                 src={`/abstract-geometric-shapes.png?key=yhwjw&height=48&width=48&query=${encodeURIComponent(`${treatment.name} beauty treatment icon`)}`}
                                 alt={treatment.name}
@@ -580,7 +577,7 @@ export default function TreatmentsPage() {
                         <td className="p-4">
                           <Badge
                             variant="secondary"
-                            className="bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] text-gray-800 border-0"
+                            className="bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] text-gray-800 border-0"
                           >
                             {treatment.category}
                           </Badge>
@@ -591,7 +588,7 @@ export default function TreatmentsPage() {
                               <Clock className="h-3 w-3" />
                               {treatment.durationMin} min
                             </div>
-                            <div className="font-semibold text-[#C8B6FF]">
+                            <div className="font-semibold text-[#8B5CF6]">
                               Rp {treatment.price.toLocaleString("id-ID")}
                             </div>
                           </div>
@@ -609,7 +606,7 @@ export default function TreatmentsPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => openEditDialog(treatment)}
-                              className="hover:bg-[#E7C6FF]/20"
+                              className="hover:bg-[#EDE9FE]/20"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -713,7 +710,7 @@ export default function TreatmentsPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF]">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE]">
                 <Star className="h-5 w-5 text-gray-800" />
               </div>
               {editingTreatment ? "Edit Product" : "Add New Product"}
@@ -724,7 +721,7 @@ export default function TreatmentsPage() {
             {/* Essential Information */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                <FileText className="h-4 w-4 text-[#C8B6FF]" />
+                <FileText className="h-4 w-4 text-[#8B5CF6]" />
                 Essential Information
               </div>
 
@@ -829,7 +826,7 @@ export default function TreatmentsPage() {
             {/* Description & Image */}
             <div className="space-y-4 pt-4 border-t">
               <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                <Image className="h-4 w-4 text-[#C8B6FF]" />
+                <Image className="h-4 w-4 text-[#8B5CF6]" />
                 Description & Image
               </div>
 
@@ -897,10 +894,10 @@ export default function TreatmentsPage() {
               <button
                 type="button"
                 onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 uppercase tracking-wide hover:text-[#C8B6FF] transition-colors"
+                className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 uppercase tracking-wide hover:text-[#8B5CF6] transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <Settings className="h-4 w-4 text-[#C8B6FF]" />
+                  <Settings className="h-4 w-4 text-[#8B5CF6]" />
                   Advanced Settings
                 </div>
                 {showAdvancedSettings ? (
@@ -1039,7 +1036,7 @@ export default function TreatmentsPage() {
                 onClick={editingTreatment ? handleEditTreatment : handleAddTreatment}
                 size="lg"
                 disabled={isSubmitting}
-                className="flex-1 h-11 bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-gray-800 hover:from-[#E7C6FF] hover:to-[#C8B6FF] border-0 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 h-11 bg-gradient-to-r from-[#FCD6F5] to-[#EDE9FE] text-gray-800 hover:from-[#EDE9FE] hover:to-[#8B5CF6] border-0 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting
                   ? "Saving..."

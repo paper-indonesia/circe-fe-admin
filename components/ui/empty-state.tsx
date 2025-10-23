@@ -35,7 +35,7 @@ export function EmptyState({
       <CardContent className="flex flex-col items-center justify-center py-16 px-4">
         <div className="relative mb-6">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
-            <Icon className="h-12 w-12 text-purple-600" />
+            <Icon className="h-12 w-12 text-[#8B5CF6]" />
           </div>
           <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg">
             <span className="text-lg">✨</span>
@@ -52,7 +52,7 @@ export function EmptyState({
             {actionLabel && onAction && (
               <Button
                 onClick={onAction}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90"
+                className="bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:opacity-90"
               >
                 {actionLabel}
               </Button>
@@ -70,7 +70,7 @@ export function EmptyState({
             {tips.map((tip, index) => {
               const TipIcon = tip.icon
               const colors = [
-                'bg-purple-50 text-purple-600',
+                'bg-[#EDE9FE] text-[#8B5CF6]',
                 'bg-pink-50 text-pink-600',
                 'bg-blue-50 text-blue-600'
               ]

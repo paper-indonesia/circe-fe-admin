@@ -64,9 +64,9 @@ const AVAILABILITY_COLORS = {
     label: "Blokir"
   },
   vacation: {
-    bg: "bg-purple-100",
+    bg: "bg-[#EDE9FE]",
     border: "border-purple-500",
-    text: "text-purple-800",
+    text: "text-[#6D28D9]",
     label: "Cuti"
   }
 }
@@ -319,7 +319,7 @@ export default function AvailabilityCalendarPage() {
                         {displayDays.map(day => (
                           <th key={day.toISOString()} className={cn(
                             "p-2 text-center font-medium text-sm min-w-[120px]",
-                            isToday(day) && "bg-purple-50"
+                            isToday(day) && "bg-[#EDE9FE]"
                           )}>
                             <div>{format(day, 'EEE', { locale: localeId })}</div>
                             <div className="text-lg">{format(day, 'd')}</div>
@@ -332,7 +332,7 @@ export default function AvailabilityCalendarPage() {
                         <tr key={staffMember.id} className="border-b hover:bg-muted/20">
                           <td className="p-4 font-medium sticky left-0 bg-background border-r">
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-sm font-medium">
+                              <div className="w-8 h-8 rounded-full bg-[#EDE9FE] flex items-center justify-center text-[#8B5CF6] text-sm font-medium">
                                 {(staffMember.display_name || staffMember.name).charAt(0).toUpperCase()}
                               </div>
                               <div>
@@ -346,7 +346,7 @@ export default function AvailabilityCalendarPage() {
                             return (
                               <td key={day.toISOString()} className={cn(
                                 "p-1 align-top",
-                                isToday(day) && "bg-purple-50"
+                                isToday(day) && "bg-[#EDE9FE]"
                               )}>
                                 <div className="space-y-1 min-h-[80px]">
                                   {entries.map(entry => {

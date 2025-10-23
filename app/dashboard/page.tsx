@@ -38,8 +38,28 @@ import {
 } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line } from 'recharts'
 
-// Color palette from palete.pdf
-const COLORS = ['#FFD6FF', '#E7C6FF', '#C8B6FF', '#B8C0FF', '#BBD0FF']
+// Color palette from typography-preview.html
+const COLORS = {
+  // Primary colors
+  primaryPurple: '#8B5CF6',
+  secondaryPurple: '#A78BFA',
+  lightPurple: '#C4B5FD',
+  lightestPurple: '#EDE9FE',
+  darkPurple: '#6D28D9',
+
+  // Accent colors
+  accentPink: '#EC4899',
+  lightPink: '#FCD6F5',
+
+  // Neutral colors
+  dark: '#1F2937',
+  grayDark: '#4B5563',
+  grayMedium: '#9CA3AF',
+  grayLight: '#E5E7EB',
+}
+
+// Chart colors for pie/bar charts
+const CHART_COLORS = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#EC4899', '#EDE9FE']
 
 // Helper function to get usage color based on status
 const getUsageColor = (status: string) => {
@@ -332,7 +352,7 @@ function DashboardContent() {
             <h1 className="text-3xl font-bold text-gray-900">
               {greeting}, {getDisplayName()}!
             </h1>
-            <p className="text-gray-500 mt-1">Here's your clinic overview for today</p>
+            <p className="text-gray-500 mt-1">Here's your business overview for today</p>
           </div>
           <Button
             variant="outline"
@@ -366,7 +386,7 @@ function DashboardContent() {
             "border-2 overflow-hidden transition-all duration-300",
             subscription.plan === "free"
               ? "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300"
-              : "bg-gradient-to-br from-[#FFD6FF]/20 via-[#E7C6FF]/20 to-[#C8B6FF]/20 border-[#C8B6FF]"
+              : "bg-gradient-to-br from-[#EDE9FE] via-[#C4B5FD]/30 to-[#A78BFA]/20 border-[#8B5CF6]"
           )}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -375,7 +395,7 @@ function DashboardContent() {
                     "p-3 rounded-xl",
                     subscription.plan === "free"
                       ? "bg-gray-200"
-                      : "bg-gradient-to-br from-[#C8B6FF] to-[#B8C0FF]"
+                      : "bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9]"
                   )}>
                     {subscription.plan === "free" ? (
                       <Shield className="h-6 w-6 text-gray-600" />
@@ -389,7 +409,7 @@ function DashboardContent() {
                         {subscription.plan} Plan
                       </h3>
                       {subscription.plan !== "free" && (
-                        <Badge className="bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] text-white border-0">
+                        <Badge className="bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white border-0">
                           Active
                         </Badge>
                       )}
@@ -454,7 +474,7 @@ function DashboardContent() {
                   {subscription.plan === "free" && (
                     <Button
                       size="lg"
-                      className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-pulse"
+                      className="bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-[#8B5CF6] hover:from-[#6D28D9] hover:via-[#EC4899] hover:to-[#6D28D9] text-white font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-pulse"
                       onClick={() => router.push('/subscription/upgrade')}
                     >
                       <Zap className="h-5 w-5 mr-2" />
@@ -465,7 +485,7 @@ function DashboardContent() {
                   {subscription.plan !== "free" && (
                     <Button
                       variant="outline"
-                      className="border-[#C8B6FF] text-[#B8C0FF] hover:bg-[#C8B6FF]/10"
+                      className="border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#EDE9FE]"
                       onClick={() => router.push('/subscription/manage')}
                     >
                       Manage Subscription
@@ -568,20 +588,20 @@ function DashboardContent() {
 
                       {/* Upgrade Recommendation */}
                       {usage.upgrade_recommended && (
-                        <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <div className="p-3 bg-[#EDE9FE] border border-[#C4B5FD] rounded-lg">
                           <div className="flex items-center justify-between">
                             <div className="flex items-start gap-2">
-                              <TrendingUp className="h-4 w-4 text-purple-600 mt-0.5" />
+                              <TrendingUp className="h-4 w-4 text-[#8B5CF6] mt-0.5" />
                               <div>
-                                <p className="text-xs font-medium text-purple-900">Upgrade Recommended</p>
-                                <p className="text-xs text-purple-700 mt-0.5">
+                                <p className="text-xs font-medium text-[#6D28D9]">Upgrade Recommended</p>
+                                <p className="text-xs text-[#8B5CF6] mt-0.5">
                                   Consider upgrading for more capacity and features
                                 </p>
                               </div>
                             </div>
                             <Button
                               size="sm"
-                              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-xs h-7"
+                              className="bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#6D28D9] hover:to-[#EC4899] text-white text-xs h-7"
                               onClick={() => router.push('/subscription/upgrade')}
                             >
                               Upgrade
@@ -650,8 +670,8 @@ function DashboardContent() {
                     {completedBookings.length} completed
                   </p>
                 </div>
-                <div className="p-3 bg-[#BBD0FF]/30 rounded-lg">
-                  <Calendar className="h-6 w-6 text-[#B8C0FF]" />
+                <div className="p-3 bg-[#EDE9FE] rounded-lg">
+                  <Calendar className="h-6 w-6 text-[#8B5CF6]" />
                 </div>
               </div>
 
@@ -662,7 +682,7 @@ function DashboardContent() {
                     <Line
                       type="monotone"
                       dataKey="bookings"
-                      stroke="#B8C0FF"
+                      stroke="#A78BFA"
                       strokeWidth={2}
                       dot={false}
                     />
@@ -695,8 +715,8 @@ function DashboardContent() {
 
                   <p className="text-xs text-gray-500 mt-1">From {completedBookings.length} bookings</p>
                 </div>
-                <div className="p-3 bg-[#E7C6FF]/30 rounded-lg">
-                  <Banknote className="h-6 w-6 text-[#C8B6FF]" />
+                <div className="p-3 bg-[#FCD6F5] rounded-lg">
+                  <Banknote className="h-6 w-6 text-[#EC4899]" />
                 </div>
               </div>
 
@@ -707,7 +727,7 @@ function DashboardContent() {
                     <Line
                       type="monotone"
                       dataKey="revenue"
-                      stroke="#C8B6FF"
+                      stroke="#8B5CF6"
                       strokeWidth={2}
                       dot={false}
                     />
@@ -725,8 +745,8 @@ function DashboardContent() {
                   <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(pendingPaymentsAmount, true)}</p>
                   <p className="text-xs text-orange-600 mt-1">{pendingPaymentsCount} invoice{pendingPaymentsCount !== 1 ? 's' : ''}</p>
                 </div>
-                <div className="p-3 bg-[#FFD6FF]/30 rounded-lg">
-                  <Clock className="h-6 w-6 text-[#E7C6FF]" />
+                <div className="p-3 bg-[#C4B5FD] rounded-lg">
+                  <Clock className="h-6 w-6 text-[#6D28D9]" />
                 </div>
               </div>
             </CardContent>
@@ -753,10 +773,10 @@ function DashboardContent() {
                     )
                   })()}
 
-                  <p className="text-xs text-purple-600 mt-1">Today</p>
+                  <p className="text-xs text-[#8B5CF6] mt-1">Today</p>
                 </div>
-                <div className="p-3 bg-[#C8B6FF]/30 rounded-lg">
-                  <Users className="h-6 w-6 text-[#B8C0FF]" />
+                <div className="p-3 bg-[#A78BFA]/20 rounded-lg">
+                  <Users className="h-6 w-6 text-[#6D28D9]" />
                 </div>
               </div>
 
@@ -767,7 +787,7 @@ function DashboardContent() {
                     <Line
                       type="monotone"
                       dataKey="newCustomers"
-                      stroke="#B8C0FF"
+                      stroke="#A78BFA"
                       strokeWidth={2}
                       dot={false}
                     />
@@ -1006,10 +1026,10 @@ function DashboardContent() {
             </Card>
 
             {/* Top Staff Today */}
-            <Card className="bg-gradient-to-br from-[#FFD6FF]/20 to-[#E7C6FF]/20 border-[#C8B6FF]/30">
+            <Card className="bg-gradient-to-br from-[#EDE9FE] to-[#FCD6F5]/50 border-[#8B5CF6]/30">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Star className="h-4 w-4 text-[#C8B6FF]" />
+                  <Star className="h-4 w-4 text-[#8B5CF6]" />
                   Top Staff Today
                 </CardTitle>
               </CardHeader>
@@ -1021,7 +1041,7 @@ function DashboardContent() {
                     topStaffToday.map((s, idx) => (
                       <div key={s.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/50 hover:bg-white/80 transition-colors">
                         <div className="flex-shrink-0">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C8B6FF] to-[#B8C0FF] flex items-center justify-center text-white font-semibold">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] flex items-center justify-center text-white font-semibold">
                             {s.name?.charAt(0) || "?"}
                           </div>
                         </div>
@@ -1039,7 +1059,7 @@ function DashboardContent() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full mt-3 text-[#C8B6FF] hover:text-[#B8C0FF] hover:bg-[#FFD6FF]/20"
+                  className="w-full mt-3 text-[#8B5CF6] hover:text-[#6D28D9] hover:bg-[#EDE9FE]"
                   onClick={() => router.push('/staff')}
                 >
                   View All Staff
