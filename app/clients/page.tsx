@@ -37,7 +37,7 @@ import {
   AlertTriangle,
   AlertCircle,
   TrendingUp,
-  DollarSign,
+  Banknote,
   Activity,
   UserCheck,
   ShieldCheck,
@@ -1152,7 +1152,7 @@ export default function ClientsPage() {
                       </p>
                     </div>
                     <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <DollarSign className="h-6 w-6 text-emerald-600" />
+                      <Banknote className="h-6 w-6 text-emerald-600" />
                     </div>
                   </div>
                 </CardContent>

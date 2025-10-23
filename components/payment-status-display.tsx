@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  DollarSign,
+  Banknote,
   CreditCard,
   User,
   Calendar,
@@ -147,7 +147,7 @@ export default function PaymentStatusDisplay({
   const getPaymentMethodIcon = (method: string) => {
     switch (method) {
       case 'cash':
-        return <DollarSign className="h-4 w-4" />
+        return <Banknote className="h-4 w-4" />
       case 'credit_card':
       case 'debit_card':
         return <CreditCard className="h-4 w-4" />
@@ -155,7 +155,7 @@ export default function PaymentStatusDisplay({
       case 'ewallet':
         return <CreditCard className="h-4 w-4" />
       default:
-        return <DollarSign className="h-4 w-4" />
+        return <Banknote className="h-4 w-4" />
     }
   }
 

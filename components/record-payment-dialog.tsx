@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2, DollarSign, AlertCircle, CreditCard, Banknote, Building2 } from "lucide-react"
+import { CheckCircle2, Banknote, AlertCircle, CreditCard,  Building2 } from "lucide-react"
 import { recordManualPayment, formatCurrency, type RecordPaymentRequest } from "@/lib/api/walk-in"
 
 interface RecordPaymentDialogProps {
@@ -163,7 +163,7 @@ export default function RecordPaymentDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-blue-600">
-            <DollarSign className="h-5 w-5" />
+            <Banknote className="h-5 w-5" />
             Record Payment
           </DialogTitle>
         </DialogHeader>
@@ -214,7 +214,7 @@ export default function RecordPaymentDialog({
                 Payment Amount <span className="text-red-500">*</span>
               </Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Banknote className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="amount"
                   type="number"

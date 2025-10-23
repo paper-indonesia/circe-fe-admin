@@ -16,7 +16,7 @@ import {
   RefreshCw,
   Clock,
   Percent,
-  DollarSign
+  Banknote
 } from "lucide-react"
 
 // ============================================================================
@@ -511,7 +511,7 @@ export function PaymentInformation({
                       : "text-muted-foreground hover:text-foreground hover:bg-white/50"
                   )}
                 >
-                  <DollarSign className="h-4 w-4" />
+                  <Banknote className="h-4 w-4" />
                   Nominal Tetap
                 </button>
               </div>

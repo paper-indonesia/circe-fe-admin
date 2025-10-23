@@ -16,7 +16,7 @@ import {
   Check, AlertCircle, Users, Calendar,
   ChevronRight, X, Printer, Mail, MessageSquare,
   TrendingUp, Star, Activity, Search, Sparkles, Syringe, Zap, Heart,
-  Percent, DollarSign, ChevronDown, Loader2, CheckCircle2
+  Percent, ChevronDown, Loader2, CheckCircle2
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { usePatients, useStaff, useTreatments, useBookings } from "@/lib/context"
@@ -552,7 +552,7 @@ export default function WalkInPage() {
       case "deposit":
         return (
           <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-200">
-            <DollarSign className="h-3 w-3 mr-1" />
+            <Banknote className="h-3 w-3 mr-1" />
             Deposit
           </Badge>
         )
@@ -1545,7 +1545,7 @@ export default function WalkInPage() {
                               : "text-muted-foreground hover:text-foreground"
                           )}
                         >
-                          <DollarSign className="h-3 w-3" />
+                          <Banknote className="h-3 w-3" />
                           Fixed
                         </button>
                       </div>

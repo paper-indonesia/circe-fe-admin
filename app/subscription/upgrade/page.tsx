@@ -30,7 +30,7 @@ import {
   TrendingUp,
   MessageCircle,
   Mail,
-  DollarSign,
+  Banknote,
   BarChart3
 } from "lucide-react"
 import { cn } from "@/lib/utils"

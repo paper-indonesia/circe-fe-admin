@@ -12,7 +12,7 @@ import {
   FileText,
   Download,
   TrendingUp,
-  DollarSign,
+  Banknote,
   Calendar,
   BarChart3,
   PieChart as PieChartIcon,
@@ -900,7 +900,7 @@ export default function ReportsPage() {
             <CardHeader className="relative flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Revenue</CardTitle>
               <div className="p-2 bg-pink-100 dark:bg-pink-900/30 rounded-lg group-hover:bg-pink-200 dark:group-hover:bg-pink-900/50 transition-colors">
-                <DollarSign className="h-4 w-4 text-pink-600 dark:text-pink-400" />
+                <Banknote className="h-4 w-4 text-pink-600 dark:text-pink-400" />
               </div>
             </CardHeader>
             <CardContent>
@@ -1483,7 +1483,7 @@ export default function ReportsPage() {
             <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-t-lg">
               <CardTitle className="flex items-center gap-2">
                 <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg">
-                  <DollarSign className="h-4 w-4 text-white" />
+                  <Banknote className="h-4 w-4 text-white" />
                 </div>
                 <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-semibold">Payment Methods</span>
               </CardTitle>
@@ -1548,7 +1548,7 @@ export default function ReportsPage() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <DollarSign className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                  <Banknote className="h-12 w-12 text-muted-foreground/50 mb-3" />
                   <p className="text-sm font-medium text-muted-foreground">No Payment Data</p>
                   <p className="text-xs text-muted-foreground mt-1">Payment method statistics will appear here once available</p>
                 </div>
@@ -1661,7 +1661,7 @@ export default function ReportsPage() {
                       </p>
                     </div>
                     <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <DollarSign className="h-6 w-6 text-emerald-600" />
+                      <Banknote className="h-6 w-6 text-emerald-600" />
                     </div>
                   </div>
                 </CardContent>
