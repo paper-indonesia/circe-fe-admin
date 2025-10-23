@@ -39,12 +39,39 @@ export function SubscriptionWarningBanner({
   // Check if user is on Free plan
   const isFreeplan = plan?.toLowerCase() === 'free'
 
-  // Reset dismissed state when days change significantly
+  // Check localStorage for dismissed status on mount
   useEffect(() => {
-    if (daysUntilExpiry !== null && daysUntilExpiry <= 3) {
+    const checkDismissed = () => {
+      try {
+        const dismissedData = localStorage.getItem('subscription-warning-dismissed')
+        if (dismissedData) {
+          const { timestamp, planType } = JSON.parse(dismissedData)
+          const hoursSinceDismissed = (Date.now() - timestamp) / (1000 * 60 * 60)
+
+          // For Free plan: show again after 24 hours
+          // For paid plans: show again if less than 3 days left
+          if (isFreeplan && planType === 'free' && hoursSinceDismissed < 24) {
+            setDismissed(true)
+          } else if (!isFreeplan && daysUntilExpiry !== null && daysUntilExpiry > 3) {
+            setDismissed(true)
+          }
+        }
+      } catch (e) {
+        console.error('Error reading dismissed status:', e)
+      }
+    }
+
+    if (subscription) {
+      checkDismissed()
+    }
+  }, [subscription, isFreeplan, daysUntilExpiry])
+
+  // Reset dismissed state when days change significantly (for paid plans)
+  useEffect(() => {
+    if (!isFreeplan && daysUntilExpiry !== null && daysUntilExpiry <= 3) {
       setDismissed(false)
     }
-  }, [daysUntilExpiry])
+  }, [daysUntilExpiry, isFreeplan])
 
   // Don't show banner if:
   // 1. No subscription data
@@ -153,10 +180,11 @@ export function SubscriptionWarningBanner({
 
   const handleDismiss = () => {
     setDismissed(true)
-    // Store dismissal in localStorage with expiry (24 hours)
+    // Store dismissal in localStorage with timestamp and plan type
     localStorage.setItem('subscription-warning-dismissed', JSON.stringify({
       timestamp: Date.now(),
-      daysLeft: daysUntilExpiry
+      daysLeft: daysUntilExpiry,
+      planType: isFreeplan ? 'free' : 'paid'
     }))
   }
 

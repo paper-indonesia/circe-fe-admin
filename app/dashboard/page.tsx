@@ -18,7 +18,7 @@ import { OperationalOnboardingWizard } from "@/components/operational-onboarding
 import { OperationalOnboardingProvider as OnboardingContext, useOperationalOnboarding } from "@/lib/operational-onboarding-context"
 import {
   Calendar,
-  DollarSign,
+  Banknote,
   Users,
   TrendingUp,
   Clock,
@@ -696,7 +696,7 @@ function DashboardContent() {
                   <p className="text-xs text-gray-500 mt-1">From {completedBookings.length} bookings</p>
                 </div>
                 <div className="p-3 bg-[#E7C6FF]/30 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-[#C8B6FF]" />
+                  <Banknote className="h-6 w-6 text-[#C8B6FF]" />
                 </div>
               </div>
 
@@ -924,7 +924,7 @@ function DashboardContent() {
                     {pendingPaymentsCount > 0 && (
                       <div className="flex items-center justify-between p-3 bg-red-100 rounded-lg hover:bg-red-200 transition-colors cursor-pointer">
                         <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-red-700" />
+                          <Banknote className="h-4 w-4 text-red-700" />
                           <span className="text-sm font-medium text-red-900">{pendingPaymentsCount} Unpaid Invoice{pendingPaymentsCount > 1 ? 's' : ''}</span>
                         </div>
                         <Badge variant="destructive" className="text-xs">

@@ -48,7 +48,6 @@ import {
   X,
   Clock,
   User,
-  DollarSign,
   Edit,
   Trash2,
   CheckCircle,
@@ -1322,7 +1321,7 @@ export default function CalendarPage() {
                     <span className="text-gray-600">{calendarStats.completed} Completed</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    <Banknote className="h-4 w-4 text-gray-500" />
                     <span className="text-gray-900 font-semibold">{formatCurrency(calendarStats.revenue)}</span>
                   </div>
                 </div>
@@ -1835,7 +1834,7 @@ export default function CalendarPage() {
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                          <DollarSign className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                                          <Banknote className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                                           <div className="min-w-0">
                                             <p className="text-gray-400 text-[10px]">Price</p>
                                             <p className="font-semibold text-gray-900">{formatCurrency(treatment?.price || 0)}</p>
@@ -3181,7 +3180,7 @@ export default function CalendarPage() {
                             onClick={() => setRecordPaymentDialogOpen(true)}
                             disabled={isCompleting}
                           >
-                            <DollarSign className="h-4 w-4 mr-2" />
+                            <Banknote className="h-4 w-4 mr-2" />
                             Manual Payment
                           </Button>
                           <Button

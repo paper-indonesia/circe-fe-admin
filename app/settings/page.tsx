@@ -78,6 +78,7 @@ export default function SettingsPage() {
   const [showClientSecret, setShowClientSecret] = useState(false)
   const [newStaffPosition, setNewStaffPosition] = useState("")
   const [newServiceCategory, setNewServiceCategory] = useState("")
+  const [customerPortalBaseUrl, setCustomerPortalBaseUrl] = useState<string>("")
 
   // Folding state for sections
   const [expandedSections, setExpandedSections] = useState({
@@ -196,6 +197,19 @@ export default function SettingsPage() {
               is_production: false // Default to sandbox, can be adjusted later
             })
           }
+        }
+
+        // Fetch customer portal base URL from server
+        try {
+          const configResponse = await fetch('/api/config/portal-url')
+          if (configResponse.ok) {
+            const configData = await configResponse.json()
+            setCustomerPortalBaseUrl(configData.url || "")
+          }
+        } catch (error) {
+          console.error('Failed to load portal URL config:', error)
+          // Fallback to environment variable if API fails
+          setCustomerPortalBaseUrl(process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || "")
         }
 
         // Load business info from API
@@ -890,7 +904,7 @@ export default function SettingsPage() {
                         </Label>
                         <div className="flex gap-2">
                           <Input
-                            value={`${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL}/${tenantInfo.slug}`}
+                            value={customerPortalBaseUrl ? `${customerPortalBaseUrl}/${tenantInfo.slug}` : 'Loading...'}
                             readOnly
                             className="font-mono text-sm bg-gray-50"
                           />
@@ -898,13 +912,22 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL}/${tenantInfo.slug}`
+                              if (!customerPortalBaseUrl) {
+                                toast({
+                                  title: "Error",
+                                  description: "Portal URL not loaded yet",
+                                  variant: "destructive"
+                                })
+                                return
+                              }
+                              const link = `${customerPortalBaseUrl}/${tenantInfo.slug}`
                               navigator.clipboard.writeText(link)
                               toast({
                                 title: "Copied!",
                                 description: "Customer portal link copied to clipboard"
                               })
                             }}
+                            disabled={!customerPortalBaseUrl}
                           >
                             <Copy className="h-4 w-4" />
                           </Button>
@@ -912,9 +935,18 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL}/${tenantInfo.slug}`
+                              if (!customerPortalBaseUrl) {
+                                toast({
+                                  title: "Error",
+                                  description: "Portal URL not loaded yet",
+                                  variant: "destructive"
+                                })
+                                return
+                              }
+                              const link = `${customerPortalBaseUrl}/${tenantInfo.slug}`
                               window.open(link, '_blank')
                             }}
+                            disabled={!customerPortalBaseUrl}
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Button>

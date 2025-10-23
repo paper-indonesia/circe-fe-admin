@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/context"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
-import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, DollarSign, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp } from "lucide-react"
+import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, Banknote, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp } from "lucide-react"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 
@@ -482,7 +482,7 @@ export default function TreatmentsPage() {
               description: `Link products to staff`
             },
             {
-              icon: DollarSign,
+              icon: Banknote,
               title: "Pricing Strategy",
               description: "Competitive pricing"
             }
