@@ -16,8 +16,6 @@ import GradientLoading from "@/components/gradient-loading"
 import { OnboardingResumeBanner } from "@/components/onboarding-resume-banner"
 import { OperationalOnboardingWizard } from "@/components/operational-onboarding-wizard"
 import { OperationalOnboardingProvider as OnboardingContext, useOperationalOnboarding } from "@/lib/operational-onboarding-context"
-import { SubscriptionWarningBanner } from "@/components/subscription-warning-banner"
-import { SubscriptionWarningDebugPanel } from "@/components/subscription-warning-debug-panel"
 import {
   Calendar,
   DollarSign,
@@ -345,11 +343,6 @@ function DashboardContent() {
             {format(new Date(), "MMM dd, yyyy")}
           </Button>
         </div>
-
-        {/* Subscription Warning Banner - Only for tenant_admin with active subscription */}
-        {authUser && isAdmin() && subscription && (
-          <SubscriptionWarningBanner className="mb-6" />
-        )}
 
         {/* Operational Onboarding Banner - Only for tenant_admin */}
         {authUser && isAdmin() && (
@@ -1057,10 +1050,6 @@ function DashboardContent() {
           </div>
         </div>
 
-        {/* Debug Panel for Testing Subscription Warnings - REMOVE IN PRODUCTION */}
-        {authUser && isAdmin() && (
-          <SubscriptionWarningDebugPanel />
-        )}
       </div>
   )
 }

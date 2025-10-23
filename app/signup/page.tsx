@@ -434,9 +434,8 @@ export default function SignUpPage() {
     setSuccess("")
 
     try {
-      // Step 1: Call FastAPI registration endpoint
-      const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL 
-      const response = await fetch(`${FASTAPI_URL}/api/v1/public/register`, {
+      // Call local API proxy which forwards to FastAPI backend
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

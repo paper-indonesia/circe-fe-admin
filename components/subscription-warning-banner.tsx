@@ -19,38 +19,22 @@ import { cn } from "@/lib/utils"
 
 interface SubscriptionWarningBannerProps {
   className?: string
-  // Debug mode untuk testing
-  debugMode?: boolean
-  debugDaysUntilExpiry?: number
-  debugStatus?: 'active' | 'expired' | 'cancelled'
-  debugPlan?: 'free' | 'starter' | 'professional' | 'enterprise'
 }
 
 export function SubscriptionWarningBanner({
-  className,
-  debugMode = false,
-  debugDaysUntilExpiry,
-  debugStatus,
-  debugPlan
+  className
 }: SubscriptionWarningBannerProps) {
   const router = useRouter()
   const { subscription } = useSubscription()
   const [dismissed, setDismissed] = useState(false)
 
-  // Calculate days until expiry
-  const daysUntilExpiry = debugMode && debugDaysUntilExpiry !== undefined
-    ? debugDaysUntilExpiry
-    : subscription?.end_date
-      ? differenceInDays(new Date(subscription.end_date), new Date())
-      : null
+  // Calculate days until expiry from real subscription data
+  const daysUntilExpiry = subscription?.end_date
+    ? differenceInDays(new Date(subscription.end_date), new Date())
+    : null
 
-  const status = debugMode && debugStatus
-    ? debugStatus
-    : subscription?.status
-
-  const plan = debugMode && debugPlan
-    ? debugPlan
-    : subscription?.plan
+  const status = subscription?.status
+  const plan = subscription?.plan
 
   // Check if user is on Free plan
   const isFreeplan = plan?.toLowerCase() === 'free'
@@ -65,20 +49,29 @@ export function SubscriptionWarningBanner({
   // Don't show banner if:
   // 1. No subscription data
   // 2. User dismissed and more than 3 days left
-  // 3. More than 14 days until expiry
-  if (!subscription && !debugMode) return null
+  // 3. More than 14 days until expiry (unless Free plan)
+  if (!subscription) return null
   if (dismissed && daysUntilExpiry !== null && daysUntilExpiry > 3) return null
-  if (daysUntilExpiry === null || daysUntilExpiry > 14) return null
+
+  // For Free plan, always show (no expiry date check)
+  // For paid plans, only show if within 14 days of expiry
+  if (!isFreeplan && (daysUntilExpiry === null || daysUntilExpiry > 14)) return null
 
   // Determine severity and styling
   const getSeverity = () => {
-    if (status === 'expired' || daysUntilExpiry <= 0) {
+    // Free plan always shows as 'info' (upgrade prompt)
+    if (isFreeplan) {
+      return 'info'
+    }
+
+    // Paid plan severity based on expiry
+    if (status === 'expired' || (daysUntilExpiry !== null && daysUntilExpiry <= 0)) {
       return 'expired'
-    } else if (daysUntilExpiry <= 1) {
+    } else if (daysUntilExpiry !== null && daysUntilExpiry <= 1) {
       return 'critical'
-    } else if (daysUntilExpiry <= 3) {
+    } else if (daysUntilExpiry !== null && daysUntilExpiry <= 3) {
       return 'urgent'
-    } else if (daysUntilExpiry <= 7) {
+    } else if (daysUntilExpiry !== null && daysUntilExpiry <= 7) {
       return 'warning'
     } else {
       return 'info'
@@ -177,13 +170,23 @@ export function SubscriptionWarningBanner({
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn(
+      "fixed top-4 left-4 right-4 z-50 mx-auto",
+      "max-w-6xl",
+      severity === 'critical' || severity === 'expired'
+        ? "animate-[slideDown_0.5s_ease-out,shake_0.5s_ease-in-out_0.5s]"
+        : "animate-[slideDown_0.3s_ease-out]",
+      className
+    )}>
       <Alert
         variant={config.variant}
         className={cn(
-          "relative overflow-hidden border-2",
+          "relative overflow-hidden",
           config.bgClass,
-          "shadow-md"
+          severity === 'critical' || severity === 'expired'
+            ? "shadow-2xl animate-pulse border-4 border-red-600 ring-4 ring-red-300 ring-opacity-50"
+            : "shadow-lg border-2",
+          "backdrop-blur-sm bg-opacity-95"
         )}
       >
         {/* Background Pattern */}
@@ -191,8 +194,18 @@ export function SubscriptionWarningBanner({
           <Crown className="h-32 w-32 -mr-8 -mt-8" />
         </div>
 
+        {/* Critical: Flashing border effect */}
+        {(severity === 'critical' || severity === 'expired') && (
+          <div className="absolute inset-0 border-4 border-red-600 animate-pulse pointer-events-none rounded-lg"></div>
+        )}
+
         {/* Icon */}
-        <Icon className={cn("h-5 w-5", config.iconColor)} />
+        <Icon className={cn(
+          severity === 'critical' || severity === 'expired'
+            ? "h-6 w-6 animate-bounce"
+            : "h-5 w-5",
+          config.iconColor
+        )} />
 
         {/* Content */}
         <div className="flex-1">
@@ -236,7 +249,8 @@ export function SubscriptionWarningBanner({
               variant={config.ctaPrimary ? "default" : "outline"}
               size="sm"
               className={cn(
-                config.ctaPrimary && "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                config.ctaPrimary && "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700",
+                (severity === 'critical' || severity === 'expired') && "animate-pulse shadow-lg"
               )}
             >
               {config.ctaText}
@@ -261,16 +275,6 @@ export function SubscriptionWarningBanner({
         </div>
       </Alert>
 
-      {/* Debug Info (only in debug mode) */}
-      {debugMode && (
-        <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono">
-          <div>Debug Mode: ON</div>
-          <div>Days Until Expiry: {daysUntilExpiry}</div>
-          <div>Status: {status}</div>
-          <div>Severity: {severity}</div>
-          <div>Plan: {subscription?.plan || 'N/A'}</div>
-        </div>
-      )}
     </div>
   )
 }
