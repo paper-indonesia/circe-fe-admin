@@ -890,7 +890,7 @@ export default function SettingsPage() {
                         </Label>
                         <div className="flex gap-2">
                           <Input
-                            value={`${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/${tenantInfo.slug}`}
+                            value={`${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL}/${tenantInfo.slug}`}
                             readOnly
                             className="font-mono text-sm bg-gray-50"
                           />
@@ -898,7 +898,7 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/${tenantInfo.slug}`
+                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL}/${tenantInfo.slug}`
                               navigator.clipboard.writeText(link)
                               toast({
                                 title: "Copied!",
@@ -912,7 +912,7 @@ export default function SettingsPage() {
                             variant="outline"
                             size="icon"
                             onClick={() => {
-                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || 'https://beauty-saas-crm-740443181568.us-central1.run.app'}/${tenantInfo.slug}`
+                              const link = `${process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL}/${tenantInfo.slug}`
                               window.open(link, '_blank')
                             }}
                           >
