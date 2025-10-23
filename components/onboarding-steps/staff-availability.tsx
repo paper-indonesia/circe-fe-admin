@@ -182,6 +182,16 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     onValidChange(hasStaff && hasAvailability)
   }, [progress.staff, progress.availabilities, onValidChange])
 
+  // Auto-select service if only 1 available
+  useEffect(() => {
+    if (services.length === 1 && staffForm.service_ids.length === 0) {
+      setStaffForm(prev => ({
+        ...prev,
+        service_ids: [services[0].id]
+      }))
+    }
+  }, [services, staffForm.service_ids.length])
+
   const validateStaff = () => {
     const newErrors: Record<string, string> = {}
 
@@ -204,6 +214,9 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     }
     if (!staffForm.outlet_id) {
       newErrors.outlet_id = "Outlet wajib dipilih"
+    }
+    if (!staffForm.service_ids || staffForm.service_ids.length === 0) {
+      newErrors.service_ids = "Minimal 1 layanan/produk harus dipilih"
     }
     if (staffForm.phone && !/^[\d\s\-\+()]+$/.test(staffForm.phone)) {
       newErrors.phone = "Format nomor telepon tidak valid"
@@ -714,48 +727,84 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label>Layanan yang Dikuasai</Label>
-                <p className="text-xs text-gray-500 mb-2">Pilih layanan yang dapat dikerjakan oleh staff ini</p>
+                <Label>Layanan yang Dikuasai *</Label>
+                <p className="text-xs text-gray-500 mb-2">Pilih minimal 1 layanan yang dapat dikerjakan oleh staff ini</p>
                 {loadingServices ? (
                   <div className="h-20 flex items-center justify-center border rounded-md bg-gray-50">
                     <span className="text-sm text-gray-500">Loading services...</span>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/50">
+                  <div className="border-2 border-purple-200 rounded-lg p-4 bg-gray-50">
                     {services.length > 0 ? (
-                      services.map((service) => (
-                        <label
-                          key={service.id}
-                          className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                            staffForm.service_ids.includes(service.id)
-                              ? "border-blue-500 bg-blue-50"
-                              : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                          }`}
-                        >
+                      <>
+                        {/* Select All Option */}
+                        <div className="flex items-center space-x-3 pb-3 border-b-2 border-purple-200 mb-3 bg-white p-3 rounded-md shadow-sm">
                           <Checkbox
-                            checked={staffForm.service_ids.includes(service.id)}
+                            id="onboarding-service-all"
+                            checked={staffForm.service_ids.length === services.length && services.length > 0}
                             onCheckedChange={(checked) => {
-                              if (checked) {
-                                setStaffForm({
-                                  ...staffForm,
-                                  service_ids: [...staffForm.service_ids, service.id],
-                                })
-                              } else {
-                                setStaffForm({
-                                  ...staffForm,
-                                  service_ids: staffForm.service_ids.filter((id) => id !== service.id),
-                                })
-                              }
+                              setStaffForm({
+                                ...staffForm,
+                                service_ids: checked ? services.map(s => s.id) : []
+                              })
                             }}
-                            className="h-5 w-5 flex-shrink-0"
+                            className="h-5 w-5 border-2 border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                           />
-                          <span className="text-sm font-medium">{service.name}</span>
-                        </label>
-                      ))
+                          <label
+                            htmlFor="onboarding-service-all"
+                            className="text-sm font-bold cursor-pointer leading-none text-purple-900"
+                          >
+                            Pilih Semua Layanan
+                          </label>
+                        </div>
+
+                        {/* Individual Services */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                          {services.map((service) => (
+                            <label
+                              key={service.id}
+                              className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all ${
+                                staffForm.service_ids.includes(service.id)
+                                  ? "border-purple-500 bg-purple-50"
+                                  : "border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
+                              }`}
+                            >
+                              <Checkbox
+                                checked={staffForm.service_ids.includes(service.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setStaffForm({
+                                      ...staffForm,
+                                      service_ids: [...staffForm.service_ids, service.id],
+                                    })
+                                  } else {
+                                    setStaffForm({
+                                      ...staffForm,
+                                      service_ids: staffForm.service_ids.filter((id) => id !== service.id),
+                                    })
+                                  }
+                                }}
+                                className="h-5 w-5 flex-shrink-0 border-2 border-gray-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                              />
+                              <span className="text-sm font-medium text-gray-900">{service.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-3">
+                          {staffForm.service_ids.length === 0
+                            ? 'Pilih minimal 1 layanan (wajib)'
+                            : staffForm.service_ids.length === services.length
+                            ? 'Semua layanan dipilih'
+                            : `${staffForm.service_ids.length} layanan dipilih`}
+                        </p>
+                      </>
                     ) : (
-                      <p className="text-sm text-gray-500 col-span-2 text-center py-4">Belum ada layanan tersedia. Tambahkan layanan di step sebelumnya.</p>
+                      <p className="text-sm text-gray-500 text-center py-4">Belum ada layanan tersedia. Tambahkan layanan di step sebelumnya.</p>
                     )}
                   </div>
+                )}
+                {errors.service_ids && (
+                  <p className="text-xs text-red-500 mt-1">{errors.service_ids}</p>
                 )}
               </div>
 

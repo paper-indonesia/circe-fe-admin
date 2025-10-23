@@ -204,6 +204,29 @@ export default function StaffPage() {
     fetchStatistics()
   }, [])
 
+  // Auto-select outlet if only 1 available
+  useEffect(() => {
+    if (outlets.length === 1 && !newStaffForm.outlet_id) {
+      setNewStaffForm(prev => ({
+        ...prev,
+        outlet_id: outlets[0]._id || outlets[0].id
+      }))
+    }
+  }, [outlets, newStaffForm.outlet_id])
+
+  // Auto-select service if only 1 available
+  useEffect(() => {
+    if (treatments.length === 1 && newStaffForm.skills.service_ids.length === 0) {
+      setNewStaffForm(prev => ({
+        ...prev,
+        skills: {
+          ...prev.skills,
+          service_ids: [treatments[0].id]
+        }
+      }))
+    }
+  }, [treatments, newStaffForm.skills.service_ids.length])
+
   const filteredStaff = staff.filter((staffMember) => {
     // Handle both object and array formats for skills
     let skillsArray: string[] = []
@@ -914,6 +937,15 @@ export default function StaffPage() {
       toast({
         title: "Error",
         description: "Outlet wajib dipilih",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!newStaffForm.skills.service_ids || newStaffForm.skills.service_ids.length === 0) {
+      toast({
+        title: "Error",
+        description: "Minimal 1 layanan/produk harus dipilih",
         variant: "destructive",
       })
       return
@@ -2475,27 +2507,61 @@ export default function StaffPage() {
                     {availabilityTab === 'working_hours' && (
                       <div>
                         <Label>Layanan Khusus (opsional)</Label>
-                        <Select
-                          value={availabilityForm.service_ids[0] || 'all'}
-                          onValueChange={(value) => setAvailabilityForm(prev => ({
-                            ...prev,
-                            service_ids: value === 'all' ? [] : [value]
-                          }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Semua layanan" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Semua Layanan</SelectItem>
+                        <div className="mt-2 border-2 border-purple-200 rounded-lg p-4 max-h-60 overflow-y-auto bg-gray-50">
+                          {/* Select All Option */}
+                          <div className="flex items-center space-x-3 pb-3 border-b-2 border-purple-200 mb-3 bg-white p-3 rounded-md shadow-sm">
+                            <Checkbox
+                              id="service-all"
+                              checked={availabilityForm.service_ids.length === treatments.length && treatments.length > 0}
+                              onCheckedChange={(checked) => {
+                                setAvailabilityForm(prev => ({
+                                  ...prev,
+                                  service_ids: checked ? treatments.map(t => t.id) : []
+                                }))
+                              }}
+                              className="border-2 border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                            />
+                            <label
+                              htmlFor="service-all"
+                              className="text-sm font-bold cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-purple-900"
+                            >
+                              Semua Layanan
+                            </label>
+                          </div>
+
+                          {/* Individual Services */}
+                          <div className="space-y-2">
                             {treatments.map(treatment => (
-                              <SelectItem key={treatment.id} value={treatment.id}>
-                                {treatment.name}
-                              </SelectItem>
+                              <div key={treatment.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-white transition-colors">
+                                <Checkbox
+                                  id={`service-${treatment.id}`}
+                                  checked={availabilityForm.service_ids.includes(treatment.id)}
+                                  onCheckedChange={(checked) => {
+                                    setAvailabilityForm(prev => ({
+                                      ...prev,
+                                      service_ids: checked
+                                        ? [...prev.service_ids, treatment.id]
+                                        : prev.service_ids.filter(id => id !== treatment.id)
+                                    }))
+                                  }}
+                                  className="border-2 border-gray-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                />
+                                <label
+                                  htmlFor={`service-${treatment.id}`}
+                                  className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-900"
+                                >
+                                  {treatment.name}
+                                </label>
+                              </div>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </div>
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Kosongkan untuk tersedia untuk semua layanan
+                          {availabilityForm.service_ids.length === 0
+                            ? 'Tidak ada layanan yang dipilih (tersedia untuk semua layanan)'
+                            : availabilityForm.service_ids.length === treatments.length
+                            ? 'Semua layanan dipilih'
+                            : `${availabilityForm.service_ids.length} layanan dipilih`}
                         </p>
                       </div>
                     )}
@@ -3046,49 +3112,83 @@ export default function StaffPage() {
               </div>
 
               <div>
-                <Label className="text-sm font-medium">Assign Products / Services</Label>
-                <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border border-[#E7C6FF] rounded-lg p-3">
-                  {treatments.map((treatment) => (
-                    <div key={treatment.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`new-treatment-${treatment.id}`}
-                        checked={newStaffForm.skills.service_ids.includes(treatment.id)}
-                        onCheckedChange={(checked) => {
-                          setNewStaffForm((prev) => {
-                            const currentServiceIds = prev.skills.service_ids
-                            if (checked) {
-                              return {
-                                ...prev,
-                                skills: {
-                                  ...prev.skills,
-                                  service_ids: [...currentServiceIds, treatment.id],
-                                },
+                <Label className="text-sm font-medium">Assign Products / Services *</Label>
+                <div className="mt-2 border-2 border-purple-200 rounded-lg p-4 bg-gray-50">
+                  {/* Select All Option */}
+                  <div className="flex items-center space-x-3 pb-3 border-b-2 border-purple-200 mb-3 bg-white p-3 rounded-md shadow-sm">
+                    <Checkbox
+                      id="new-service-all"
+                      checked={newStaffForm.skills.service_ids.length === treatments.length && treatments.length > 0}
+                      onCheckedChange={(checked) => {
+                        setNewStaffForm((prev) => ({
+                          ...prev,
+                          skills: {
+                            ...prev.skills,
+                            service_ids: checked ? treatments.map(t => t.id) : []
+                          }
+                        }))
+                      }}
+                      className="border-2 border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                    />
+                    <label
+                      htmlFor="new-service-all"
+                      className="text-sm font-bold cursor-pointer leading-none text-purple-900"
+                    >
+                      Pilih Semua Layanan
+                    </label>
+                  </div>
+
+                  {/* Individual Services */}
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {treatments.map((treatment) => (
+                      <div key={treatment.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-white transition-colors">
+                        <Checkbox
+                          id={`new-treatment-${treatment.id}`}
+                          checked={newStaffForm.skills.service_ids.includes(treatment.id)}
+                          onCheckedChange={(checked) => {
+                            setNewStaffForm((prev) => {
+                              const currentServiceIds = prev.skills.service_ids
+                              if (checked) {
+                                return {
+                                  ...prev,
+                                  skills: {
+                                    ...prev.skills,
+                                    service_ids: [...currentServiceIds, treatment.id],
+                                  },
+                                }
+                              } else {
+                                return {
+                                  ...prev,
+                                  skills: {
+                                    ...prev.skills,
+                                    service_ids: currentServiceIds.filter((id) => id !== treatment.id),
+                                  },
+                                }
                               }
-                            } else {
-                              return {
-                                ...prev,
-                                skills: {
-                                  ...prev.skills,
-                                  service_ids: currentServiceIds.filter((id) => id !== treatment.id),
-                                },
-                              }
-                            }
-                          })
-                        }}
-                        className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
-                      />
-                      <Label htmlFor={`new-treatment-${treatment.id}`} className="text-sm cursor-pointer flex-1">
-                        <div className="flex items-center gap-2">
-                          <span>{treatment.name}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {treatment.duration}min
-                          </Badge>
-                          <span className="text-muted-foreground">{formatCurrency(treatment.price || 0)}</span>
-                        </div>
-                      </Label>
-                    </div>
-                  ))}
+                            })
+                          }}
+                          className="border-2 border-gray-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                        />
+                        <Label htmlFor={`new-treatment-${treatment.id}`} className="text-sm cursor-pointer flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-900 font-medium">{treatment.name}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {treatment.duration}min
+                            </Badge>
+                            <span className="text-muted-foreground text-xs">{formatCurrency(treatment.price || 0)}</span>
+                          </div>
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {newStaffForm.skills.service_ids.length === 0
+                    ? 'Pilih minimal 1 layanan (wajib)'
+                    : newStaffForm.skills.service_ids.length === treatments.length
+                    ? 'Semua layanan dipilih'
+                    : `${newStaffForm.skills.service_ids.length} layanan dipilih`}
+                </p>
               </div>
 
               <div className="flex gap-3 pt-4">
