@@ -201,14 +201,14 @@ export function UserManagementStep({ onValidChange }: UserManagementStepProps) {
           </div>
         </Card>
 
-        <Card className="p-5 border-purple-200 bg-purple-50">
+        <Card className="p-5 border-[#C4B5FD] bg-[#EDE9FE]">
           <div className="flex items-start gap-3">
-            <div className="bg-purple-100 rounded-lg p-2">
-              <CheckCircle2 className="h-5 w-5 text-purple-600" />
+            <div className="bg-[#EDE9FE] rounded-lg p-2">
+              <CheckCircle2 className="h-5 w-5 text-[#8B5CF6]" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-purple-900 mb-2">Kenapa ini penting</h3>
-              <p className="text-sm text-purple-700">
+              <h3 className="font-semibold text-[#6D28D9] mb-2">Kenapa ini penting</h3>
+              <p className="text-sm text-[#6D28D9]">
                 User dengan role yang tepat memastikan akses terkontrol, audit trail yang jelas, dan pembagian tugas yang efisien.
               </p>
             </div>

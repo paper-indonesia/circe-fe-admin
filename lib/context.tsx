@@ -215,30 +215,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         console.log('[Context] Bookings array:', bookingsArray)
 
-        // Collect unique customer IDs for lookup
-        const customerIds = [...new Set(bookingsArray.map((b: any) => b.customer_id).filter(Boolean))]
-        console.log('[Context] Fetching customer details for', customerIds.length, 'customers')
-
-        // Fetch customer details for all appointments
+        // Create customer lookup map from already fetched customers
         const customerDetailsMap: Record<string, any> = {}
-        if (customerIds.length > 0) {
-          await Promise.all(
-            customerIds.map(async (customerId) => {
-              try {
-                const response = await fetch(`/api/customers/${customerId}`)
-                if (response.ok) {
-                  const customerData = await response.json()
-                  customerDetailsMap[customerId] = customerData
-                }
-              } catch (error) {
-                console.warn(`[Context] Failed to fetch customer ${customerId}:`, error)
-              }
-            })
-          )
-        }
+        patients.forEach((customer: any) => {
+          if (customer.id) {
+            customerDetailsMap[customer.id] = customer
+          }
+        })
 
-        console.log('[Context] Customer details loaded:', Object.keys(customerDetailsMap).length)
-        console.log('[Context] Customer details map:', customerDetailsMap)
+        console.log('[Context] Customer lookup map created from', patients.length, 'customers')
 
         const bookings = bookingsArray.map((b: any) => {
           // Get first service for backward compatibility
@@ -572,26 +557,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? mongoBookings
         : (mongoBookings.items || [])
 
-      // Collect unique customer IDs for lookup
-      const customerIds = [...new Set(bookingsArray.map((b: any) => b.customer_id).filter(Boolean))]
-
-      // Fetch customer details for all appointments
+      // Create customer lookup map from already fetched customers
       const customerDetailsMap: Record<string, any> = {}
-      if (customerIds.length > 0) {
-        await Promise.all(
-          customerIds.map(async (customerId) => {
-            try {
-              const response = await fetch(`/api/customers/${customerId}`)
-              if (response.ok) {
-                const customerData = await response.json()
-                customerDetailsMap[customerId] = customerData
-              }
-            } catch (error) {
-              console.warn(`[Context] Failed to fetch customer ${customerId}:`, error)
-            }
-          })
-        )
-      }
+      patients.forEach((customer: any) => {
+        if (customer.id) {
+          customerDetailsMap[customer.id] = customer
+        }
+      })
 
       const bookings = bookingsArray.map((b: any) => {
         const firstService = b.services && b.services.length > 0 ? b.services[0] : null

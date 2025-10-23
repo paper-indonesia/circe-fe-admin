@@ -51,6 +51,7 @@ import {
   FileText,
   MapPin,
 } from "lucide-react"
+import { AddButton } from "@/components/ui/add-button"
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -706,7 +707,7 @@ export default function ClientsPage() {
       case 'paid': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
       case 'partially_paid': return 'bg-amber-100 text-amber-700 border-amber-200'
       case 'pending': return 'bg-orange-100 text-orange-700 border-orange-200'
-      case 'refunded': return 'bg-purple-100 text-purple-700 border-purple-200'
+      case 'refunded': return 'bg-[#EDE9FE] text-[#6D28D9] border-[#C4B5FD]'
       default: return 'bg-gray-100 text-gray-700 border-gray-200'
     }
   }
@@ -799,13 +800,9 @@ export default function ClientsPage() {
             <h1 className="text-3xl font-bold text-foreground">Customer Management</h1>
             <p className="text-muted-foreground">Manage your customer database and relationships</p>
           </div>
-          <Button
-            onClick={openAddDialog}
-            className="bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] hover:from-[#E7C6FF] hover:to-[#C8B6FF] text-purple-800 border-0"
-          >
-            <Plus className="h-4 w-4 mr-2" />
+          <AddButton onClick={openAddDialog}>
             Add Customer
-          </Button>
+          </AddButton>
         </div>
 
         {/* Search and Filters */}
@@ -1158,18 +1155,18 @@ export default function ClientsPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-[#C4B5FD]">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-purple-600 uppercase">Total Appointments</p>
-                      <p className="text-2xl font-bold text-purple-900 mt-1">{(statistics.total_appointments || 0).toLocaleString()}</p>
-                      <p className="text-xs text-purple-600 mt-2">
+                      <p className="text-xs font-medium text-[#8B5CF6] uppercase">Total Appointments</p>
+                      <p className="text-2xl font-bold text-[#6D28D9] mt-1">{(statistics.total_appointments || 0).toLocaleString()}</p>
+                      <p className="text-xs text-[#8B5CF6] mt-2">
                         Avg: {(statistics.avg_appointments_per_customer || 0).toFixed(1)}/customer
                       </p>
                     </div>
-                    <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
-                      <CalendarIcon className="h-6 w-6 text-purple-600" />
+                    <div className="h-12 w-12 rounded-full bg-[#EDE9FE] flex items-center justify-center">
+                      <CalendarIcon className="h-6 w-6 text-[#8B5CF6]" />
                     </div>
                   </div>
                 </CardContent>
@@ -1206,9 +1203,9 @@ export default function ClientsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                      <div className="flex items-center justify-between p-3 bg-[#EDE9FE] rounded-lg">
                         <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-purple-600" />
+                          <Award className="h-4 w-4 text-[#8B5CF6]" />
                           <span className="font-medium text-sm">VIP Customers</span>
                         </div>
                         <Badge className="bg-purple-600">{statistics.customer_segments.vip || 0}</Badge>
@@ -1663,21 +1660,21 @@ export default function ClientsPage() {
                       <div className="grid grid-cols-2 gap-4">
                         {/* Statistics Card */}
                         <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 rounded-lg p-4">
-                          <h4 className="font-semibold text-purple-900 mb-3">Statistics</h4>
+                          <h4 className="font-semibold text-[#6D28D9] mb-3">Statistics</h4>
                           <div className="space-y-2.5">
                             <div className="flex items-center justify-between bg-white/60 rounded-md p-2">
                               <span className="text-xs text-gray-600">Total Appointments:</span>
-                              <span className="font-semibold text-sm text-purple-900">{selectedClient.totalVisits}</span>
+                              <span className="font-semibold text-sm text-[#6D28D9]">{selectedClient.totalVisits}</span>
                             </div>
                             <div className="flex items-center justify-between bg-white/60 rounded-md p-2">
                               <span className="text-xs text-gray-600">Total Spent:</span>
-                              <span className="font-semibold text-sm text-purple-900">
+                              <span className="font-semibold text-sm text-[#6D28D9]">
                                 Rp {(selectedClient.total_spent || 0).toLocaleString('id-ID')}
                               </span>
                             </div>
                             <div className="flex items-center justify-between bg-white/60 rounded-md p-2">
                               <span className="text-xs text-gray-600">Member Since:</span>
-                              <span className="font-semibold text-sm text-purple-900">
+                              <span className="font-semibold text-sm text-[#6D28D9]">
                                 {selectedClient.createdAt && typeof selectedClient.createdAt === "string"
                                   ? (() => {
                                       try {
@@ -1772,7 +1769,7 @@ export default function ClientsPage() {
           <DialogContent className="bg-background data-[state=open]:animate-in data-[state=closed]:animate-out max-w-[99vw] w-[90vw] max-h-[95vh] overflow-hidden flex flex-col p-4">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <History className="h-5 w-5 text-purple-600" />
+                <History className="h-5 w-5 text-[#8B5CF6]" />
                 Appointment History - {appointmentHistoryCustomer?.name}
               </DialogTitle>
               <p className="text-sm text-muted-foreground">
@@ -1866,13 +1863,13 @@ export default function ClientsPage() {
               ) : (
                 <table className="w-full table-fixed">
                   <thead className="bg-gradient-to-r from-purple-50 to-pink-50 sticky top-0">
-                    <tr className="border-b border-purple-200">
-                      <th className="text-left py-3 px-3 font-semibold text-sm text-purple-900 w-[12%]">Date & Time</th>
-                      <th className="text-left py-3 px-3 font-semibold text-sm text-purple-900 w-[45%]">Services</th>
-                      <th className="text-left py-3 px-3 font-semibold text-sm text-purple-900 w-[10%]">Status</th>
-                      <th className="text-left py-3 px-3 font-semibold text-sm text-purple-900 w-[11%]">Payment</th>
-                      <th className="text-right py-3 px-3 font-semibold text-sm text-purple-900 w-[12%]">Total</th>
-                      <th className="text-center py-3 px-3 font-semibold text-sm text-purple-900 w-[10%]">Actions</th>
+                    <tr className="border-b border-[#C4B5FD]">
+                      <th className="text-left py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[12%]">Date & Time</th>
+                      <th className="text-left py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[45%]">Services</th>
+                      <th className="text-left py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[10%]">Status</th>
+                      <th className="text-left py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[11%]">Payment</th>
+                      <th className="text-right py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[12%]">Total</th>
+                      <th className="text-center py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[10%]">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1883,7 +1880,7 @@ export default function ClientsPage() {
                       return (
                         <tr
                           key={appointmentId}
-                          className="border-b border-gray-100 hover:bg-purple-50/30 transition-colors"
+                          className="border-b border-gray-100 hover:bg-[#EDE9FE]/30 transition-colors"
                         >
                           <td className="py-3 px-3">
                             <div className="flex flex-col gap-0.5">
@@ -1929,7 +1926,7 @@ export default function ClientsPage() {
                             </Badge>
                           </td>
                           <td className="py-3 px-3 text-right">
-                            <span className="font-bold text-sm text-purple-700 whitespace-nowrap">
+                            <span className="font-bold text-sm text-[#6D28D9] whitespace-nowrap">
                               Rp {(appointment.total_price || 0).toLocaleString('id-ID')}
                             </span>
                           </td>
@@ -2089,22 +2086,22 @@ export default function ClientsPage() {
                 {/* Services Details */}
                 <div>
                   <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-purple-600" />
+                    <Activity className="h-5 w-5 text-[#8B5CF6]" />
                     Services Booked
                   </h3>
                   <div className="space-y-3">
                     {selectedAppointment.services?.map((service: any, idx: number) => (
-                      <div key={idx} className="border border-purple-200 rounded-lg p-4 bg-gradient-to-br from-purple-50/50 to-white">
+                      <div key={idx} className="border border-[#C4B5FD] rounded-lg p-4 bg-gradient-to-br from-purple-50/50 to-white">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-base text-purple-900">{service.service_name}</h4>
+                            <h4 className="font-semibold text-base text-[#6D28D9]">{service.service_name}</h4>
                             <p className="text-sm text-muted-foreground mt-1">
                               <UserCheck className="h-3 w-3 inline mr-1" />
                               Therapist: {service.staff_name}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-lg text-purple-700">
+                            <p className="font-bold text-lg text-[#6D28D9]">
                               Rp {(service.price || 0).toLocaleString('id-ID')}
                             </p>
                             <p className="text-xs text-muted-foreground">{service.duration_minutes} minutes</p>

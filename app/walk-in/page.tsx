@@ -176,7 +176,7 @@ export default function WalkInPage() {
 
   // Category gradient mapping
   const categoryGradients: Record<string, { gradient: string, color: string }> = {
-    "All": { gradient: "from-purple-500 to-pink-500", color: "bg-purple-50 border-purple-200 text-purple-700 hover:border-purple-400" },
+    "All": { gradient: "from-purple-500 to-pink-500", color: "bg-[#EDE9FE] border-[#C4B5FD] text-[#6D28D9] hover:border-[#8B5CF6]" },
     "Facial": { gradient: "from-blue-500 to-cyan-500", color: "bg-blue-50 border-blue-200 text-blue-700 hover:border-blue-400" },
     "Medical": { gradient: "from-green-500 to-emerald-500", color: "bg-green-50 border-green-200 text-green-700 hover:border-green-400" },
     "Laser": { gradient: "from-orange-500 to-red-500", color: "bg-orange-50 border-orange-200 text-orange-700 hover:border-orange-400" },
@@ -558,7 +558,7 @@ export default function WalkInPage() {
         )
       case "refunded":
         return (
-          <Badge className="text-xs bg-purple-100 text-purple-700 border-purple-200">
+          <Badge className="text-xs bg-[#EDE9FE] text-[#6D28D9] border-[#C4B5FD]">
             <AlertCircle className="h-3 w-3 mr-1" />
             Refunded
           </Badge>

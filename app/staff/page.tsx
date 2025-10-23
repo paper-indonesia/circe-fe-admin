@@ -23,6 +23,7 @@ import { format, isToday, parseISO } from "date-fns"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useRouter } from "next/navigation"
+import { AddButton } from "@/components/ui/add-button"
 
 export default function StaffPage() {
   const { staff, loading, addStaff, updateStaff, deleteStaff } = useStaff()
@@ -1197,16 +1198,12 @@ export default function StaffPage() {
             <h1 className="text-3xl font-bold text-foreground">Staff Management</h1>
             <p className="text-muted-foreground">Manage your team, schedules, and performance</p>
           </div>
-          <Button
-            onClick={() => setShowAddStaffDialog(true)}
-            className="bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] hover:from-[#E7C6FF] hover:to-[#C8B6FF] text-purple-800 border-0 shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            <Plus className="h-4 w-4 mr-2" />
+          <AddButton onClick={() => setShowAddStaffDialog(true)}>
             Add Staff Member
-          </Button>
+          </AddButton>
         </div>
 
-        <Card className="border-[#E7C6FF]/30">
+        <Card className="border-[#EDE9FE]/30">
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
@@ -1216,13 +1213,13 @@ export default function StaffPage() {
                     placeholder="Search staff by name, role, or skills..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                    className="pl-10 border-[#EDE9FE] focus:border-[#8B5CF6]"
                   />
                 </div>
               </div>
               <div className="flex gap-2">
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-40 border-[#E7C6FF]">
+                  <SelectTrigger className="w-40 border-[#EDE9FE]">
                     <Filter className="h-4 w-4 mr-2" />
                     <SelectValue placeholder="Role" />
                   </SelectTrigger>
@@ -1236,7 +1233,7 @@ export default function StaffPage() {
                   </SelectContent>
                 </Select>
                 <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
-                  <SelectTrigger className="w-40 border-[#E7C6FF]">
+                  <SelectTrigger className="w-40 border-[#EDE9FE]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1250,10 +1247,10 @@ export default function StaffPage() {
           </CardContent>
         </Card>
 
-        <div className="bg-white rounded-lg border border-[#E7C6FF]/30 overflow-hidden">
+        <div className="bg-white rounded-lg border border-[#EDE9FE]/30 overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gradient-to-r from-[#FFD6FF]/20 to-[#E7C6FF]/20">
+              <TableRow className="bg-gradient-to-r from-[#FCD6F5]/20 to-[#EDE9FE]/20">
                 <TableHead className="w-16">Photo</TableHead>
                 <TableHead>Staff Member</TableHead>
                 <TableHead>Products</TableHead>
@@ -1275,9 +1272,9 @@ export default function StaffPage() {
                 const performance = getStaffPerformance(staffMember.id)
 
                 return (
-                  <TableRow key={staffMember.id} className="hover:bg-[#FFD6FF]/10 transition-colors">
+                  <TableRow key={staffMember.id} className="hover:bg-[#FCD6F5]/10 transition-colors">
                     <TableCell>
-                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#E7C6FF]">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#EDE9FE]">
                         <img
                           src={`/abstract-geometric-shapes.png?height=40&width=40&query=${staffMember.name} professional beauty therapist headshot portrait`}
                           alt={staffMember.name}
@@ -1332,13 +1329,13 @@ export default function StaffPage() {
                                 <Badge
                                   key={product.id}
                                   variant="outline"
-                                  className="text-xs border-[#C8B6FF] text-purple-600 bg-[#FFD6FF]/30"
+                                  className="text-xs border-[#8B5CF6] text-[#8B5CF6] bg-[#FCD6F5]/30"
                                 >
                                   {product.name}
                                 </Badge>
                               ))}
                               {remaining > 0 && (
-                                <Badge variant="outline" className="text-xs border-[#E7C6FF] text-purple-600">
+                                <Badge variant="outline" className="text-xs border-[#EDE9FE] text-[#8B5CF6]">
                                   +{remaining} more
                                 </Badge>
                               )}
@@ -1373,13 +1370,13 @@ export default function StaffPage() {
                                 <Badge
                                   key={idx}
                                   variant="secondary"
-                                  className="text-xs bg-[#FFD6FF]/50 text-purple-700"
+                                  className="text-xs bg-[#FCD6F5]/50 text-[#6D28D9]"
                                 >
                                   {specialty}
                                 </Badge>
                               ))}
                               {remaining > 0 && (
-                                <Badge variant="secondary" className="text-xs bg-[#E7C6FF]/50 text-purple-700">
+                                <Badge variant="secondary" className="text-xs bg-[#EDE9FE]/50 text-[#6D28D9]">
                                   +{remaining} more
                                 </Badge>
                               )}
@@ -1389,13 +1386,13 @@ export default function StaffPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] rounded-full">
-                        <span className="text-sm font-semibold text-purple-800">{performance.todayBookings}</span>
+                      <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] rounded-full">
+                        <span className="text-sm font-semibold text-[#6D28D9]">{performance.todayBookings}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="inline-flex items-center justify-center w-12 h-8 bg-gradient-to-br from-[#E7C6FF] to-[#C8B6FF] rounded-full">
-                        <span className="text-sm font-semibold text-purple-800">
+                      <div className="inline-flex items-center justify-center w-12 h-8 bg-gradient-to-br from-[#EDE9FE] to-[#8B5CF6] rounded-full">
+                        <span className="text-sm font-semibold text-[#6D28D9]">
                           {Math.round(performance.completionRate)}%
                         </span>
                       </div>
@@ -1405,18 +1402,18 @@ export default function StaffPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 hover:bg-[#FFD6FF]/30"
+                          className="h-8 w-8 p-0 hover:bg-[#FCD6F5]/30"
                           onClick={() => handleViewSchedule(staffMember)}
                         >
-                          <Calendar className="h-4 w-4 text-purple-600" />
+                          <Calendar className="h-4 w-4 text-[#8B5CF6]" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0 hover:bg-[#FFD6FF]/30"
+                          className="h-8 w-8 p-0 hover:bg-[#FCD6F5]/30"
                           onClick={() => openStaffProfile(staffMember)}
                         >
-                          <Edit className="h-4 w-4 text-purple-600" />
+                          <Edit className="h-4 w-4 text-[#8B5CF6]" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -1437,7 +1434,7 @@ export default function StaffPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-[#E7C6FF]/30 bg-white rounded-lg p-4">
+          <div className="flex items-center justify-between border-t border-[#EDE9FE]/30 bg-white rounded-lg p-4">
             <div className="text-sm text-muted-foreground">
               Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredStaff.length)} of {filteredStaff.length} staff members
             </div>
@@ -1447,7 +1444,7 @@ export default function StaffPage() {
                 size="sm"
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="border-[#E7C6FF] text-purple-600 hover:bg-[#FFD6FF]/30"
+                className="border-[#EDE9FE] text-[#8B5CF6] hover:bg-[#FCD6F5]/30"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
@@ -1472,8 +1469,8 @@ export default function StaffPage() {
                       size="sm"
                       onClick={() => setCurrentPage(pageNum)}
                       className={currentPage === pageNum
-                        ? "bg-gradient-to-r from-[#FFD6FF] to-[#E7C6FF] text-purple-800 border-0"
-                        : "border-[#E7C6FF] text-purple-600 hover:bg-[#FFD6FF]/30"
+                        ? "bg-gradient-to-r from-[#FCD6F5] to-[#EDE9FE] text-[#6D28D9] border-0"
+                        : "border-[#EDE9FE] text-[#8B5CF6] hover:bg-[#FCD6F5]/30"
                       }
                     >
                       {pageNum}
@@ -1486,7 +1483,7 @@ export default function StaffPage() {
                 size="sm"
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
-                className="border-[#E7C6FF] text-purple-600 hover:bg-[#FFD6FF]/30"
+                className="border-[#EDE9FE] text-[#8B5CF6] hover:bg-[#FCD6F5]/30"
               >
                 Next
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -1671,7 +1668,7 @@ export default function StaffPage() {
                                   <Badge
                                     key={treatment.id}
                                     variant="outline"
-                                    className="text-xs border-[#C8B6FF] text-purple-600 bg-[#FFD6FF]/30"
+                                    className="text-xs border-[#8B5CF6] text-[#8B5CF6] bg-[#FCD6F5]/30"
                                   >
                                     {treatment.name}
                                   </Badge>
@@ -1705,7 +1702,7 @@ export default function StaffPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1 bg-white text-purple-700 hover:bg-[#FFD6FF]/30" onClick={() => {
+                      <Button variant="outline" className="flex-1 bg-white text-[#6D28D9] hover:bg-[#FCD6F5]/30" onClick={() => {
                         // Convert skills to array format for form
                         let skillsArray: string[] = []
                         if (Array.isArray(selectedStaff.skills)) {
@@ -1776,7 +1773,7 @@ export default function StaffPage() {
                       </Button>
                       <Button
                         variant="outline"
-                        className="flex-1 bg-white text-purple-700 hover:bg-[#FFD6FF]/30"
+                        className="flex-1 bg-white text-[#6D28D9] hover:bg-[#FCD6F5]/30"
                         onClick={() => {
                           setShowStaffDialog(false)
                           setShowScheduleDialog(true)
@@ -1808,7 +1805,7 @@ export default function StaffPage() {
                               display_name: fullName
                             }))
                           }}
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         />
                       </div>
                       <div>
@@ -1828,7 +1825,7 @@ export default function StaffPage() {
                               position: value
                             }))}
                           >
-                            <SelectTrigger className="mt-1 h-11 border-[#E7C6FF] focus:border-[#C8B6FF]">
+                            <SelectTrigger className="mt-1 h-11 border-[#EDE9FE] focus:border-[#8B5CF6]">
                               <SelectValue placeholder="Select a position" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1849,7 +1846,7 @@ export default function StaffPage() {
                               position: e.target.value
                             }))}
                             placeholder="e.g., Beauty Therapist, Massage Therapist"
-                            className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                            className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                             required
                           />
                         )}
@@ -1869,7 +1866,7 @@ export default function StaffPage() {
                           type="email"
                           value={editStaffForm.email}
                           onChange={(e) => setEditStaffForm((prev) => ({ ...prev, email: e.target.value }))}
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         />
                       </div>
                       <div>
@@ -1880,7 +1877,7 @@ export default function StaffPage() {
                           id="edit-phone"
                           value={editStaffForm.phone}
                           onChange={(e) => setEditStaffForm((prev) => ({ ...prev, phone: e.target.value }))}
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         />
                       </div>
                     </div>
@@ -1896,7 +1893,7 @@ export default function StaffPage() {
                             setEditStaffForm((prev) => ({ ...prev, employment_type: value }))
                           }
                         >
-                          <SelectTrigger className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]">
+                          <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1917,7 +1914,7 @@ export default function StaffPage() {
                           value={editStaffForm.employee_id}
                           onChange={(e) => setEditStaffForm((prev) => ({ ...prev, employee_id: e.target.value }))}
                           placeholder="EMP001"
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         />
                       </div>
                     </div>
@@ -1932,7 +1929,7 @@ export default function StaffPage() {
                           type="date"
                           value={editStaffForm.hire_date}
                           onChange={(e) => setEditStaffForm((prev) => ({ ...prev, hire_date: e.target.value }))}
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         />
                       </div>
                       <div>
@@ -1944,7 +1941,7 @@ export default function StaffPage() {
                           type="date"
                           value={editStaffForm.birth_date}
                           onChange={(e) => setEditStaffForm((prev) => ({ ...prev, birth_date: e.target.value }))}
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         />
                       </div>
                     </div>
@@ -1961,7 +1958,7 @@ export default function StaffPage() {
                           value={editStaffForm.hourly_rate || ""}
                           onChange={(e) => setEditStaffForm((prev) => ({ ...prev, hourly_rate: e.target.value ? parseFloat(e.target.value) : null }))}
                           placeholder="0"
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         />
                       </div>
                       <div>
@@ -1975,7 +1972,7 @@ export default function StaffPage() {
                           value={editStaffForm.salary || ""}
                           onChange={(e) => setEditStaffForm((prev) => ({ ...prev, salary: e.target.value ? parseFloat(e.target.value) : null }))}
                           placeholder="0"
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         />
                       </div>
                     </div>
@@ -1989,7 +1986,7 @@ export default function StaffPage() {
                         value={editStaffForm.photo}
                         onChange={(e) => setEditStaffForm((prev) => ({ ...prev, photo: e.target.value, profile_image_url: e.target.value }))}
                         placeholder="https://example.com/photo.jpg"
-                        className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                        className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
                         Enter a URL to the staff member's photo
@@ -2005,7 +2002,7 @@ export default function StaffPage() {
                         value={editStaffForm.bio}
                         onChange={(e) => setEditStaffForm((prev) => ({ ...prev, bio: e.target.value }))}
                         placeholder="Deskripsi singkat tentang staff member..."
-                        className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                        className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         rows={2}
                       />
                     </div>
@@ -2019,7 +2016,7 @@ export default function StaffPage() {
                         value={editStaffForm.instagram_handle}
                         onChange={(e) => setEditStaffForm((prev) => ({ ...prev, instagram_handle: e.target.value }))}
                         placeholder="@username"
-                        className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                        className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                       />
                     </div>
 
@@ -2034,7 +2031,7 @@ export default function StaffPage() {
                             setEditStaffForm((prev) => ({ ...prev, status: value, is_active: value === "active" }))
                           }
                         >
-                          <SelectTrigger className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]">
+                          <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -2053,7 +2050,7 @@ export default function StaffPage() {
                             onCheckedChange={(checked) =>
                               setEditStaffForm((prev) => ({ ...prev, is_active: checked as boolean }))
                             }
-                            className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
+                            className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
                           />
                           <Label htmlFor="edit-is-active" className="text-sm cursor-pointer">
                             Staff Aktif
@@ -2062,7 +2059,7 @@ export default function StaffPage() {
                       </div>
                     </div>
 
-                    <div className="border border-[#E7C6FF] rounded-lg p-4 space-y-3">
+                    <div className="border border-[#EDE9FE] rounded-lg p-4 space-y-3">
                       <Label className="text-sm font-medium">Pengaturan Booking</Label>
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -2071,7 +2068,7 @@ export default function StaffPage() {
                           onCheckedChange={(checked) =>
                             setEditStaffForm((prev) => ({ ...prev, is_bookable: checked as boolean }))
                           }
-                          className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
+                          className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
                         />
                         <Label htmlFor="edit-is-bookable" className="text-sm cursor-pointer">
                           Staff dapat dibooking
@@ -2084,7 +2081,7 @@ export default function StaffPage() {
                           onCheckedChange={(checked) =>
                             setEditStaffForm((prev) => ({ ...prev, accepts_online_booking: checked as boolean }))
                           }
-                          className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
+                          className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
                         />
                         <Label htmlFor="edit-accepts-online" className="text-sm cursor-pointer">
                           Terima booking online
@@ -2104,14 +2101,14 @@ export default function StaffPage() {
                             setEditStaffForm((prev) => ({ ...prev, max_advance_booking_days: parseInt(e.target.value) || 30 }))
                           }
                           placeholder="30"
-                          className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]"
+                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
                         />
                       </div>
                     </div>
 
                     <div>
                       <Label className="text-sm font-medium">Assigned Products</Label>
-                      <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border border-[#E7C6FF] rounded-lg p-3">
+                      <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border border-[#EDE9FE] rounded-lg p-3">
                         {treatments.map((treatment) => (
                           <div key={treatment.id} className="flex items-center space-x-2">
                             <Checkbox
@@ -2135,7 +2132,7 @@ export default function StaffPage() {
                                   }
                                 })
                               }}
-                              className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
+                              className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
                             />
                             <Label htmlFor={`treatment-${treatment.id}`} className="text-sm cursor-pointer flex-1">
                               <div className="flex items-center gap-2">
@@ -2158,14 +2155,14 @@ export default function StaffPage() {
                           value={editSkillInput}
                           onChange={(e) => setEditSkillInput(e.target.value)}
                           placeholder="Add a skill"
-                          className="border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                          className="border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                           onKeyPress={(e) => e.key === "Enter" && handleEditAddSkill()}
                         />
                         <Button
                           type="button"
                           onClick={handleEditAddSkill}
                           size="sm"
-                          className="bg-[#E7C6FF] hover:bg-[#C8B6FF] text-purple-800"
+                          className="bg-[#EDE9FE] hover:bg-[#8B5CF6] text-[#6D28D9]"
                         >
                           Add
                         </Button>
@@ -2176,7 +2173,7 @@ export default function StaffPage() {
                             <Badge
                               key={skill}
                               variant="secondary"
-                              className="text-xs bg-[#FFD6FF] text-purple-800 hover:bg-[#E7C6FF]"
+                              className="text-xs bg-[#FCD6F5] text-[#6D28D9] hover:bg-[#EDE9FE]"
                             >
                               {skill}
                               <button onClick={() => handleEditRemoveSkill(skill)} className="ml-1 hover:text-red-600">
@@ -2192,13 +2189,13 @@ export default function StaffPage() {
                       <Button
                         variant="outline"
                         onClick={() => setIsEditMode(false)}
-                        className="flex-1 border-[#E7C6FF] text-purple-700 hover:bg-[#FFD6FF]"
+                        className="flex-1 border-[#EDE9FE] text-[#6D28D9] hover:bg-[#FCD6F5]"
                       >
                         Cancel
                       </Button>
                       <Button
                         onClick={handleUpdateStaff}
-                        className="flex-1 bg-gradient-to-r from-[#E7C6FF] to-[#C8B6FF] hover:from-[#C8B6FF] hover:to-[#B8C0FF] text-purple-800"
+                        className="flex-1 bg-gradient-to-r from-[#EDE9FE] to-[#8B5CF6] hover:from-[#8B5CF6] hover:to-[#A78BFA] text-[#6D28D9]"
                       >
                         Save Changes
                       </Button>
@@ -2343,7 +2340,7 @@ export default function StaffPage() {
                                   <div className="text-xs text-muted-foreground mt-1">{entry.notes}</div>
                                 )}
                                 {entry.service_ids && entry.service_ids.length > 0 && (
-                                  <div className="text-xs text-purple-600 mt-1">
+                                  <div className="text-xs text-[#8B5CF6] mt-1">
                                     Layanan: {treatments.filter(t => entry.service_ids.includes(t.id)).map(t => t.name).join(', ')}
                                   </div>
                                 )}
@@ -2378,8 +2375,8 @@ export default function StaffPage() {
 
                 {/* Add/Edit Availability Form (Outside Tabs) */}
                 {showAddAvailability && (
-                  <div className="border-2 border-purple-200 rounded-xl p-6 space-y-5 bg-gradient-to-br from-purple-50/50 to-pink-50/50 shadow-lg">
-                    <div className="flex items-center gap-4 pb-4 border-b border-purple-200">
+                  <div className="border-2 border-[#C4B5FD] rounded-xl p-6 space-y-5 bg-gradient-to-br from-purple-50/50 to-pink-50/50 shadow-lg">
+                    <div className="flex items-center gap-4 pb-4 border-b border-[#C4B5FD]">
                       <Button
                         variant="outline"
                         size="sm"
@@ -2387,7 +2384,7 @@ export default function StaffPage() {
                           setShowAddAvailability(false)
                           setEditingAvailability(null)
                         }}
-                        className="hover:bg-purple-100 border-purple-300"
+                        className="hover:bg-[#EDE9FE] border-[#C4B5FD]"
                       >
                         <ArrowLeft className="h-4 w-4 mr-1" />
                         Kembali
@@ -2507,9 +2504,9 @@ export default function StaffPage() {
                     {availabilityTab === 'working_hours' && (
                       <div>
                         <Label>Layanan Khusus (opsional)</Label>
-                        <div className="mt-2 border-2 border-purple-200 rounded-lg p-4 max-h-60 overflow-y-auto bg-gray-50">
+                        <div className="mt-2 border-2 border-[#C4B5FD] rounded-lg p-4 max-h-60 overflow-y-auto bg-gray-50">
                           {/* Select All Option */}
-                          <div className="flex items-center space-x-3 pb-3 border-b-2 border-purple-200 mb-3 bg-white p-3 rounded-md shadow-sm">
+                          <div className="flex items-center space-x-3 pb-3 border-b-2 border-[#C4B5FD] mb-3 bg-white p-3 rounded-md shadow-sm">
                             <Checkbox
                               id="service-all"
                               checked={availabilityForm.service_ids.length === treatments.length && treatments.length > 0}
@@ -2519,11 +2516,11 @@ export default function StaffPage() {
                                   service_ids: checked ? treatments.map(t => t.id) : []
                                 }))
                               }}
-                              className="border-2 border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                              className="border-2 border-[#8B5CF6] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                             />
                             <label
                               htmlFor="service-all"
-                              className="text-sm font-bold cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-purple-900"
+                              className="text-sm font-bold cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-[#6D28D9]"
                             >
                               Semua Layanan
                             </label>
@@ -2576,11 +2573,11 @@ export default function StaffPage() {
                       />
                     </div>
 
-                    <div className="flex gap-3 pt-2 border-t border-purple-200">
+                    <div className="flex gap-3 pt-2 border-t border-[#C4B5FD]">
                       <Button
                         onClick={editingAvailability ? handleUpdateAvailability : handleCreateAvailability}
                         disabled={savingAvailability}
-                        className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 h-12 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#6D28D9] hover:to-[#EC4899] text-white shadow-lg hover:shadow-xl transition-all font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {savingAvailability ? (
                           <>
@@ -2632,7 +2629,7 @@ export default function StaffPage() {
           <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Users className="h-5 w-5 text-[#C8B6FF]" />
+                <Users className="h-5 w-5 text-[#8B5CF6]" />
                 Add New Staff Member
               </DialogTitle>
             </DialogHeader>
@@ -2647,7 +2644,7 @@ export default function StaffPage() {
                     value={newStaffForm.first_name}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, first_name: e.target.value }))}
                     placeholder="Enter first name"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                     required
                   />
                 </div>
@@ -2660,7 +2657,7 @@ export default function StaffPage() {
                     value={newStaffForm.last_name}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, last_name: e.target.value }))}
                     placeholder="Enter last name"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                     required
                   />
                 </div>
@@ -2675,7 +2672,7 @@ export default function StaffPage() {
                   value={newStaffForm.display_name}
                   onChange={(e) => setNewStaffForm((prev) => ({ ...prev, display_name: e.target.value }))}
                   placeholder="Leave empty to auto-generate from first + last name"
-                  className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                  className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Leave empty to auto-generate from first + last name
@@ -2695,7 +2692,7 @@ export default function StaffPage() {
                     value={newStaffForm.position}
                     onValueChange={(value) => setNewStaffForm((prev) => ({ ...prev, position: value }))}
                   >
-                    <SelectTrigger className="mt-1 h-11 border-[#E7C6FF] focus:border-[#C8B6FF]">
+                    <SelectTrigger className="mt-1 h-11 border-[#EDE9FE] focus:border-[#8B5CF6]">
                       <SelectValue placeholder="Select a position" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2712,7 +2709,7 @@ export default function StaffPage() {
                     value={newStaffForm.position}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, position: e.target.value }))}
                     placeholder="e.g., Beauty Therapist, Massage Therapist, Receptionist"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                     required
                   />
                 )}
@@ -2732,7 +2729,7 @@ export default function StaffPage() {
                     value={newStaffForm.email}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, email: e.target.value }))}
                     placeholder="email@example.com"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                     required
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -2749,7 +2746,7 @@ export default function StaffPage() {
                     value={newStaffForm.phone}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, phone: e.target.value }))}
                     placeholder="+6281xxxxxxxxx atau 081xxxxxxxxx"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                     required
                     minLength={10}
                   />
@@ -2770,7 +2767,7 @@ export default function StaffPage() {
                       setNewStaffForm((prev) => ({ ...prev, employment_type: value }))
                     }
                   >
-                    <SelectTrigger className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]">
+                    <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -2791,7 +2788,7 @@ export default function StaffPage() {
                     value={newStaffForm.employee_id}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, employee_id: e.target.value }))}
                     placeholder="Contoh: EMP001"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                   />
                 </div>
               </div>
@@ -2806,7 +2803,7 @@ export default function StaffPage() {
                     type="date"
                     value={newStaffForm.hire_date}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, hire_date: e.target.value }))}
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                   />
                 </div>
                 <div>
@@ -2818,7 +2815,7 @@ export default function StaffPage() {
                     type="date"
                     value={newStaffForm.birth_date}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, birth_date: e.target.value }))}
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                   />
                 </div>
               </div>
@@ -2835,7 +2832,7 @@ export default function StaffPage() {
                     value={newStaffForm.hourly_rate || ""}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, hourly_rate: e.target.value ? parseFloat(e.target.value) : null }))}
                     placeholder="Opsional"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                   />
                 </div>
                 <div>
@@ -2849,7 +2846,7 @@ export default function StaffPage() {
                     value={newStaffForm.salary || ""}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, salary: e.target.value ? parseFloat(e.target.value) : null }))}
                     placeholder="Opsional"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                   />
                 </div>
               </div>
@@ -2864,7 +2861,7 @@ export default function StaffPage() {
                     value={newStaffForm.instagram_handle}
                     onChange={(e) => setNewStaffForm((prev) => ({ ...prev, instagram_handle: e.target.value }))}
                     placeholder="@username"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                   />
                 </div>
                 <div>
@@ -2881,7 +2878,7 @@ export default function StaffPage() {
                       skills: { ...prev.skills, years_experience: parseInt(e.target.value) || 0 }
                     }))}
                     placeholder="0"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                   />
                 </div>
               </div>
@@ -2895,7 +2892,7 @@ export default function StaffPage() {
                     value={newStaffForm.outlet_id}
                     onValueChange={(value) => setNewStaffForm((prev) => ({ ...prev, outlet_id: value }))}
                   >
-                    <SelectTrigger className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF]">
+                    <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
                       <SelectValue placeholder="Pilih outlet" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2921,7 +2918,7 @@ export default function StaffPage() {
                   value={newStaffForm.profile_image_url}
                   onChange={(e) => setNewStaffForm((prev) => ({ ...prev, profile_image_url: e.target.value }))}
                   placeholder="https://example.com/photo.jpg"
-                  className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                  className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Enter a URL to the staff member's profile image
@@ -2937,12 +2934,12 @@ export default function StaffPage() {
                   value={newStaffForm.bio}
                   onChange={(e) => setNewStaffForm((prev) => ({ ...prev, bio: e.target.value }))}
                   placeholder="Deskripsi singkat tentang staff member..."
-                  className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                  className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                   rows={2}
                 />
               </div>
 
-              <div className="border border-[#E7C6FF] rounded-lg p-4 space-y-3">
+              <div className="border border-[#EDE9FE] rounded-lg p-4 space-y-3">
                 <Label className="text-sm font-medium">Pengaturan Booking</Label>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -2951,7 +2948,7 @@ export default function StaffPage() {
                     onCheckedChange={(checked) =>
                       setNewStaffForm((prev) => ({ ...prev, is_bookable: checked as boolean }))
                     }
-                    className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
+                    className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
                   />
                   <Label htmlFor="is_bookable" className="text-sm cursor-pointer">
                     Staff dapat dibooking
@@ -2964,7 +2961,7 @@ export default function StaffPage() {
                     onCheckedChange={(checked) =>
                       setNewStaffForm((prev) => ({ ...prev, accepts_online_booking: checked as boolean }))
                     }
-                    className="border-[#E7C6FF] data-[state=checked]:bg-[#C8B6FF]"
+                    className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
                   />
                   <Label htmlFor="accepts_online_booking" className="text-sm cursor-pointer">
                     Terima booking online
@@ -2987,7 +2984,7 @@ export default function StaffPage() {
                       }))
                     }
                     placeholder="30"
-                    className="mt-1 border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Berapa hari ke depan customer bisa booking (default: 30 hari)
@@ -3004,14 +3001,14 @@ export default function StaffPage() {
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
                     placeholder="Add a specialty (e.g., Facial Treatment, Body Massage)"
-                    className="border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                     onKeyPress={(e) => e.key === "Enter" && handleAddSkill()}
                   />
                   <Button
                     type="button"
                     onClick={handleAddSkill}
                     size="sm"
-                    className="bg-[#E7C6FF] hover:bg-[#C8B6FF] text-purple-800"
+                    className="bg-[#EDE9FE] hover:bg-[#8B5CF6] text-[#6D28D9]"
                   >
                     Add
                   </Button>
@@ -3022,7 +3019,7 @@ export default function StaffPage() {
                       <Badge
                         key={skill}
                         variant="secondary"
-                        className="text-xs bg-[#FFD6FF] text-purple-800 hover:bg-[#E7C6FF]"
+                        className="text-xs bg-[#FCD6F5] text-[#6D28D9] hover:bg-[#EDE9FE]"
                       >
                         {skill}
                         <button onClick={() => handleRemoveSkill(skill)} className="ml-1 hover:text-red-600">
@@ -3043,7 +3040,7 @@ export default function StaffPage() {
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
                     placeholder="Add a certification"
-                    className="border-[#E7C6FF] focus:border-[#C8B6FF] focus:ring-[#C8B6FF]"
+                    className="border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                     onKeyPress={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault()
@@ -3077,7 +3074,7 @@ export default function StaffPage() {
                       }
                     }}
                     size="sm"
-                    className="bg-[#E7C6FF] hover:bg-[#C8B6FF] text-purple-800"
+                    className="bg-[#EDE9FE] hover:bg-[#8B5CF6] text-[#6D28D9]"
                   >
                     Add
                   </Button>
@@ -3113,9 +3110,9 @@ export default function StaffPage() {
 
               <div>
                 <Label className="text-sm font-medium">Assign Products / Services *</Label>
-                <div className="mt-2 border-2 border-purple-200 rounded-lg p-4 bg-gray-50">
+                <div className="mt-2 border-2 border-[#C4B5FD] rounded-lg p-4 bg-gray-50">
                   {/* Select All Option */}
-                  <div className="flex items-center space-x-3 pb-3 border-b-2 border-purple-200 mb-3 bg-white p-3 rounded-md shadow-sm">
+                  <div className="flex items-center space-x-3 pb-3 border-b-2 border-[#C4B5FD] mb-3 bg-white p-3 rounded-md shadow-sm">
                     <Checkbox
                       id="new-service-all"
                       checked={newStaffForm.skills.service_ids.length === treatments.length && treatments.length > 0}
@@ -3128,11 +3125,11 @@ export default function StaffPage() {
                           }
                         }))
                       }}
-                      className="border-2 border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                      className="border-2 border-[#8B5CF6] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                     />
                     <label
                       htmlFor="new-service-all"
-                      className="text-sm font-bold cursor-pointer leading-none text-purple-900"
+                      className="text-sm font-bold cursor-pointer leading-none text-[#6D28D9]"
                     >
                       Pilih Semua Layanan
                     </label>
@@ -3195,13 +3192,13 @@ export default function StaffPage() {
                 <Button
                   variant="outline"
                   onClick={() => setShowAddStaffDialog(false)}
-                  className="flex-1 border-[#E7C6FF] text-purple-700 hover:bg-[#FFD6FF]"
+                  className="flex-1 border-[#EDE9FE] text-[#6D28D9] hover:bg-[#FCD6F5]"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleAddStaff}
-                  className="flex-1 bg-gradient-to-r from-[#E7C6FF] to-[#C8B6FF] hover:from-[#C8B6FF] hover:to-[#B8C0FF] text-purple-800 shadow-lg"
+                  className="flex-1 bg-gradient-to-r from-[#EDE9FE] to-[#8B5CF6] hover:from-[#8B5CF6] hover:to-[#A78BFA] text-[#6D28D9] shadow-lg"
                 >
                   Add Staff Member
                 </Button>
@@ -3275,7 +3272,7 @@ export default function StaffPage() {
               )}
               <AlertDialogAction
                 onClick={() => setShowErrorDialog(false)}
-                className="bg-gradient-to-r from-[#E7C6FF] to-[#C8B6FF] hover:from-[#C8B6FF] hover:to-[#B8C0FF] text-purple-800"
+                className="bg-gradient-to-r from-[#EDE9FE] to-[#8B5CF6] hover:from-[#8B5CF6] hover:to-[#A78BFA] text-[#6D28D9]"
               >
                 Mengerti
               </AlertDialogAction>

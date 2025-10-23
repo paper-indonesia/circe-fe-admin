@@ -4,7 +4,8 @@
       "Bash(powershell -Command \"Get-ChildItem -Path ''app/settings'' -Recurse | Select-Object FullName, Length\")",
       "Bash(git checkout:*)",
       "Bash(find:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(npx shadcn@latest add https://magicui.design/r/shimmer-button.json)"
     ],
     "deny": [],
     "ask": []

@@ -240,7 +240,7 @@ export function Sidebar() {
                         className={cn(
                           "flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 group relative",
                           isActive
-                            ? "bg-gradient-to-r from-[#FFD6FF]/30 to-[#E7C6FF]/30 text-gray-900 shadow-sm ring-1 ring-[#C8B6FF]/20"
+                            ? "bg-gradient-to-r from-[#FCD6F5]/30 to-[#EDE9FE]/30 text-gray-900 shadow-sm ring-1 ring-[#8B5CF6]/20"
                             : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
                           isCollapsed && "justify-center"
                         )}
@@ -249,7 +249,7 @@ export function Sidebar() {
                       >
                         <item.icon className={cn(
                           "h-5 w-5 transition-all duration-200 flex-shrink-0",
-                          isActive ? "text-[#C8B6FF]" : "text-gray-400 group-hover:text-gray-600"
+                          isActive ? "text-[#8B5CF6]" : "text-gray-400 group-hover:text-gray-600"
                         )} />
                         <div
                           style={{
@@ -266,7 +266,7 @@ export function Sidebar() {
                           <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">{item.name}</span>
                           {/* Active indicator */}
                           {isActive && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#C8B6FF] flex-shrink-0" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6] flex-shrink-0" />
                           )}
                         </div>
 
@@ -288,8 +288,8 @@ export function Sidebar() {
           <div className="p-4 border-t border-gray-100" style={{ overflow: 'hidden' }}>
             {/* User Info */}
             <div className={cn("flex items-center gap-3 mb-3 overflow-hidden", isCollapsed && "justify-center")}>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FFD6FF] to-[#E7C6FF] flex items-center justify-center shadow-sm flex-shrink-0">
-                <span className="text-xs font-semibold bg-gradient-to-br from-[#C8B6FF] to-[#B8C0FF] bg-clip-text text-transparent">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center shadow-sm flex-shrink-0">
+                <span className="text-xs font-semibold bg-gradient-to-br from-[#8B5CF6] to-[#A78BFA] bg-clip-text text-transparent">
                   {getInitials()}
                 </span>
               </div>
@@ -328,7 +328,7 @@ export function Sidebar() {
                     <div className={cn(
                       "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
                       subscription.plan === 'free' && "bg-gray-100 text-gray-700",
-                      subscription.plan === 'pro' && "bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700",
+                      subscription.plan === 'pro' && "bg-gradient-to-r from-purple-100 to-pink-100 text-[#6D28D9]",
                       subscription.plan === 'enterprise' && "bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700"
                     )}>
                       <Crown className="h-3 w-3" />
@@ -370,7 +370,7 @@ export function Sidebar() {
             <button
               onClick={handleLogout}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#B8C0FF] hover:bg-[#A8B0EF] text-gray-900 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0",
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-[#A78BFA] hover:bg-[#A8B0EF] text-gray-900 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0",
                 isCollapsed && "justify-center px-2"
               )}
               style={{ overflow: 'hidden' }}

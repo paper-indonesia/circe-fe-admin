@@ -534,7 +534,7 @@ export default function SignUpPage() {
           {/* Logo and Header */}
           <div className="mb-8 text-center">
             <div className="relative inline-flex items-center justify-center mb-6">
-              <div className="absolute inset-0 w-20 h-20 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full blur-xl opacity-60 animate-pulse" />
+              <div className="absolute inset-0 w-20 h-20 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] rounded-full blur-xl opacity-60 animate-pulse" />
               <div className="relative">
                 <img
                   src="/reserva_logo.webp"
@@ -572,7 +572,7 @@ export default function SignUpPage() {
                     >
                       <div className={`relative flex items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 ${
                         currentStep > step.id
-                          ? 'bg-gradient-to-br from-purple-600 to-pink-600 shadow-lg shadow-purple-500/50'
+                          ? 'bg-gradient-to-br from-[#8B5CF6] to-[#EC4899] shadow-lg shadow-purple-500/50'
                           : currentStep === step.id
                           ? 'bg-white border-2 border-purple-600 shadow-lg shadow-purple-300/50'
                           : 'bg-white/50 border-2 border-gray-200'
@@ -581,7 +581,7 @@ export default function SignUpPage() {
                           <Check className="h-6 w-6 text-white" strokeWidth={3} />
                         ) : (
                           <span className={`font-bold text-lg ${
-                            currentStep === step.id ? 'text-purple-600' : 'text-gray-400'
+                            currentStep === step.id ? 'text-[#8B5CF6]' : 'text-gray-400'
                           }`}>
                             {step.id}
                           </span>
@@ -592,7 +592,7 @@ export default function SignUpPage() {
                       {currentStep === step.id && (
                         <motion.div
                           layoutId="activeStep"
-                          className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 opacity-20"
+                          className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#8B5CF6] to-[#EC4899] opacity-20"
                           transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         />
                       )}
@@ -623,7 +623,7 @@ export default function SignUpPage() {
                           width: currentStep > step.id ? '100%' : '0%'
                         }}
                         transition={{ duration: 0.4, ease: "easeInOut" }}
-                        className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full"
+                        className="absolute inset-0 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] rounded-full"
                       />
                     </div>
                   )}
@@ -634,7 +634,7 @@ export default function SignUpPage() {
 
           {/* Sign Up Card */}
           <Card className="border-0 shadow-2xl backdrop-blur-sm bg-white/95">
-            <div className="h-2 bg-gradient-to-r from-purple-600 to-pink-600" />
+            <div className="h-2 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899]" />
             <CardHeader className="space-y-1 pb-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -1098,7 +1098,7 @@ export default function SignUpPage() {
                       {/* Summary Card */}
                       <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
                         {/* Header with gradient */}
-                        <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
+                        <div className="bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                               <Sparkles className="h-5 w-5 text-white" />
@@ -1117,7 +1117,7 @@ export default function SignUpPage() {
                             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Business Information</h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
-                                <Building2 className="h-5 w-5 text-purple-600 mt-0.5" />
+                                <Building2 className="h-5 w-5 text-[#8B5CF6] mt-0.5" />
                                 <div>
                                   <p className="text-xs text-gray-500 mb-1">Business Name</p>
                                   <p className="font-semibold text-gray-900">{formData.business_name}</p>
@@ -1130,7 +1130,7 @@ export default function SignUpPage() {
                                   const IconComponent = selectedType?.icon
                                   return (
                                     <>
-                                      {IconComponent && <IconComponent className="h-5 w-5 text-purple-600 mt-0.5" />}
+                                      {IconComponent && <IconComponent className="h-5 w-5 text-[#8B5CF6] mt-0.5" />}
                                       <div>
                                         <p className="text-xs text-gray-500 mb-1">Business Type</p>
                                         <p className="font-semibold text-gray-900">{selectedType?.label}</p>
@@ -1141,7 +1141,7 @@ export default function SignUpPage() {
                               </div>
 
                               <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
-                                <Mail className="h-5 w-5 text-purple-600 mt-0.5" />
+                                <Mail className="h-5 w-5 text-[#8B5CF6] mt-0.5" />
                                 <div>
                                   <p className="text-xs text-gray-500 mb-1">Business Email</p>
                                   <p className="font-semibold text-gray-900 break-all">{formData.business_email}</p>
@@ -1149,7 +1149,7 @@ export default function SignUpPage() {
                               </div>
 
                               <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
-                                <Phone className="h-5 w-5 text-purple-600 mt-0.5" />
+                                <Phone className="h-5 w-5 text-[#8B5CF6] mt-0.5" />
                                 <div>
                                   <p className="text-xs text-gray-500 mb-1">Phone Number</p>
                                   <p className="font-semibold text-gray-900">{formData.business_phone}</p>
@@ -1158,7 +1158,7 @@ export default function SignUpPage() {
 
                               {formData.website && (
                                 <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 md:col-span-2">
-                                  <Globe className="h-5 w-5 text-purple-600 mt-0.5" />
+                                  <Globe className="h-5 w-5 text-[#8B5CF6] mt-0.5" />
                                   <div>
                                     <p className="text-xs text-gray-500 mb-1">Website</p>
                                     <p className="font-semibold text-gray-900 break-all">{formData.website}</p>
@@ -1172,7 +1172,7 @@ export default function SignUpPage() {
                           <div>
                             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Administrator Account</h4>
                             <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100">
-                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center flex-shrink-0">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#8B5CF6] to-[#EC4899] flex items-center justify-center flex-shrink-0">
                                 <User className="h-5 w-5 text-white" />
                               </div>
                               <div>
@@ -1198,7 +1198,7 @@ export default function SignUpPage() {
                               termsError
                                 ? 'border-red-300 bg-red-50/50 shadow-sm shadow-red-100'
                                 : formData.terms_accepted
-                                ? 'border-purple-200 bg-purple-50/50'
+                                ? 'border-[#C4B5FD] bg-[#EDE9FE]/50'
                                 : 'border-gray-200 bg-white hover:border-gray-300'
                             }`}
                           >
@@ -1224,7 +1224,7 @@ export default function SignUpPage() {
                                   e.stopPropagation()
                                   setShowTermsModal(true)
                                 }}
-                                className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                                className="text-[#8B5CF6] hover:text-[#6D28D9] font-semibold underline underline-offset-2"
                               >
                                 Terms of Service
                               </button>
@@ -1233,7 +1233,7 @@ export default function SignUpPage() {
                               <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg"
+                                className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-[#8B5CF6] to-[#EC4899] rounded-full flex items-center justify-center shadow-lg"
                               >
                                 <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
                               </motion.div>
@@ -1258,7 +1258,7 @@ export default function SignUpPage() {
                               privacyError
                                 ? 'border-red-300 bg-red-50/50 shadow-sm shadow-red-100'
                                 : formData.privacy_accepted
-                                ? 'border-purple-200 bg-purple-50/50'
+                                ? 'border-[#C4B5FD] bg-[#EDE9FE]/50'
                                 : 'border-gray-200 bg-white hover:border-gray-300'
                             }`}
                           >
@@ -1284,7 +1284,7 @@ export default function SignUpPage() {
                                   e.stopPropagation()
                                   setShowPrivacyModal(true)
                                 }}
-                                className="text-purple-600 hover:text-purple-700 font-semibold underline underline-offset-2"
+                                className="text-[#8B5CF6] hover:text-[#6D28D9] font-semibold underline underline-offset-2"
                               >
                                 Privacy Policy
                               </button>
@@ -1293,7 +1293,7 @@ export default function SignUpPage() {
                               <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1 }}
-                                className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-lg"
+                                className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-gradient-to-br from-[#8B5CF6] to-[#EC4899] rounded-full flex items-center justify-center shadow-lg"
                               >
                                 <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
                               </motion.div>
@@ -1343,7 +1343,7 @@ export default function SignUpPage() {
                         type="button"
                         onClick={handleNext}
                         disabled={isLoading}
-                        className="gap-2 h-12 px-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                        className="gap-2 h-12 px-8 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#6D28D9] hover:to-[#EC4899] text-white shadow-lg hover:shadow-xl transition-all duration-300"
                       >
                         <span>Continue</span>
                         <ChevronRight className="h-4 w-4" />
@@ -1357,7 +1357,7 @@ export default function SignUpPage() {
                           type="button"
                           onClick={handleSubmit}
                           disabled={isLoading}
-                          className="gap-2 h-12 px-8 bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 bg-[length:200%_100%] hover:bg-right"
+                          className="gap-2 h-12 px-8 bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-purple-600 hover:from-[#6D28D9] hover:via-[#EC4899] hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 bg-[length:200%_100%] hover:bg-right"
                         >
                           {isLoading ? (
                             <>
@@ -1382,7 +1382,7 @@ export default function SignUpPage() {
                   Already have an account?{" "}
                   <Link
                     href="/signin"
-                    className="text-purple-600 hover:text-purple-700 font-semibold transition-colors"
+                    className="text-[#8B5CF6] hover:text-[#6D28D9] font-semibold transition-colors"
                   >
                     Sign in
                   </Link>

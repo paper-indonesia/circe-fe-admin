@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 import { useSubscription } from "@/lib/subscription-context"
+import { useAuth } from "@/lib/auth-context"
 import { differenceInDays, format } from "date-fns"
 import {
   AlertTriangle,
@@ -26,6 +27,7 @@ export function SubscriptionWarningBanner({
 }: SubscriptionWarningBannerProps) {
   const router = useRouter()
   const { subscription } = useSubscription()
+  const { user } = useAuth()
   const [dismissed, setDismissed] = useState(false)
 
   // Calculate days until expiry from real subscription data
@@ -42,8 +44,18 @@ export function SubscriptionWarningBanner({
   // Check localStorage for dismissed status on mount
   useEffect(() => {
     const checkDismissed = () => {
+      if (!user?.id) return
+
       try {
-        const dismissedData = localStorage.getItem('subscription-warning-dismissed')
+        // Clean up old non-user-specific key (backward compatibility)
+        const oldKey = 'subscription-warning-dismissed'
+        if (localStorage.getItem(oldKey)) {
+          localStorage.removeItem(oldKey)
+        }
+
+        // Use user-specific key
+        const storageKey = `subscription-warning-dismissed-${user.id}`
+        const dismissedData = localStorage.getItem(storageKey)
         if (dismissedData) {
           const { timestamp, planType } = JSON.parse(dismissedData)
           const hoursSinceDismissed = (Date.now() - timestamp) / (1000 * 60 * 60)
@@ -61,10 +73,10 @@ export function SubscriptionWarningBanner({
       }
     }
 
-    if (subscription) {
+    if (subscription && user) {
       checkDismissed()
     }
-  }, [subscription, isFreeplan, daysUntilExpiry])
+  }, [subscription, isFreeplan, daysUntilExpiry, user])
 
   // Reset dismissed state when days change significantly (for paid plans)
   useEffect(() => {
@@ -179,12 +191,16 @@ export function SubscriptionWarningBanner({
   const Icon = config.icon
 
   const handleDismiss = () => {
+    if (!user?.id) return
+
     setDismissed(true)
-    // Store dismissal in localStorage with timestamp and plan type
-    localStorage.setItem('subscription-warning-dismissed', JSON.stringify({
+    // Store dismissal in localStorage with user-specific key
+    const storageKey = `subscription-warning-dismissed-${user.id}`
+    localStorage.setItem(storageKey, JSON.stringify({
       timestamp: Date.now(),
       daysLeft: daysUntilExpiry,
-      planType: isFreeplan ? 'free' : 'paid'
+      planType: isFreeplan ? 'free' : 'paid',
+      userId: user.id
     }))
   }
 
@@ -277,7 +293,7 @@ export function SubscriptionWarningBanner({
               variant={config.ctaPrimary ? "default" : "outline"}
               size="sm"
               className={cn(
-                config.ctaPrimary && "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700",
+                config.ctaPrimary && "bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#6D28D9] hover:to-[#EC4899]",
                 (severity === 'critical' || severity === 'expired') && "animate-pulse shadow-lg"
               )}
             >

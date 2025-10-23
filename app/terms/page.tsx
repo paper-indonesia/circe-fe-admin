@@ -27,7 +27,7 @@ export default function TermsPage() {
           </Link>
 
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 bg-gradient-to-br from-[#8B5CF6] to-[#EC4899] rounded-2xl flex items-center justify-center shadow-lg">
               <FileText className="h-8 w-8 text-white" />
             </div>
             <div>
@@ -45,7 +45,7 @@ export default function TermsPage() {
 
         {/* Content Card */}
         <Card className={`border-0 shadow-xl ${mounted ? 'animate-fadeIn' : 'opacity-0'} animate-delay-100`}>
-          <div className="h-2 bg-gradient-to-r from-purple-600 to-pink-600" />
+          <div className="h-2 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899]" />
           <CardHeader className="border-b bg-gray-50">
             <CardTitle className="text-2xl">Syarat & Ketentuan Layanan</CardTitle>
             <CardDescription>
@@ -65,7 +65,7 @@ export default function TermsPage() {
             Jika ada pertanyaan terkait Terms & Conditions ini, silakan hubungi kami:
           </p>
           <div className="flex items-center justify-center gap-4 text-sm">
-            <a href="mailto:reservaofficialig@gmail.com" className="text-purple-600 hover:text-purple-700 font-semibold">
+            <a href="mailto:reservaofficialig@gmail.com" className="text-[#8B5CF6] hover:text-[#6D28D9] font-semibold">
               reservaofficialig@gmail.com
             </a>
           </div>
@@ -80,7 +80,7 @@ export default function TermsPage() {
             </Button>
           </Link>
           <Link href="/signup">
-            <Button className="gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90">
+            <Button>
               I Accept - Create Account
             </Button>
           </Link>

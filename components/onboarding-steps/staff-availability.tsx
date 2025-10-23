@@ -474,14 +474,14 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
           </div>
         </Card>
 
-        <Card className="p-5 border-purple-200 bg-purple-50">
+        <Card className="p-5 border-[#C4B5FD] bg-[#EDE9FE]">
           <div className="flex items-start gap-3">
-            <div className="bg-purple-100 rounded-lg p-2">
-              <CheckCircle2 className="h-5 w-5 text-purple-600" />
+            <div className="bg-[#EDE9FE] rounded-lg p-2">
+              <CheckCircle2 className="h-5 w-5 text-[#8B5CF6]" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-purple-900 mb-2">Kenapa ini penting</h3>
-              <p className="text-sm text-purple-700">
+              <h3 className="font-semibold text-[#6D28D9] mb-2">Kenapa ini penting</h3>
+              <p className="text-sm text-[#6D28D9]">
                 Staff dan availability menentukan slot booking yang tersedia dan menghindari bentrok jadwal.
               </p>
             </div>
@@ -734,11 +734,11 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
                     <span className="text-sm text-gray-500">Loading services...</span>
                   </div>
                 ) : (
-                  <div className="border-2 border-purple-200 rounded-lg p-4 bg-gray-50">
+                  <div className="border-2 border-[#C4B5FD] rounded-lg p-4 bg-gray-50">
                     {services.length > 0 ? (
                       <>
                         {/* Select All Option */}
-                        <div className="flex items-center space-x-3 pb-3 border-b-2 border-purple-200 mb-3 bg-white p-3 rounded-md shadow-sm">
+                        <div className="flex items-center space-x-3 pb-3 border-b-2 border-[#C4B5FD] mb-3 bg-white p-3 rounded-md shadow-sm">
                           <Checkbox
                             id="onboarding-service-all"
                             checked={staffForm.service_ids.length === services.length && services.length > 0}
@@ -748,11 +748,11 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
                                 service_ids: checked ? services.map(s => s.id) : []
                               })
                             }}
-                            className="h-5 w-5 border-2 border-purple-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                            className="h-5 w-5 border-2 border-[#8B5CF6] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                           />
                           <label
                             htmlFor="onboarding-service-all"
-                            className="text-sm font-bold cursor-pointer leading-none text-purple-900"
+                            className="text-sm font-bold cursor-pointer leading-none text-[#6D28D9]"
                           >
                             Pilih Semua Layanan
                           </label>
@@ -765,7 +765,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
                               key={service.id}
                               className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-all ${
                                 staffForm.service_ids.includes(service.id)
-                                  ? "border-purple-500 bg-purple-50"
+                                  ? "border-purple-500 bg-[#EDE9FE]"
                                   : "border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
                               }`}
                             >

@@ -355,7 +355,7 @@ export default function UpgradePage() {
           </Button>
 
           <div className="text-center">
-            <div className="inline-flex items-center justify-center p-3 bg-gradient-to-br from-[#C8B6FF] to-[#B8C0FF] rounded-2xl mb-4">
+            <div className="inline-flex items-center justify-center p-3 bg-gradient-to-br from-[#8B5CF6] to-[#A78BFA] rounded-2xl mb-4">
               <Sparkles className="h-8 w-8 text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
@@ -367,7 +367,7 @@ export default function UpgradePage() {
 
             {currentPlan && (
               <div className="mt-4">
-                <Badge className="bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] text-white capitalize">
+                <Badge className="bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] text-white capitalize">
                   Current Plan: {currentPlan}
                 </Badge>
               </div>
@@ -388,7 +388,7 @@ export default function UpgradePage() {
             className={cn(
               "relative w-14 h-7 rounded-full transition-colors",
               billingPeriod === "yearly"
-                ? "bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF]"
+                ? "bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA]"
                 : "bg-gray-300"
             )}
           >
@@ -446,20 +446,20 @@ export default function UpgradePage() {
                   "relative overflow-hidden transition-all duration-300 h-full flex flex-col",
                   canSelect && "cursor-pointer hover:shadow-xl",
                   isFreeAndCurrent && "opacity-60 cursor-not-allowed",
-                  isPro && !isSelected && !isCurrentPlan && "ring-2 ring-[#C8B6FF]",
+                  isPro && !isSelected && !isCurrentPlan && "ring-2 ring-[#8B5CF6]",
                   isCurrentPlan && !isFreeAndCurrent && "border-green-500 border-2",
                   isSelected && canSelect && "ring-4 ring-purple-500 ring-offset-2 shadow-2xl",
                   canSelect && !isSelected && "hover:scale-[1.02]"
                 )}
               >
                 {isSelected && canSelect && (
-                  <div className="absolute top-0 left-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-3 py-1 rounded-br-lg flex items-center gap-1 z-10">
+                  <div className="absolute top-0 left-0 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white text-xs font-bold px-3 py-1 rounded-br-lg flex items-center gap-1 z-10">
                     <Check className="h-3 w-3" />
                     SELECTED
                   </div>
                 )}
                 {isPro && !isSelected && !isCurrentPlan && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-[#C8B6FF] to-[#B8C0FF] text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10">
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] text-white text-xs font-bold px-3 py-1 rounded-bl-lg z-10">
                     RECOMMENDED
                   </div>
                 )}
@@ -530,9 +530,9 @@ export default function UpgradePage() {
                       className={cn(
                         "w-full font-semibold",
                         isSelected && canSelect
-                          ? "bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300"
+                          ? "bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-purple-600 hover:from-[#6D28D9] hover:via-[#EC4899] hover:to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300"
                           : isPro && canSelect
-                          ? "bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-700 hover:via-pink-700 hover:to-purple-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                          ? "bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-purple-600 hover:from-[#6D28D9] hover:via-[#EC4899] hover:to-purple-700 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
                           : canSelect
                           ? "bg-gray-900 hover:bg-gray-800 text-white shadow-lg hover:shadow-xl transition-all duration-300"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed",
@@ -563,7 +563,7 @@ export default function UpgradePage() {
         </div>
 
         {/* FAQ or Additional Info */}
-        <Card className="max-w-4xl mx-auto bg-gradient-to-br from-[#FFD6FF]/20 to-[#C8B6FF]/20 border-[#C8B6FF]/30">
+        <Card className="max-w-4xl mx-auto bg-gradient-to-br from-[#FCD6F5]/20 to-[#8B5CF6]/20 border-[#8B5CF6]/30">
           <CardContent className="p-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -574,7 +574,7 @@ export default function UpgradePage() {
               </p>
               <Button
                 variant="outline"
-                className="border-[#C8B6FF] text-[#B8C0FF] hover:bg-[#C8B6FF]/10"
+                className="border-[#8B5CF6] text-[#A78BFA] hover:bg-[#8B5CF6]/10"
                 onClick={() => {
                   const whatsappUrl = "https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20subscription%20di%20reserva"
                   window.open(whatsappUrl, '_blank')
@@ -612,7 +612,7 @@ export default function UpgradePage() {
               {isProcessingPayment ? (
                 <>
                   {/* Processing State */}
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-6">
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-[#C4B5FD] rounded-lg p-6">
                     <div className="flex flex-col items-center text-center space-y-4">
                       <div className="animate-pulse">
                         <Crown className="h-12 w-12 text-purple-500" />
@@ -625,7 +625,7 @@ export default function UpgradePage() {
                           We're checking your payment status. This usually takes 1-2 minutes.
                         </p>
                         <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-purple-400 border-t-transparent" />
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-[#8B5CF6] border-t-transparent" />
                           Auto-checking every 5 seconds...
                         </div>
                       </div>
@@ -649,12 +649,12 @@ export default function UpgradePage() {
               ) : (
                 <>
                   {/* Payment Button State */}
-                  <div className="bg-gradient-to-br from-[#FFD6FF]/20 to-[#C8B6FF]/20 border border-[#C8B6FF]/30 rounded-lg p-4">
+                  <div className="bg-gradient-to-br from-[#FCD6F5]/20 to-[#8B5CF6]/20 border border-[#8B5CF6]/30 rounded-lg p-4">
                     <p className="text-sm text-gray-700 mb-3">
                       Your upgrade request has been processed. Click the button below to complete your payment.
                     </p>
                     <Button
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                      className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#6D28D9] hover:to-[#EC4899]"
                       onClick={() => {
                         window.open(paymentUrl, '_blank', 'noopener,noreferrer')
                       }}
@@ -664,7 +664,7 @@ export default function UpgradePage() {
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full mt-3 border-purple-200 text-purple-600 hover:bg-purple-50"
+                      className="w-full mt-3 border-[#C4B5FD] text-[#8B5CF6] hover:bg-[#EDE9FE]"
                       onClick={() => {
                         setIsProcessingPayment(true)
                         setProcessingStartTime(Date.now())
@@ -748,10 +748,10 @@ export default function UpgradePage() {
                 <>
                   <div className="text-left">
                     <p className="text-sm text-gray-600 mb-2">You are about to upgrade to:</p>
-                    <div className="bg-gradient-to-br from-[#FFD6FF]/20 to-[#C8B6FF]/20 border border-[#C8B6FF]/30 rounded-lg p-4">
+                    <div className="bg-gradient-to-br from-[#FCD6F5]/20 to-[#8B5CF6]/20 border border-[#8B5CF6]/30 rounded-lg p-4">
                       <h3 className="text-lg font-bold text-gray-900 capitalize">{pendingUpgradePlan.name} Plan</h3>
                       <p className="text-sm text-gray-600 mt-1">{pendingUpgradePlan.description}</p>
-                      <div className="mt-3 pt-3 border-t border-[#C8B6FF]/20">
+                      <div className="mt-3 pt-3 border-t border-[#8B5CF6]/20">
                         <div className="flex items-baseline justify-between">
                           <span className="text-sm text-gray-600">Price:</span>
                           <span className="text-2xl font-bold text-gray-900">
@@ -783,7 +783,7 @@ export default function UpgradePage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleUpgrade}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              className="bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#6D28D9] hover:to-[#EC4899]"
             >
               Proceed to Payment
             </AlertDialogAction>
