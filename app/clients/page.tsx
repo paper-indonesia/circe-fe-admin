@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 import { format, parseISO, isValid } from "date-fns"
 import GradientLoading from "@/components/gradient-loading"
@@ -752,6 +753,9 @@ export default function ClientsPage() {
     }
   }
 
+  // Check if data is completely empty
+  const hasNoData = !loading && (!customers || customers.length === 0)
+
   if (loading) {
     return (
       <>
@@ -761,9 +765,6 @@ export default function ClientsPage() {
       </>
     )
   }
-
-  // Check if data is completely empty
-  const hasNoData = !loading && (!customers || customers.length === 0)
 
   return (
     <>
@@ -967,33 +968,33 @@ export default function ClientsPage() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Name</th>
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Contact</th>
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Gender</th>
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Appointments</th>
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Total Spent</th>
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Status</th>
-                        <th className="text-left py-3 px-2 font-medium text-sm text-muted-foreground">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gradient-to-r from-[#FCD6F5]/20 to-[#EDE9FE]/20">
+                        <TableHead>Name</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Gender</TableHead>
+                        <TableHead>Appointments</TableHead>
+                        <TableHead>Total Spent</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {filteredClients.map((client) => (
-                        <tr key={client.id} className="border-b border-border/50 hover:bg-muted/30">
-                          <td className="py-4 px-2">
+                        <TableRow key={client.id} className="hover:bg-[#FCD6F5]/10 transition-colors">
+                          <TableCell className="py-4 px-2">
                             <div>
                               <div className="font-medium">{client.name}</div>
                               <div className="text-sm text-muted-foreground">{client.email || "No email"}</div>
                             </div>
-                          </td>
-                          <td className="py-4 px-2 text-sm text-muted-foreground">{client.phone}</td>
-                          <td className="py-4 px-2 text-sm capitalize">{client.gender || "-"}</td>
-                          <td className="py-4 px-2 text-sm">{client.totalVisits}</td>
-                          <td className="py-4 px-2 font-medium text-sm">Rp {(client.total_spent || 0).toLocaleString('id-ID')}</td>
-                          <td className="py-4 px-2">{getStatusBadge(client.status)}</td>
-                          <td className="py-4 px-2">
+                          </TableCell>
+                          <TableCell className="py-4 px-2 text-sm text-muted-foreground">{client.phone}</TableCell>
+                          <TableCell className="py-4 px-2 text-sm capitalize">{client.gender || "-"}</TableCell>
+                          <TableCell className="py-4 px-2 text-sm">{client.totalVisits}</TableCell>
+                          <TableCell className="py-4 px-2 font-medium text-sm">Rp {(client.total_spent || 0).toLocaleString('id-ID')}</TableCell>
+                          <TableCell className="py-4 px-2">{getStatusBadge(client.status)}</TableCell>
+                          <TableCell className="py-4 px-2">
                             <div className="flex gap-1">
                               <Button variant="outline" size="sm" onClick={() => openClientDetails(client)}>
                                 <Eye className="h-4 w-4 mr-1" />
@@ -1013,11 +1014,11 @@ export default function ClientsPage() {
                                 Delete
                               </Button>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
 
                 {totalPages > 1 && (
@@ -1861,28 +1862,28 @@ export default function ClientsPage() {
                   <p className="text-sm text-muted-foreground">No appointments found</p>
                 </div>
               ) : (
-                <table className="w-full table-fixed">
-                  <thead className="bg-gradient-to-r from-purple-50 to-pink-50 sticky top-0">
-                    <tr className="border-b border-[#C4B5FD]">
-                      <th className="text-left py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[12%]">Date & Time</th>
-                      <th className="text-left py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[45%]">Services</th>
-                      <th className="text-left py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[10%]">Status</th>
-                      <th className="text-left py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[11%]">Payment</th>
-                      <th className="text-right py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[12%]">Total</th>
-                      <th className="text-center py-3 px-3 font-semibold text-sm text-[#6D28D9] w-[10%]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="table-fixed">
+                  <TableHeader>
+                    <TableRow className="bg-gradient-to-r from-[#FCD6F5]/20 to-[#EDE9FE]/20">
+                      <TableHead className="w-[12%]">Date & Time</TableHead>
+                      <TableHead className="w-[45%]">Services</TableHead>
+                      <TableHead className="w-[10%]">Status</TableHead>
+                      <TableHead className="w-[11%]">Payment</TableHead>
+                      <TableHead className="text-right w-[12%]">Total</TableHead>
+                      <TableHead className="text-center w-[10%]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {appointments.map((appointment) => {
                       const appointmentId = appointment._id || appointment.id
                       const isLoadingThis = clickedAppointmentId === appointmentId
 
                       return (
-                        <tr
+                        <TableRow
                           key={appointmentId}
-                          className="border-b border-gray-100 hover:bg-[#EDE9FE]/30 transition-colors"
+                          className="hover:bg-[#FCD6F5]/10 transition-colors"
                         >
-                          <td className="py-3 px-3">
+                          <TableCell className="py-3 px-3">
                             <div className="flex flex-col gap-0.5">
                               <span className="font-medium text-sm">
                                 {new Date(appointment.appointment_date).toLocaleDateString('id-ID', {
@@ -1895,8 +1896,8 @@ export default function ClientsPage() {
                                 {appointment.start_time} - {appointment.end_time}
                               </span>
                             </div>
-                          </td>
-                          <td className="py-3 px-3">
+                          </TableCell>
+                          <TableCell className="py-3 px-3">
                             <div className="flex flex-col gap-1">
                               {appointment.services?.map((service: any, idx: number) => (
                                 <div key={idx} className="text-sm">
@@ -1907,8 +1908,8 @@ export default function ClientsPage() {
                                 </div>
                               ))}
                             </div>
-                          </td>
-                          <td className="py-3 px-3">
+                          </TableCell>
+                          <TableCell className="py-3 px-3">
                             <Badge className={`${getStatusBadgeColor(appointment.status)} border text-xs whitespace-nowrap`}>
                               {appointment.status === 'confirmed' ? 'Confirmed' :
                                appointment.status === 'completed' ? 'Completed' :
@@ -1916,21 +1917,21 @@ export default function ClientsPage() {
                                appointment.status === 'no_show' ? 'No Show' :
                                appointment.status === 'pending' ? 'Pending' : appointment.status}
                             </Badge>
-                          </td>
-                          <td className="py-3 px-3">
+                          </TableCell>
+                          <TableCell className="py-3 px-3">
                             <Badge className={`${getPaymentStatusBadgeColor(appointment.payment_status)} border text-xs whitespace-nowrap`}>
                               {appointment.payment_status === 'paid' ? 'Paid' :
                                appointment.payment_status === 'partially_paid' ? 'Partial' :
                                appointment.payment_status === 'pending' ? 'Pending' :
                                appointment.payment_status === 'refunded' ? 'Refunded' : appointment.payment_status}
                             </Badge>
-                          </td>
-                          <td className="py-3 px-3 text-right">
+                          </TableCell>
+                          <TableCell className="py-3 px-3 text-right">
                             <span className="font-bold text-sm text-[#6D28D9] whitespace-nowrap">
                               Rp {(appointment.total_price || 0).toLocaleString('id-ID')}
                             </span>
-                          </td>
-                          <td className="py-3 px-3 text-center">
+                          </TableCell>
+                          <TableCell className="py-3 px-3 text-center">
                             <Button
                               size="sm"
                               variant="outline"
@@ -1950,12 +1951,12 @@ export default function ClientsPage() {
                                 </>
                               )}
                             </Button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       )
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               )}
             </div>
 

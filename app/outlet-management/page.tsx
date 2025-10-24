@@ -622,7 +622,7 @@ export default function OutletManagementPage() {
               <div className="rounded-lg border overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50">
+                    <TableRow className="bg-gradient-to-r from-[#FCD6F5]/20 to-[#EDE9FE]/20">
                       <TableHead>Name</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Contact</TableHead>
@@ -633,7 +633,7 @@ export default function OutletManagementPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredOutlets.map((outlet) => (
-                      <TableRow key={outlet.id}>
+                      <TableRow key={outlet.id} className="hover:bg-[#FCD6F5]/10 transition-colors">
                         <TableCell>
                           <div>
                             <p className="font-medium">{outlet.name}</p>

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/context"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
@@ -540,24 +541,24 @@ export default function TreatmentsPage() {
           <>
             <div className="bg-white rounded-lg border overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gradient-to-r from-[#FCD6F5] to-[#EDE9FE]">
-                    <tr>
-                      <th className="text-left p-4 font-semibold text-gray-800">Product</th>
-                      <th className="text-left p-4 font-semibold text-gray-800">Category</th>
-                      <th className="text-left p-4 font-semibold text-gray-800">Duration & Price</th>
-                      <th className="text-left p-4 font-semibold text-gray-800">Popularity</th>
-                      <th className="text-left p-4 font-semibold text-gray-800">Bookings</th>
-                      <th className="text-right p-4 font-semibold text-gray-800">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gradient-to-r from-[#FCD6F5]/20 to-[#EDE9FE]/20">
+                      <TableHead>Product</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Duration & Price</TableHead>
+                      <TableHead>Popularity</TableHead>
+                      <TableHead>Bookings</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {paginatedTreatments.map((treatment, index) => (
-                      <tr
+                      <TableRow
                         key={treatment.id}
-                        className={`border-b hover:bg-gradient-to-r hover:from-[#FCD6F5]/10 hover:to-[#EDE9FE]/10 transition-colors ${index % 2 === 0 ? "bg-gray-50/50" : "bg-white"}`}
+                        className="hover:bg-[#FCD6F5]/10 transition-colors"
                       >
-                        <td className="p-4">
+                        <TableCell className="p-4">
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center">
                               <img
@@ -573,16 +574,16 @@ export default function TreatmentsPage() {
                               </div>
                             </div>
                           </div>
-                        </td>
-                        <td className="p-4">
+                        </TableCell>
+                        <TableCell className="p-4">
                           <Badge
                             variant="secondary"
                             className="bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] text-gray-800 border-0"
                           >
                             {treatment.category}
                           </Badge>
-                        </td>
-                        <td className="p-4">
+                        </TableCell>
+                        <TableCell className="p-4">
                           <div className="space-y-1">
                             <div className="flex items-center gap-1 text-sm text-gray-600">
                               <Clock className="h-3 w-3" />
@@ -592,15 +593,15 @@ export default function TreatmentsPage() {
                               Rp {treatment.price.toLocaleString("id-ID")}
                             </div>
                           </div>
-                        </td>
-                        <td className="p-4">{getPopularityBadge(treatment.popularity)}</td>
-                        <td className="p-4">
+                        </TableCell>
+                        <TableCell className="p-4">{getPopularityBadge(treatment.popularity)}</TableCell>
+                        <TableCell className="p-4">
                           <div className="text-sm">
                             <div className="font-medium">{treatment.bookingCount} total</div>
                             <div className="text-gray-500">{treatment.completedCount} completed</div>
                           </div>
-                        </td>
-                        <td className="p-4">
+                        </TableCell>
+                        <TableCell className="p-4">
                           <div className="flex justify-end gap-2">
                             <Button
                               variant="outline"
@@ -619,11 +620,11 @@ export default function TreatmentsPage() {
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
 

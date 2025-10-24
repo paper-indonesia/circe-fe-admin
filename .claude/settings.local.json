@@ -5,7 +5,11 @@
       "Bash(git checkout:*)",
       "Bash(find:*)",
       "Bash(git reset:*)",
-      "Bash(npx shadcn@latest add https://magicui.design/r/shimmer-button.json)"
+      "Bash(npx shadcn@latest add https://magicui.design/r/shimmer-button.json)",
+      "Bash(for:*)",
+      "Bash(do)",
+      "Bash(done)",
+      "Bash(do echo \"=== $file ===\")"
     ],
     "deny": [],
     "ask": []

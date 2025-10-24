@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { formatCurrency, cn } from "@/lib/utils"
@@ -1466,10 +1467,10 @@ export default function CalendarPage() {
 
               {/* Table */}
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gradient-to-r from-[#FCD6F5]/20 to-[#EDE9FE]/20">
+                      <TableHead className="w-12">
                         <input
                           type="checkbox"
                           checked={selectedBookings.length === filteredBookings.length}
@@ -1482,19 +1483,19 @@ export default function CalendarPage() {
                           }}
                           className="rounded"
                         />
-                      </th>
-                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Booking ID</th>
-                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Customer</th>
-                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Product</th>
-                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Date & Time</th>
-                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Staff</th>
-                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Status</th>
-                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Payment</th>
-                      <th className="text-left text-sm font-semibold text-gray-600 py-3 px-4">Amount</th>
-                      <th className="text-right text-sm font-semibold text-gray-600 py-3 px-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                      <TableHead>Booking ID</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Staff</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {paginatedBookings.map((booking) => {
                       const customerData = booking.customer
                       const patient = customerData ? {
@@ -1513,8 +1514,8 @@ export default function CalendarPage() {
                       const staffMember = staff.find(s => s.id === booking.staffId)
 
                       return (
-                        <tr key={booking.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4">
+                        <TableRow key={booking.id} className="hover:bg-[#FCD6F5]/10 transition-colors">
+                          <TableCell className="py-3 px-4">
                             <input
                               type="checkbox"
                               checked={selectedBookings.includes(booking.id)}
@@ -1527,33 +1528,33 @@ export default function CalendarPage() {
                               }}
                               className="rounded"
                             />
-                          </td>
-                          <td className="py-3 px-4 text-sm font-mono text-gray-600">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-sm font-mono text-gray-600">
                             #{booking.id.slice(0, 8)}
-                          </td>
-                          <td className="py-3 px-4">
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center text-sm font-semibold">
                                 {patient?.name?.charAt(0) || "?"}
                               </div>
                               <span className="text-sm font-medium">{patient?.name || "Unknown"}</span>
                             </div>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{treatment?.name || "Unknown"}</td>
-                          <td className="py-3 px-4 text-sm text-gray-600">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-sm text-gray-600">{treatment?.name || "Unknown"}</TableCell>
+                          <TableCell className="py-3 px-4 text-sm text-gray-600">
                             {format(new Date(booking.startAt), "MMM dd, yyyy HH:mm")}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-gray-600">{staffMember?.name || "Unassigned"}</td>
-                          <td className="py-3 px-4">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-sm text-gray-600">{staffMember?.name || "Unassigned"}</TableCell>
+                          <TableCell className="py-3 px-4">
                             <Badge className={cn("text-xs", getStatusColor(booking.status))}>
                               {booking.status}
                             </Badge>
-                          </td>
-                          <td className="py-3 px-4">
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
                             {getPaymentStatusBadge((booking as any).payment_status)}
-                          </td>
-                          <td className="py-3 px-4 text-sm font-medium">{formatCurrency(treatment?.price || 0)}</td>
-                          <td className="py-3 px-4 text-right">
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-sm font-medium">{formatCurrency(treatment?.price || 0)}</TableCell>
+                          <TableCell className="py-3 px-4 text-right">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1561,12 +1562,12 @@ export default function CalendarPage() {
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       )
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
 
               {/* Pagination */}
