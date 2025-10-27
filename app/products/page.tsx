@@ -1071,7 +1071,7 @@ export default function TreatmentsPage() {
         entityDetails={[
           { label: "Name", value: productToDelete?.name || "-" },
           { label: "Category", value: productToDelete?.category || "-" },
-          { label: "Price", value: productToDelete?.price ? `$${productToDelete.price}` : "-" },
+          { label: "Price", value: productToDelete?.price ? `IDR ${productToDelete.price}` : "-" },
           { label: "Duration", value: `${productToDelete?.durationMin || 0} minutes` },
           { label: "Status", value: productToDelete?.status || "active" },
         ]}
