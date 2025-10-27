@@ -283,6 +283,15 @@ export default function StaffPage() {
   const handleViewSchedule = async (staffMember: any) => {
     setSelectedStaff(staffMember)
     setShowScheduleDialog(true)
+
+    // Auto-assign all staff's services to availability form
+    // Handle both nested (skills.service_ids) and flat (service_ids) structure
+    const staffServiceIds = staffMember.skills?.service_ids || staffMember.service_ids || []
+    setAvailabilityForm(prev => ({
+      ...prev,
+      service_ids: staffServiceIds // Auto-select all assigned services
+    }))
+
     // Fetch availability entries for this staff
     await fetchAvailabilityEntries(staffMember.id)
   }
@@ -2297,6 +2306,9 @@ export default function StaffPage() {
                         onClick={() => {
                           setShowAddAvailability(true)
                           setEditingAvailability(null)
+                          // Auto-assign all staff's services when opening add form
+                          // Handle both nested (skills.service_ids) and flat (service_ids) structure
+                          const staffServiceIds = selectedStaff?.skills?.service_ids || selectedStaff?.service_ids || []
                           setAvailabilityForm({
                             date: new Date().toISOString().split('T')[0],
                             start_time: availabilityTab === 'break' ? "12:00" : "09:00",
@@ -2307,7 +2319,7 @@ export default function StaffPage() {
                             recurrence_days: [],
                             is_available: availabilityTab === 'working_hours',
                             notes: "",
-                            service_ids: [],
+                            service_ids: staffServiceIds, // Auto-select all assigned services
                           })
                         }}
                         className="w-full bg-purple-600 hover:bg-purple-700"
@@ -2518,67 +2530,90 @@ export default function StaffPage() {
                     )}
 
                     {/* Service-Specific Availability */}
-                    {availabilityTab === 'working_hours' && (
-                      <div>
-                        <Label>Layanan Khusus (opsional)</Label>
-                        <div className="mt-2 border-2 border-[#C4B5FD] rounded-lg p-4 max-h-60 overflow-y-auto bg-gray-50">
-                          {/* Select All Option */}
-                          <div className="flex items-center space-x-3 pb-3 border-b-2 border-[#C4B5FD] mb-3 bg-white p-3 rounded-md shadow-sm">
-                            <Checkbox
-                              id="service-all"
-                              checked={availabilityForm.service_ids.length === treatments.length && treatments.length > 0}
-                              onCheckedChange={(checked) => {
-                                setAvailabilityForm(prev => ({
-                                  ...prev,
-                                  service_ids: checked ? treatments.map(t => t.id) : []
-                                }))
-                              }}
-                              className="border-2 border-[#8B5CF6] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                            />
-                            <label
-                              htmlFor="service-all"
-                              className="text-sm font-bold cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-[#6D28D9]"
-                            >
-                              Semua Layanan
-                            </label>
-                          </div>
+                    {availabilityTab === 'working_hours' && (() => {
+                      // Filter treatments to only show services assigned to this staff
+                      // Handle both nested (skills.service_ids) and flat (service_ids) structure
+                      const staffServiceIds = selectedStaff?.skills?.service_ids || selectedStaff?.service_ids || []
+                      const assignedTreatments = treatments.filter(t => staffServiceIds.includes(t.id))
 
-                          {/* Individual Services */}
-                          <div className="space-y-2">
-                            {treatments.map(treatment => (
-                              <div key={treatment.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-white transition-colors">
+                      return (
+                        <div>
+                          <Label>Layanan Staff (opsional)</Label>
+                          <p className="text-xs text-muted-foreground mt-1 mb-2">
+                            Hanya layanan yang sudah di-assign ke staff ini. Default: Semua layanan ter-assign.
+                          </p>
+
+                          {assignedTreatments.length === 0 ? (
+                            <div className="mt-2 border-2 border-yellow-300 rounded-lg p-4 bg-yellow-50">
+                              <p className="text-sm text-yellow-800">
+                                ⚠️ Staff ini belum memiliki layanan yang di-assign.
+                                Silakan assign layanan terlebih dahulu di tab "Layanan" saat edit staff.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="mt-2 border-2 border-[#C4B5FD] rounded-lg p-4 max-h-60 overflow-y-auto bg-gray-50">
+                              {/* Select All Option */}
+                              <div className="flex items-center space-x-3 pb-3 border-b-2 border-[#C4B5FD] mb-3 bg-white p-3 rounded-md shadow-sm">
                                 <Checkbox
-                                  id={`service-${treatment.id}`}
-                                  checked={availabilityForm.service_ids.includes(treatment.id)}
+                                  id="service-all"
+                                  checked={availabilityForm.service_ids.length === assignedTreatments.length && assignedTreatments.length > 0}
                                   onCheckedChange={(checked) => {
                                     setAvailabilityForm(prev => ({
                                       ...prev,
-                                      service_ids: checked
-                                        ? [...prev.service_ids, treatment.id]
-                                        : prev.service_ids.filter(id => id !== treatment.id)
+                                      service_ids: checked ? assignedTreatments.map(t => t.id) : []
                                     }))
                                   }}
-                                  className="border-2 border-gray-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                  className="border-2 border-[#8B5CF6] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                 />
                                 <label
-                                  htmlFor={`service-${treatment.id}`}
-                                  className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-900"
+                                  htmlFor="service-all"
+                                  className="text-sm font-bold cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-[#6D28D9]"
                                 >
-                                  {treatment.name}
+                                  Semua Layanan Staff ({assignedTreatments.length})
                                 </label>
                               </div>
-                            ))}
-                          </div>
+
+                              {/* Individual Services */}
+                              <div className="space-y-2">
+                                {assignedTreatments.map(treatment => (
+                                  <div key={treatment.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-white transition-colors">
+                                    <Checkbox
+                                      id={`service-${treatment.id}`}
+                                      checked={availabilityForm.service_ids.includes(treatment.id)}
+                                      onCheckedChange={(checked) => {
+                                        setAvailabilityForm(prev => ({
+                                          ...prev,
+                                          service_ids: checked
+                                            ? [...prev.service_ids, treatment.id]
+                                            : prev.service_ids.filter(id => id !== treatment.id)
+                                        }))
+                                      }}
+                                      className="border-2 border-gray-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                    />
+                                    <label
+                                      htmlFor={`service-${treatment.id}`}
+                                      className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-900"
+                                    >
+                                      {treatment.name}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <p className="text-xs text-muted-foreground mt-2">
+                            {assignedTreatments.length === 0
+                              ? 'Staff belum memiliki layanan yang di-assign'
+                              : availabilityForm.service_ids.length === 0
+                              ? 'Tidak ada layanan yang dipilih (tersedia untuk semua layanan)'
+                              : availabilityForm.service_ids.length === assignedTreatments.length
+                              ? `Semua layanan staff dipilih (${assignedTreatments.length})`
+                              : `${availabilityForm.service_ids.length} dari ${assignedTreatments.length} layanan dipilih`}
+                          </p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {availabilityForm.service_ids.length === 0
-                            ? 'Tidak ada layanan yang dipilih (tersedia untuk semua layanan)'
-                            : availabilityForm.service_ids.length === treatments.length
-                            ? 'Semua layanan dipilih'
-                            : `${availabilityForm.service_ids.length} layanan dipilih`}
-                        </p>
-                      </div>
-                    )}
+                      )
+                    })()}
 
                     <div>
                       <Label>Catatan</Label>
