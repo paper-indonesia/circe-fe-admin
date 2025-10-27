@@ -338,7 +338,24 @@ export default function StaffPage() {
 
     setSavingAvailability(true)
     try {
+      // Get tenant_id from selectedStaff or fetch from API
+      let tenantId = selectedStaff.tenant_id
+
+      if (!tenantId) {
+        // Fallback: fetch tenant info from API
+        const tenantResponse = await fetch('/api/tenant/me')
+        if (tenantResponse.ok) {
+          const tenantData = await tenantResponse.json()
+          tenantId = tenantData.tenant_id
+        }
+      }
+
+      if (!tenantId) {
+        throw new Error("Tenant ID tidak ditemukan. Silakan login kembali.")
+      }
+
       const payload: any = {
+        tenant_id: tenantId,
         staff_id: selectedStaff.id,
         date: availabilityForm.date,
         start_time: availabilityForm.start_time,

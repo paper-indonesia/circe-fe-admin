@@ -78,44 +78,14 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
-    // Get tenant_id from cookie
-    let tenantId: string | null = null
-    const tenantData = req.cookies.get('tenant')
-    if (tenantData) {
-      try {
-        const tenant = JSON.parse(tenantData.value)
-        tenantId = tenant.id
-      } catch (e) {
-        console.error('Failed to parse tenant cookie:', e)
-      }
-    }
-
-    // If no tenant_id in cookie, fetch from /api/v1/users/me
-    if (!tenantId) {
-      const userResponse = await fetch(`${FASTAPI_URL}/api/v1/users/me`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (userResponse.ok) {
-        const userData = await userResponse.json()
-        if (userData.tenant_ids && userData.tenant_ids.length > 0) {
-          tenantId = userData.tenant_ids[0]
-        }
-      }
-    }
-
-    if (!tenantId) {
+    // Validate required fields
+    if (!body.tenant_id) {
       return NextResponse.json(
-        { error: 'Tenant ID not found. Please login again.' },
+        { error: 'Tenant ID wajib diisi' },
         { status: 400 }
       )
     }
 
-    // Validate required fields
     if (!body.staff_id) {
       return NextResponse.json(
         { error: 'Staff ID wajib diisi' },
@@ -152,11 +122,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Add tenant_id to the payload
-    const payload = {
-      ...body,
-      tenant_id: tenantId
-    }
+    // Use the payload as-is from the request body
+    const payload = body
 
     console.log('Creating availability entry with payload:', payload)
 

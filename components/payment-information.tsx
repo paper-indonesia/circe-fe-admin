@@ -15,8 +15,8 @@ import {
   CheckCircle2,
   RefreshCw,
   Clock,
-  Percent,
-  Banknote
+  Percent
+  
 } from "lucide-react"
 
 // ============================================================================

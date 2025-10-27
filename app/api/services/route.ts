@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
       preparation_minutes: parseInt(String(body.preparation_minutes || 0)) || 0,
       cleanup_minutes: parseInt(String(body.cleanup_minutes || 0)) || 0,
       max_advance_booking_days: parseInt(String(body.max_advance_booking_days || 30)) || 30,
-      min_advance_booking_hours: parseInt(String(body.min_advance_booking_hours || 2)) || 2,
+      min_advance_booking_hours: parseInt(String(body.min_advance_booking_hours || 1)) || 1,
       requires_staff: body.requires_staff !== false,
       required_staff_count: parseInt(String(body.required_staff_count || 1)) || 1,
       allow_parallel_bookings: body.allow_parallel_bookings || false,
@@ -294,7 +294,7 @@ export async function PUT(req: NextRequest) {
       backendPayload.max_advance_booking_days = parseInt(String(updateData.max_advance_booking_days)) || 30
     }
     if (updateData.min_advance_booking_hours !== undefined) {
-      backendPayload.min_advance_booking_hours = parseInt(String(updateData.min_advance_booking_hours)) || 2
+      backendPayload.min_advance_booking_hours = parseInt(String(updateData.min_advance_booking_hours)) || 1
     }
     if (updateData.requires_staff !== undefined) {
       backendPayload.requires_staff = updateData.requires_staff
