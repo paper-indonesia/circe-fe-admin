@@ -202,6 +202,70 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
     if (typeof window === 'undefined') return
 
     try {
+      // Step 1: Check if outlets exist using /api/outlets?page=1&size=1
+      const outletsCheckResponse = await fetch('/api/outlets?page=1&size=1')
+      let hasOutlets = false
+
+      if (outletsCheckResponse.ok) {
+        const outletsData = await outletsCheckResponse.json()
+        hasOutlets = outletsData.items && outletsData.items.length > 0
+      }
+
+      // Step 2: Only if no outlets exist, get tenant_id and update templates
+      if (!hasOutlets) {
+        console.log('[Onboarding] User has NO outlets, updating tenant templates...')
+
+        // Get tenant_id from /api/current
+        const currentResponse = await fetch('/api/current')
+        let tenantId: string | null = null
+
+        if (currentResponse.ok) {
+          const currentData = await currentResponse.json()
+          tenantId = currentData.tenant_id
+        }
+
+        if (tenantId) {
+          // Prepare tenant update payload
+          const updatePayload: any = {}
+
+          // Add staff position templates if selected
+          if (progress.staffPositionTemplates && progress.staffPositionTemplates.length > 0) {
+            updatePayload.settings = {
+              ...updatePayload.settings,
+              staff_position_templates: progress.staffPositionTemplates.map(t => t.name)
+            }
+          }
+
+          // Add service category templates if selected
+          if (progress.serviceCategoryTemplates && progress.serviceCategoryTemplates.length > 0) {
+            updatePayload.settings = {
+              ...updatePayload.settings,
+              service_category_templates: progress.serviceCategoryTemplates.map(t => t.name)
+            }
+          }
+
+          // Only send update if there are templates to update
+          if (updatePayload.settings && Object.keys(updatePayload.settings).length > 0) {
+            const updateResponse = await fetch(`/api/tenants/${tenantId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(updatePayload),
+            })
+
+            if (!updateResponse.ok) {
+              console.error('[Onboarding] Failed to update tenant templates:', await updateResponse.text())
+              // Don't throw - allow onboarding to complete even if template update fails
+            } else {
+              console.log('[Onboarding] Tenant templates updated successfully')
+            }
+          }
+        }
+      } else {
+        console.log('[Onboarding] User already has outlets, SKIPPING template update')
+      }
+
       // Mark operational onboarding as complete in localStorage
       localStorage.setItem(COMPLETION_KEY, JSON.stringify({
         completed: true,

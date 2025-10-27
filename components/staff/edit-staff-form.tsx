@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, Mail, Phone, Crown, Star, Briefcase, Edit, X, Loader2, Calendar as CalendarIcon, DollarSign, Award, Settings } from "lucide-react"
+import { Users, Mail, Phone, Crown, Star, Briefcase, Edit, X, Loader2, Calendar as CalendarIcon, DollarSign, Award, Settings, Clock } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 interface EditStaffFormProps {
@@ -136,9 +136,12 @@ export function EditStaffForm({
                       id="edit_display_name"
                       value={editStaffForm.display_name}
                       onChange={(e) => setEditStaffForm((prev: any) => ({ ...prev, display_name: e.target.value }))}
-                      placeholder="Display name"
+                      placeholder="Auto-generated from first + last name"
                       className="h-12 border-2 border-blue-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 rounded-lg transition-all"
                     />
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className="text-base">💡</span> Leave empty to auto-generate
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -172,18 +175,22 @@ export function EditStaffForm({
                         id="edit_position"
                         value={editStaffForm.position}
                         onChange={(e) => setEditStaffForm((prev: any) => ({ ...prev, position: e.target.value }))}
-                        placeholder="e.g., Beauty Therapist"
+                        placeholder="e.g., Beauty Therapist, Massage Therapist"
                         className="h-12 border-2 border-blue-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 rounded-lg"
                         required
                       />
                     )}
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className="text-base">{positionTemplates.length > 0 ? "📋" : "✏️"}</span>
+                      {positionTemplates.length > 0 ? "Select from your position templates" : "Enter the staff position"}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50/50 via-emerald-50/50 to-teal-50/50 p-6 rounded-2xl border-2 border-green-200 shadow-sm">
+              <div className="bg-gradient-to-br from-[#DCFCE7]/40 via-[#D1FAE5]/40 to-[#A7F3D0]/30 p-6 rounded-2xl border-2 border-green-200 shadow-sm">
                 <h3 className="font-bold text-green-800 mb-5 flex items-center gap-2 text-lg">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-green-500 to-green-400 flex items-center justify-center">
                     <Mail className="h-5 w-5 text-white" />
                   </div>
                   Contact Information
@@ -244,7 +251,7 @@ export function EditStaffForm({
 
             {/* Tab 2: Employment Details */}
             <TabsContent value="employment" className="space-y-5 mt-0">
-              <div className="bg-gradient-to-br from-orange-50/50 via-amber-50/50 to-yellow-50/50 p-6 rounded-2xl border-2 border-orange-200 shadow-sm">
+              <div className="bg-gradient-to-br from-[#FEF3C7]/40 via-[#FDE68A]/30 to-[#FCD34D]/20 p-6 rounded-2xl border-2 border-orange-200 shadow-sm">
                 <h3 className="font-bold text-orange-800 mb-5 flex items-center gap-2 text-lg">
                   <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-orange-500 to-amber-400 flex items-center justify-center">
                     <Crown className="h-5 w-5 text-white" />
@@ -351,6 +358,29 @@ export function EditStaffForm({
                     </div>
                   </div>
 
+                  {outlets.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_outlet_id" className="text-sm font-bold text-gray-700 flex items-center gap-1">
+                        Outlet <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={editStaffForm.outlet_id}
+                        onValueChange={(value) => setEditStaffForm((prev: any) => ({ ...prev, outlet_id: value }))}
+                      >
+                        <SelectTrigger className="h-12 border-2 border-orange-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 rounded-lg">
+                          <SelectValue placeholder="Select outlet" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {outlets.map((outlet) => (
+                            <SelectItem key={outlet._id || outlet.id} value={outlet._id || outlet.id}>
+                              {outlet.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="edit_bio" className="text-sm font-bold text-gray-700">
                       Bio / Description
@@ -417,22 +447,8 @@ export function EditStaffForm({
                           className="h-12 border-2 border-orange-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/20 rounded-lg"
                         />
                         <p className="text-xs text-muted-foreground">
-                          How many days in advance customers can book
+                          How many days in advance customers can book (default: 30 days)
                         </p>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id="edit_is_active"
-                          checked={editStaffForm.is_active}
-                          onCheckedChange={(checked) =>
-                            setEditStaffForm((prev: any) => ({ ...prev, is_active: checked as boolean }))
-                          }
-                          className="border-2 border-orange-300 data-[state=checked]:bg-orange-500"
-                        />
-                        <Label htmlFor="edit_is_active" className="text-sm cursor-pointer font-medium">
-                          Staff is active
-                        </Label>
                       </div>
                     </div>
                   </div>
@@ -442,7 +458,7 @@ export function EditStaffForm({
 
             {/* Tab 3: Skills & Certifications */}
             <TabsContent value="skills" className="space-y-5 mt-0">
-              <div className="bg-gradient-to-br from-green-50/60 via-emerald-50/50 to-teal-50/50 p-6 rounded-2xl border-2 border-green-300 shadow-sm">
+              <div className="bg-gradient-to-br from-[#D1FAE5]/50 via-[#A7F3D0]/40 to-[#6EE7B7]/30 p-6 rounded-2xl border-2 border-green-300 shadow-sm">
                 <h3 className="font-bold text-green-800 mb-5 flex items-center gap-2 text-lg">
                   <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-green-600 to-emerald-500 flex items-center justify-center">
                     <Award className="h-5 w-5 text-white" />
@@ -471,9 +487,9 @@ export function EditStaffForm({
                         Add
                       </Button>
                     </div>
-                    {editStaffForm.skills && editStaffForm.skills.length > 0 && (
+                    {editStaffForm.skills?.specialties?.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3 p-4 bg-white/60 rounded-xl">
-                        {editStaffForm.skills.map((skill: string) => (
+                        {editStaffForm.skills.specialties.map((skill: string) => (
                           <Badge
                             key={skill}
                             variant="secondary"
@@ -504,10 +520,13 @@ export function EditStaffForm({
                           if (e.key === "Enter") {
                             e.preventDefault()
                             const value = editSkillInput.trim()
-                            if (value && !editStaffForm.certifications?.includes(value)) {
+                            if (value && !editStaffForm.skills?.certifications?.includes(value)) {
                               setEditStaffForm((prev: any) => ({
                                 ...prev,
-                                certifications: [...(prev.certifications || []), value],
+                                skills: {
+                                  ...prev.skills,
+                                  certifications: [...(prev.skills?.certifications || []), value],
+                                },
                               }))
                               setEditSkillInput("")
                             }
@@ -518,10 +537,13 @@ export function EditStaffForm({
                         type="button"
                         onClick={() => {
                           const value = editSkillInput.trim()
-                          if (value && !editStaffForm.certifications?.includes(value)) {
+                          if (value && !editStaffForm.skills?.certifications?.includes(value)) {
                             setEditStaffForm((prev: any) => ({
                               ...prev,
-                              certifications: [...(prev.certifications || []), value],
+                              skills: {
+                                ...prev.skills,
+                                certifications: [...(prev.skills?.certifications || []), value],
+                              },
                             }))
                             setEditSkillInput("")
                           }
@@ -531,9 +553,9 @@ export function EditStaffForm({
                         Add
                       </Button>
                     </div>
-                    {editStaffForm.certifications && editStaffForm.certifications.length > 0 && (
+                    {editStaffForm.skills?.certifications?.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3 p-4 bg-white/60 rounded-xl">
-                        {editStaffForm.certifications.map((cert: string) => (
+                        {editStaffForm.skills.certifications.map((cert: string) => (
                           <Badge
                             key={cert}
                             variant="secondary"
@@ -544,7 +566,10 @@ export function EditStaffForm({
                               onClick={() =>
                                 setEditStaffForm((prev: any) => ({
                                   ...prev,
-                                  certifications: (prev.certifications || []).filter((c: string) => c !== cert),
+                                  skills: {
+                                    ...prev.skills,
+                                    certifications: (prev.skills?.certifications || []).filter((c: string) => c !== cert),
+                                  },
                                 }))
                               }
                               className="ml-2 hover:text-red-600"
@@ -565,10 +590,10 @@ export function EditStaffForm({
                       id="edit_years_experience"
                       type="number"
                       min="0"
-                      value={editStaffForm.years_experience || 0}
+                      value={editStaffForm.skills?.years_experience || 0}
                       onChange={(e) => setEditStaffForm((prev: any) => ({
                         ...prev,
-                        years_experience: parseInt(e.target.value) || 0
+                        skills: { ...prev.skills, years_experience: parseInt(e.target.value) || 0 }
                       }))}
                       placeholder="0"
                       className="h-12 border-2 border-green-300 focus:border-green-600 focus:ring-4 focus:ring-green-600/20 rounded-lg"
@@ -580,7 +605,7 @@ export function EditStaffForm({
 
             {/* Tab 4: Services Assignment */}
             <TabsContent value="services" className="space-y-5 mt-0">
-              <div className="bg-gradient-to-br from-pink-50/60 via-rose-50/50 to-fuchsia-50/50 p-6 rounded-2xl border-2 border-pink-300 shadow-sm">
+              <div className="bg-gradient-to-br from-[#FCE7F3]/50 via-[#FBCFE8]/40 to-[#F9A8D4]/30 p-6 rounded-2xl border-2 border-pink-300 shadow-sm">
                 <h3 className="font-bold text-pink-800 mb-5 flex items-center gap-2 text-lg">
                   <div className="h-8 w-8 rounded-lg bg-gradient-to-r from-pink-600 to-rose-500 flex items-center justify-center">
                     <Star className="h-5 w-5 text-white" />
@@ -592,11 +617,14 @@ export function EditStaffForm({
                   <div className="flex items-center space-x-3 pb-4 border-b-2 border-pink-200 mb-4 bg-gradient-to-r from-pink-50 to-rose-50 p-4 rounded-lg">
                     <Checkbox
                       id="edit-service-all"
-                      checked={editStaffForm.service_ids?.length === treatments.length && treatments.length > 0}
+                      checked={editStaffForm.skills?.service_ids?.length === treatments.length && treatments.length > 0}
                       onCheckedChange={(checked) => {
                         setEditStaffForm((prev: any) => ({
                           ...prev,
-                          service_ids: checked ? treatments.map(t => t.id) : []
+                          skills: {
+                            ...prev.skills,
+                            service_ids: checked ? treatments.map(t => t.id) : []
+                          }
                         }))
                       }}
                       className="h-5 w-5 border-2 border-pink-400 data-[state=checked]:bg-pink-600 data-[state=checked]:border-pink-600"
@@ -616,19 +644,25 @@ export function EditStaffForm({
                       <div key={treatment.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-pink-50 transition-colors border border-transparent hover:border-pink-200">
                         <Checkbox
                           id={`edit-treatment-${treatment.id}`}
-                          checked={editStaffForm.service_ids?.includes(treatment.id)}
+                          checked={editStaffForm.skills?.service_ids?.includes(treatment.id)}
                           onCheckedChange={(checked) => {
                             setEditStaffForm((prev: any) => {
-                              const currentServiceIds = prev.service_ids || []
+                              const currentServiceIds = prev.skills?.service_ids || []
                               if (checked) {
                                 return {
                                   ...prev,
-                                  service_ids: [...currentServiceIds, treatment.id],
+                                  skills: {
+                                    ...prev.skills,
+                                    service_ids: [...currentServiceIds, treatment.id],
+                                  },
                                 }
                               } else {
                                 return {
                                   ...prev,
-                                  service_ids: currentServiceIds.filter((id: string) => id !== treatment.id),
+                                  skills: {
+                                    ...prev.skills,
+                                    service_ids: currentServiceIds.filter((id: string) => id !== treatment.id),
+                                  },
                                 }
                               }
                             })
@@ -640,6 +674,7 @@ export function EditStaffForm({
                             <div className="flex items-center gap-3">
                               <span className="text-gray-900 font-semibold">{treatment.name}</span>
                               <Badge variant="outline" className="text-xs border-pink-300 text-pink-700">
+                                <Clock className="h-3 w-3 mr-1" />
                                 {treatment.durationMin}min
                               </Badge>
                             </div>
@@ -652,14 +687,14 @@ export function EditStaffForm({
                 </div>
                 <p className="text-sm text-muted-foreground mt-4 flex items-center gap-2 bg-white/50 p-3 rounded-lg">
                   <span className="text-lg">
-                    {!editStaffForm.service_ids || editStaffForm.service_ids.length === 0 ? "⚠️" : editStaffForm.service_ids.length === treatments.length ? "✅" : "📝"}
+                    {!editStaffForm.skills?.service_ids || editStaffForm.skills.service_ids.length === 0 ? "⚠️" : editStaffForm.skills.service_ids.length === treatments.length ? "✅" : "📝"}
                   </span>
                   <span className="font-medium">
-                    {!editStaffForm.service_ids || editStaffForm.service_ids.length === 0
+                    {!editStaffForm.skills?.service_ids || editStaffForm.skills.service_ids.length === 0
                       ? 'Please select at least 1 service (required)'
-                      : editStaffForm.service_ids.length === treatments.length
+                      : editStaffForm.skills.service_ids.length === treatments.length
                       ? 'All services selected'
-                      : `${editStaffForm.service_ids.length} service${editStaffForm.service_ids.length > 1 ? 's' : ''} selected`}
+                      : `${editStaffForm.skills.service_ids.length} service${editStaffForm.skills.service_ids.length > 1 ? 's' : ''} selected`}
                   </span>
                 </p>
               </div>
