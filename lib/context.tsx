@@ -264,6 +264,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             fee_breakdown: b.fee_breakdown,
             // Customer details
             customer: customer || null,
+            customer_name: b.customer_name, // Keep original customer_name from API
           }
         })
 
@@ -596,6 +597,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           total_price: b.total_price,
           fee_breakdown: b.fee_breakdown,
           customer: customer || null,
+          customer_name: b.customer_name, // Keep original customer_name from API
         }
       })
 

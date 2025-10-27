@@ -295,7 +295,7 @@ export default function CalendarPage() {
         const search = searchQuery.toLowerCase()
 
         return (
-          b.patientName?.toLowerCase().includes(search) ||
+          ((b as any).customer_name || b.patientName)?.toLowerCase().includes(search) ||
           treatment?.name?.toLowerCase().includes(search) ||
           b.id?.toLowerCase().includes(search)
         )
@@ -1397,7 +1397,7 @@ export default function CalendarPage() {
                                     {getPaymentStatusIcon((booking as any).payment_status)}
                                   </div>
                                   <div className="text-[10px] truncate opacity-90">
-                                    {booking.patientName || "Unknown"}
+                                    {(booking as any).customer_name || booking.patientName || "Unknown"}
                                   </div>
                                 </div>
                               )
@@ -1501,12 +1501,12 @@ export default function CalendarPage() {
                       const patient = customerData ? {
                         ...customerData,
                         id: customerData._id || customerData.id,
-                        name: `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim() || booking.patientName || 'Unknown',
+                        name: (booking as any).customer_name || `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim() || booking.patientName || 'Unknown',
                         phone: customerData.phone || booking.patientPhone,
                         email: customerData.email || booking.patientEmail,
                       } : {
                         id: booking.patientId,
-                        name: booking.patientName,
+                        name: (booking as any).customer_name || booking.patientName,
                         phone: booking.patientPhone,
                         email: booking.patientEmail,
                       }
@@ -1711,7 +1711,7 @@ export default function CalendarPage() {
                                 key={idx}
                                 className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center border-2 border-white text-xs font-bold text-gray-700 shadow-sm"
                               >
-                                {booking.patientName?.charAt(0)?.toUpperCase() || "?"}
+                                {((booking as any).customer_name || booking.patientName)?.charAt(0)?.toUpperCase() || "?"}
                               </div>
                             )
                           })}
@@ -1741,12 +1741,12 @@ export default function CalendarPage() {
                             const patient = customerData ? {
                               ...customerData,
                               id: customerData._id || customerData.id,
-                              name: `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim() || booking.patientName || 'Unknown',
+                              name: (booking as any).customer_name || `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim() || booking.patientName || 'Unknown',
                               phone: customerData.phone || booking.patientPhone,
                               email: customerData.email || booking.patientEmail,
                             } : {
                               id: booking.patientId,
-                              name: booking.patientName,
+                              name: (booking as any).customer_name || booking.patientName,
                               phone: booking.patientPhone,
                               email: booking.patientEmail,
                             }
@@ -1872,12 +1872,12 @@ export default function CalendarPage() {
               const patient = customerData ? {
                 ...customerData,
                 id: customerData._id || customerData.id,
-                name: `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim() || selectedBooking.patientName || 'Unknown',
+                name: (selectedBooking as any).customer_name || `${customerData.first_name || ''} ${customerData.last_name || ''}`.trim() || selectedBooking.patientName || 'Unknown',
                 phone: customerData.phone || selectedBooking.patientPhone,
                 email: customerData.email || selectedBooking.patientEmail,
               } : {
                 id: selectedBooking.patientId,
-                name: selectedBooking.patientName,
+                name: (selectedBooking as any).customer_name || selectedBooking.patientName,
                 phone: selectedBooking.patientPhone,
                 email: selectedBooking.patientEmail,
               }
