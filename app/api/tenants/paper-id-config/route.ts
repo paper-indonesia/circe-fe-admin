@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL 
+const FASTAPI_URL = process.env.NEXT_PUBLIC_FASTAPI_URL 
 
 // GET /api/tenants/paper-id-config
 export async function GET() {
@@ -30,7 +30,7 @@ export async function GET() {
 
     // Fallback: get tenant_id from /api/v1/users/me
     if (!tenantId) {
-      const userResponse = await fetch(`${BACKEND_URL}/api/v1/users/me`, {
+      const userResponse = await fetch(`${FASTAPI_URL}/api/v1/users/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken.value}`,
@@ -51,7 +51,7 @@ export async function GET() {
     }
 
     // Get Paper.id configuration
-    const response = await fetch(`${BACKEND_URL}/api/v1/tenants/${tenantId}/paper-id-config`, {
+    const response = await fetch(`${FASTAPI_URL}/api/v1/tenants/${tenantId}/paper-id-config`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authToken.value}`,
@@ -106,7 +106,7 @@ export async function PUT(request: Request) {
 
     // Fallback: get tenant_id from /api/v1/users/me
     if (!tenantId) {
-      const userResponse = await fetch(`${BACKEND_URL}/api/v1/users/me`, {
+      const userResponse = await fetch(`${FASTAPI_URL}/api/v1/users/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken.value}`,
@@ -129,7 +129,7 @@ export async function PUT(request: Request) {
     const body = await request.json()
 
     // Update Paper.id configuration
-    const response = await fetch(`${BACKEND_URL}/api/v1/tenants/${tenantId}/paper-id-config`, {
+    const response = await fetch(`${FASTAPI_URL}/api/v1/tenants/${tenantId}/paper-id-config`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${authToken.value}`,
@@ -176,7 +176,7 @@ export async function DELETE() {
 
     // Fallback: get tenant_id from /api/v1/users/me
     if (!tenantId) {
-      const userResponse = await fetch(`${BACKEND_URL}/api/v1/users/me`, {
+      const userResponse = await fetch(`${FASTAPI_URL}/api/v1/users/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken.value}`,
@@ -197,7 +197,7 @@ export async function DELETE() {
     }
 
     // Disable Paper.id configuration
-    const response = await fetch(`${BACKEND_URL}/api/v1/tenants/${tenantId}/paper-id-config`, {
+    const response = await fetch(`${FASTAPI_URL}/api/v1/tenants/${tenantId}/paper-id-config`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${authToken.value}`,
