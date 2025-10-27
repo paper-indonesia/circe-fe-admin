@@ -79,6 +79,7 @@ export default function SettingsPage() {
   const [newStaffPosition, setNewStaffPosition] = useState("")
   const [newServiceCategory, setNewServiceCategory] = useState("")
   const [customerPortalBaseUrl, setCustomerPortalBaseUrl] = useState<string>("")
+  const [fastapiBaseUrl, setFastapiBaseUrl] = useState<string>("")
 
   // Folding state for sections
   const [expandedSections, setExpandedSections] = useState({
@@ -210,6 +211,19 @@ export default function SettingsPage() {
           console.error('Failed to load portal URL config:', error)
           // Fallback to environment variable if API fails
           setCustomerPortalBaseUrl(process.env.NEXT_PUBLIC_CUSTOMER_PORTAL_URL || "")
+        }
+
+        // Fetch FastAPI base URL from server
+        try {
+          const fastapiConfigResponse = await fetch('/api/config/fastapi-url')
+          if (fastapiConfigResponse.ok) {
+            const fastapiConfigData = await fastapiConfigResponse.json()
+            setFastapiBaseUrl(fastapiConfigData.url || "")
+          }
+        } catch (error) {
+          console.error('Failed to load FastAPI URL config:', error)
+          // Fallback to environment variable if API fails
+          setFastapiBaseUrl(process.env.NEXT_PUBLIC_FASTAPI_URL || "")
         }
 
         // Load business info from API
@@ -1321,7 +1335,7 @@ export default function SettingsPage() {
                       </p>
                       <div className="flex gap-2">
                         <Input
-                          value={`${process.env.NEXT_PUBLIC_FASTAPI_URL }/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`}
+                          value={fastapiBaseUrl ? `${fastapiBaseUrl}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}` : "Loading..."}
                           readOnly
                           className="font-mono text-sm bg-gray-50"
                         />
@@ -1329,13 +1343,15 @@ export default function SettingsPage() {
                           variant="outline"
                           size="icon"
                           onClick={() => {
-                            const webhookUrl = `${process.env.NEXT_PUBLIC_FASTAPI_URL }/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`
+                            if (!fastapiBaseUrl) return
+                            const webhookUrl = `${fastapiBaseUrl}/api/v1/webhooks/paper-invoice/tenant/${tenantInfo.id}`
                             navigator.clipboard.writeText(webhookUrl)
                             toast({
                               title: "Copied!",
                               description: "Webhook callback URL copied to clipboard"
                             })
                           }}
+                          disabled={!fastapiBaseUrl}
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
