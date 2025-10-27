@@ -41,17 +41,25 @@ export default function SignInPage() {
   }, [])
 
   // Helper function to setup business type templates on first login
-  const setupBusinessTypeTemplates = async (tenantId: string, outlets: any[]) => {
+  const setupBusinessTypeTemplates = async (tenantId: string) => {
     try {
-      // First login detection: Check if user has NO outlets yet
+      // Step 1: Check if outlets exist using /api/outlets?page=1&size=1
+      const outletsCheckResponse = await fetch('/api/outlets?page=1&size=1')
+      let hasOutlets = false
+
+      if (outletsCheckResponse.ok) {
+        const outletsData = await outletsCheckResponse.json()
+        hasOutlets = outletsData.items && outletsData.items.length > 0
+      }
+
       // If user has outlets, they've already completed onboarding
-      if (outlets && outlets.length > 0) {
-        console.log('User already has outlets, skipping template setup')
+      if (hasOutlets) {
+        console.log('[Login] User already has outlets, skipping template setup')
         localStorage.removeItem('pending_template_setup') // Cleanup if exists
         return
       }
 
-      console.log('First login detected (no outlets yet), checking for business type...')
+      console.log('[Login] First login detected (no outlets yet), checking for business type...')
 
       // Try to get business type from localStorage (if signup was recent)
       const pendingSetup = localStorage.getItem('pending_template_setup')
@@ -181,7 +189,7 @@ export default function SignInPage() {
 
         // Setup business type templates if this is first login (no outlets yet)
         if (data.tenant?.id) {
-          await setupBusinessTypeTemplates(data.tenant.id, data.outlets || [])
+          await setupBusinessTypeTemplates(data.tenant.id)
         }
 
         console.log("Redirecting to dashboard")
@@ -234,7 +242,7 @@ export default function SignInPage() {
 
         // Setup business type templates if this is first login (no outlets yet)
         if (data.tenant?.id) {
-          await setupBusinessTypeTemplates(data.tenant.id, data.outlets || [])
+          await setupBusinessTypeTemplates(data.tenant.id)
         }
 
         window.location.replace('/dashboard')
