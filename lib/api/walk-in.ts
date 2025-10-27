@@ -117,10 +117,20 @@ export async function createCustomer(customerData: {
     throw new Error('Tenant information not found. Please login again.')
   }
 
-  // Split name into first_name and last_name
-  const nameParts = customerData.name.trim().split(' ')
-  const firstName = nameParts[0] || ''
-  const lastName = nameParts.slice(1).join(' ') || firstName // Use firstName as fallback if no last name
+  // Smart name splitting:
+  // If multiple words -> last word becomes last_name, rest becomes first_name
+  // Example: "Moch Aril Indra" -> first_name: "Moch Aril", last_name: "Indra"
+  // If single word -> duplicate to both first_name and last_name
+  const nameParts = customerData.name.trim().split(' ').filter(part => part.length > 0)
+  let firstName = nameParts[0] || ''
+  let lastName = ''
+
+  if (nameParts.length > 1) {
+    lastName = nameParts[nameParts.length - 1] // Last word
+    firstName = nameParts.slice(0, -1).join(' ') // All words except last
+  } else {
+    lastName = firstName // Single word, use as both
+  }
 
   // Build request body with required API fields
   const requestBody: any = {

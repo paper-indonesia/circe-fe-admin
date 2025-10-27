@@ -334,15 +334,30 @@ export default function ClientsPage() {
       }
 
       // Build request body
-      const requestBody: any = {
-        first_name: clientForm.first_name.trim(),
-        phone: clientForm.phone.trim(),
-        tenant_id: tenantId
+      let firstName = clientForm.first_name.trim()
+      let lastName = clientForm.last_name.trim()
+
+      // Smart name splitting: If last_name is empty but first_name has multiple words
+      // Split: take last word as last_name, rest as first_name
+      // Example: "Moch Aril" -> first_name: "Moch", last_name: "Aril"
+      if (!lastName && firstName.includes(' ')) {
+        const nameParts = firstName.split(' ').filter(part => part.length > 0)
+        if (nameParts.length > 1) {
+          lastName = nameParts[nameParts.length - 1] // Last word
+          firstName = nameParts.slice(0, -1).join(' ') // All words except last
+        } else {
+          lastName = firstName // Single word, use as both
+        }
+      } else if (!lastName) {
+        // If still no last name and single word, duplicate it
+        lastName = firstName
       }
 
-      // Only add optional fields if they have values
-      if (clientForm.last_name && clientForm.last_name.trim()) {
-        requestBody.last_name = clientForm.last_name.trim()
+      const requestBody: any = {
+        first_name: firstName,
+        last_name: lastName,
+        phone: clientForm.phone.trim(),
+        tenant_id: tenantId
       }
 
       if (clientForm.email && clientForm.email.trim()) {
@@ -414,14 +429,29 @@ export default function ClientsPage() {
 
     try {
       // Build request body
-      const requestBody: any = {
-        first_name: clientForm.first_name.trim(),
-        phone: clientForm.phone.trim()
+      let firstName = clientForm.first_name.trim()
+      let lastName = clientForm.last_name.trim()
+
+      // Smart name splitting: If last_name is empty but first_name has multiple words
+      // Split: take last word as last_name, rest as first_name
+      // Example: "Moch Aril" -> first_name: "Moch", last_name: "Aril"
+      if (!lastName && firstName.includes(' ')) {
+        const nameParts = firstName.split(' ').filter(part => part.length > 0)
+        if (nameParts.length > 1) {
+          lastName = nameParts[nameParts.length - 1] // Last word
+          firstName = nameParts.slice(0, -1).join(' ') // All words except last
+        } else {
+          lastName = firstName // Single word, use as both
+        }
+      } else if (!lastName) {
+        // If still no last name and single word, duplicate it
+        lastName = firstName
       }
 
-      // Only add optional fields if they have values
-      if (clientForm.last_name && clientForm.last_name.trim()) {
-        requestBody.last_name = clientForm.last_name.trim()
+      const requestBody: any = {
+        first_name: firstName,
+        last_name: lastName,
+        phone: clientForm.phone.trim()
       }
 
       if (clientForm.email && clientForm.email.trim()) {
