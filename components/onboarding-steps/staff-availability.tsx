@@ -76,6 +76,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     end_time: "17:00",
     recurrence_days: [] as number[],
     recurrence_end_date: "",
+    service_ids: [] as string[],
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -298,6 +299,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
           phone: staffForm.phone.trim() || undefined,
           position: staffForm.position,
           service_ids: staffForm.service_ids,
+          tenant_id: data.tenant_id,
         }
 
         addStaff(newStaff)
@@ -362,6 +364,30 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     setLoading(true)
 
     try {
+      // Get staff details to retrieve tenant_id
+      const selectedStaffData = progress.staff.find(s => s.id === availabilityForm.staff_id)
+
+      // If tenant_id not in local data, fetch from API
+      let tenantId = selectedStaffData?.tenant_id
+
+      if (!tenantId) {
+        // Fetch staff details from API
+        const staffResponse = await fetch(`/api/staff?staff_id=${availabilityForm.staff_id}`)
+        if (staffResponse.ok) {
+          const staffData = await staffResponse.json()
+          // Check if response has items array or is a single staff object
+          if (staffData.items && staffData.items.length > 0) {
+            tenantId = staffData.items[0].tenant_id
+          } else if (staffData.tenant_id) {
+            tenantId = staffData.tenant_id
+          }
+        }
+      }
+
+      if (!tenantId) {
+        throw new Error("Tenant ID tidak ditemukan. Silakan login kembali.")
+      }
+
       const today = new Date()
 
       // Calculate recurrence_end_date (3 months from now if not specified)
@@ -384,6 +410,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          tenant_id: tenantId,
           staff_id: availabilityForm.staff_id,
           date: today.toISOString().split('T')[0],
           start_time: availabilityForm.start_time,
@@ -393,6 +420,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
           recurrence_end_date: endDate,
           recurrence_days: apiRecurrenceDays,
           is_available: true,
+          service_ids: availabilityForm.service_ids.length > 0 ? availabilityForm.service_ids : null,
         }),
       })
 
@@ -430,6 +458,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
         end_time: "17:00",
         recurrence_days: [],
         recurrence_end_date: "",
+        service_ids: [],
       })
       setErrors({})
       setCurrentTab('staff')
@@ -1037,6 +1066,82 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
                 <p className="text-xs text-red-500">{errors.staff_id}</p>
               )}
             </div>
+
+            {/* Service Selection - Optional */}
+            {availabilityForm.staff_id && (
+              <div className="space-y-2 p-4 bg-purple-50/30 border-2 border-purple-200 rounded-xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className="bg-purple-600 text-white">Opsional</Badge>
+                  <h4 className="text-sm font-semibold text-gray-700">Layanan yang Tersedia</h4>
+                </div>
+                <p className="text-xs text-gray-600 mb-3">
+                  Pilih layanan spesifik untuk ketersediaan ini. Kosongkan untuk semua layanan yang dikuasai staff.
+                </p>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {(() => {
+                    const selectedStaff = progress.staff.find(s => s.id === availabilityForm.staff_id)
+                    const staffServiceIds = selectedStaff?.service_ids || []
+                    const availableServices = services.filter(s => staffServiceIds.includes(s.id))
+
+                    if (availableServices.length === 0) {
+                      return (
+                        <p className="text-sm text-gray-500 italic">
+                          Staff ini belum memiliki layanan yang di-assign
+                        </p>
+                      )
+                    }
+
+                    return (
+                      <>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg bg-white hover:bg-gray-50 transition-colors">
+                          <Checkbox
+                            id="all-services"
+                            checked={availabilityForm.service_ids.length === 0}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setAvailabilityForm({ ...availabilityForm, service_ids: [] })
+                              }
+                            }}
+                          />
+                          <Label htmlFor="all-services" className="text-sm cursor-pointer font-medium flex-1">
+                            Semua layanan ({availableServices.length})
+                          </Label>
+                        </div>
+                        {availableServices.map((service) => (
+                          <div key={service.id} className="flex items-center space-x-2 p-3 border rounded-lg bg-white hover:bg-gray-50 transition-colors">
+                            <Checkbox
+                              id={`service-${service.id}`}
+                              checked={availabilityForm.service_ids.includes(service.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setAvailabilityForm({
+                                    ...availabilityForm,
+                                    service_ids: [...availabilityForm.service_ids, service.id]
+                                  })
+                                } else {
+                                  setAvailabilityForm({
+                                    ...availabilityForm,
+                                    service_ids: availabilityForm.service_ids.filter(id => id !== service.id)
+                                  })
+                                }
+                              }}
+                            />
+                            <Label htmlFor={`service-${service.id}`} className="text-sm cursor-pointer flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium">{service.name}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {service.durationMin || service.duration_minutes} min
+                                </Badge>
+                              </div>
+                            </Label>
+                          </div>
+                        ))}
+                      </>
+                    )
+                  })()}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

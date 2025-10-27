@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Select,
   SelectContent,
@@ -639,25 +640,25 @@ export default function ManageSubscriptionPage() {
               <div className="space-y-3">
                 {/* Desktop Table */}
                 <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left text-xs font-medium text-gray-500 pb-3 px-2">Date</th>
-                        <th className="text-left text-xs font-medium text-gray-500 pb-3 px-2">Description</th>
-                        <th className="text-left text-xs font-medium text-gray-500 pb-3 px-2">Reference</th>
-                        <th className="text-left text-xs font-medium text-gray-500 pb-3 px-2">Payment Method</th>
-                        <th className="text-right text-xs font-medium text-gray-500 pb-3 px-2">Amount</th>
-                        <th className="text-center text-xs font-medium text-gray-500 pb-3 px-2">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gradient-to-r from-[#FCD6F5]/20 to-[#EDE9FE]/20">
+                        <TableHead>Date</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Reference</TableHead>
+                        <TableHead>Payment Method</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-center">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {Array.isArray(billingHistory) && billingHistory.map((payment) => (
-                        <tr
+                        <TableRow
                           key={payment._id}
-                          className="border-b border-gray-50 hover:bg-blue-50 transition-colors cursor-pointer"
+                          className="hover:bg-[#FCD6F5]/10 transition-colors cursor-pointer"
                           onClick={() => handleViewPaymentDetail(payment._id)}
                         >
-                          <td className="py-4 px-2">
+                          <TableCell className="py-4 px-2">
                             <div className="flex flex-col">
                               <span className="text-sm font-medium text-gray-900">
                                 {format(new Date(payment.paid_at || payment.created_at), "MMM dd, yyyy")}
@@ -666,24 +667,24 @@ export default function ManageSubscriptionPage() {
                                 {format(new Date(payment.paid_at || payment.created_at), "HH:mm")}
                               </span>
                             </div>
-                          </td>
-                          <td className="py-4 px-2">
+                          </TableCell>
+                          <TableCell className="py-4 px-2">
                             <div className="flex flex-col">
                               <span className="text-sm text-gray-900">{payment.description}</span>
                               {payment.notes && (
                                 <span className="text-xs text-gray-500">{payment.notes}</span>
                               )}
                             </div>
-                          </td>
-                          <td className="py-4 px-2">
+                          </TableCell>
+                          <TableCell className="py-4 px-2">
                             <span className="text-xs font-mono text-gray-600">{payment.reference_id}</span>
-                          </td>
-                          <td className="py-4 px-2">
+                          </TableCell>
+                          <TableCell className="py-4 px-2">
                             <Badge variant="outline" className="text-xs capitalize">
                               {payment.payment_method === 'bank_transfer' ? 'Bank Transfer' : payment.payment_method}
                             </Badge>
-                          </td>
-                          <td className="py-4 px-2 text-right">
+                          </TableCell>
+                          <TableCell className="py-4 px-2 text-right">
                             <div className="flex flex-col items-end">
                               <span className="text-sm font-bold text-gray-900">
                                 {formatCurrency(parseFloat(payment.total_amount))}
@@ -692,19 +693,19 @@ export default function ManageSubscriptionPage() {
                                 <span className="text-xs text-gray-500">{payment.currency}</span>
                               )}
                             </div>
-                          </td>
-                          <td className="py-4 px-2 text-center">
+                          </TableCell>
+                          <TableCell className="py-4 px-2 text-center">
                             <Badge
                               variant={payment.status === 'completed' ? 'default' : 'secondary'}
                               className="text-xs capitalize"
                             >
                               {payment.status}
                             </Badge>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
 
                 {/* Mobile Cards */}

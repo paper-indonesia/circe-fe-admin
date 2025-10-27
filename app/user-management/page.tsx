@@ -607,7 +607,7 @@ export default function UserManagementPage() {
             <div className="rounded-lg border overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
+                  <TableRow className="bg-gradient-to-r from-[#FCD6F5]/20 to-[#EDE9FE]/20">
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
@@ -617,7 +617,7 @@ export default function UserManagementPage() {
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} className="hover:bg-[#FCD6F5]/10 transition-colors">
                       <TableCell className="font-medium">
                         <div>
                           <p>{user.first_name} {user.last_name}</p>

@@ -24,6 +24,31 @@ const TIMEZONES = [
   { value: "Asia/Jayapura", label: "WIT - Waktu Indonesia Timur" },
 ]
 
+const DEFAULT_BUSINESS_HOURS = [
+  { day: 0, is_open: false },
+  { day: 1, is_open: true, open_time: "09:00", close_time: "18:00" },
+  { day: 2, is_open: true, open_time: "09:00", close_time: "18:00" },
+  { day: 3, is_open: true, open_time: "09:00", close_time: "18:00" },
+  { day: 4, is_open: true, open_time: "09:00", close_time: "18:00" },
+  { day: 5, is_open: true, open_time: "09:00", close_time: "18:00" },
+  { day: 6, is_open: false },
+]
+
+const DEFAULT_SETTINGS = {
+  accepts_online_booking: true,
+  requires_appointment: true,
+  walk_ins_allowed: true,
+  advance_booking_days: 30,
+  cancellation_hours: 24,
+  auto_confirm_bookings: false,
+  payment_required_upfront: false,
+  timezone: "Asia/Jakarta",
+  default_service_buffer_minutes: 15,
+  accepts_online_payment: true,
+  accepts_cash_payment: true,
+  payment_on_arrival: false,
+}
+
 export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
   const { toast } = useToast()
   const { progress, addOutlet } = useOperationalOnboarding()
@@ -31,7 +56,7 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
 
   const [formData, setFormData] = useState({
     name: "",
-    slug: "",
+    description: "",
     address: {
       street: "",
       city: "",
@@ -44,15 +69,16 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
       email: ""
     },
     status: "active",
-    settings: {
-      timezone: "Asia/Jakarta"
-    }
+    business_hours: DEFAULT_BUSINESS_HOURS,
+    settings: DEFAULT_SETTINGS
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [planLimits, setPlanLimits] = useState<{ current: number; max: number } | null>(null)
   const [showOutletList, setShowOutletList] = useState(true)
+  const [showBusinessHours, setShowBusinessHours] = useState(false)
+  const [showBookingSettings, setShowBookingSettings] = useState(false)
 
   // Load plan limits from subscription context
   useEffect(() => {
@@ -81,9 +107,6 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
     if (!formData.name.trim()) {
       newErrors.name = "Nama outlet wajib diisi"
     }
-    if (!formData.slug.trim()) {
-      newErrors.slug = "Slug wajib diisi"
-    }
     if (!formData.address.street.trim()) {
       newErrors.street = "Alamat wajib diisi"
     }
@@ -98,14 +121,6 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
-  }
-
-  // Auto-generate slug from name
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
   }
 
   const handleAdd = async () => {
@@ -145,10 +160,22 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
     setLoading(true)
 
     try {
+      // Generate slug from name
+      const generateSlug = (name: string) => {
+        return name
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      }
+
       const outletData = {
         tenant_id: tenantId,
         name: formData.name.trim(),
-        slug: formData.slug.trim(),
+        slug: generateSlug(formData.name),
+        description: formData.description.trim() || undefined,
         address: {
           street: formData.address.street.trim(),
           city: formData.address.city.trim(),
@@ -161,9 +188,8 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
           ...(formData.contact.email?.trim() && { email: formData.contact.email.trim() })
         },
         status: formData.status,
-        settings: {
-          timezone: formData.settings.timezone
-        }
+        business_hours: formData.business_hours,
+        settings: formData.settings
       }
 
       const response = await fetch("/api/outlets", {
@@ -190,7 +216,7 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
         // Reset form
         setFormData({
           name: "",
-          slug: "",
+          description: "",
           address: {
             street: "",
             city: "",
@@ -203,9 +229,8 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
             email: ""
           },
           status: "active",
-          settings: {
-            timezone: "Asia/Jakarta"
-          }
+          business_hours: DEFAULT_BUSINESS_HOURS,
+          settings: DEFAULT_SETTINGS
         })
         setErrors({})
       } else {
@@ -285,8 +310,8 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
         </div>
 
         <div className="grid grid-cols-12 gap-4 max-w-full">
-          {/* Nama Outlet - 6 cols */}
-          <div className="col-span-12 lg:col-span-6 space-y-2">
+          {/* Nama Outlet - 12 cols (full width) */}
+          <div className="col-span-12 space-y-2">
             <Label htmlFor="name" className="text-sm font-medium">
               Nama Outlet <span className="text-red-500">*</span>
             </Label>
@@ -294,14 +319,7 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
               id="name"
               placeholder="Contoh: Cabang Jakarta Pusat"
               value={formData.name}
-              onChange={(e) => {
-                const newName = e.target.value
-                setFormData({
-                  ...formData,
-                  name: newName,
-                  slug: generateSlug(newName)
-                })
-              }}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className={`h-11 rounded-lg ${errors.name ? "border-red-500" : ""}`}
             />
             {errors.name && (
@@ -309,23 +327,19 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
             )}
           </div>
 
-          {/* Slug - 6 cols (auto-generated) */}
-          <div className="col-span-12 lg:col-span-6 space-y-2">
-            <Label htmlFor="slug" className="text-sm font-medium">
-              Slug <span className="text-red-500">*</span>
+          {/* Deskripsi - 12 cols (full width, optional) */}
+          <div className="col-span-12 space-y-2">
+            <Label htmlFor="description" className="text-sm font-medium">
+              Deskripsi Outlet (Opsional)
             </Label>
             <Input
-              id="slug"
-              placeholder="cabang-jakarta-pusat"
-              value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              className={`h-11 rounded-lg font-mono text-sm ${errors.slug ? "border-red-500" : ""}`}
+              id="description"
+              placeholder="Contoh: Outlet utama di pusat kota Jakarta"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="h-11 rounded-lg"
             />
-            {errors.slug ? (
-              <p className="text-xs text-red-500 mt-1">{errors.slug}</p>
-            ) : (
-              <p className="text-xs text-gray-500 mt-1">URL identifier (auto-generated)</p>
-            )}
+            <p className="text-xs text-gray-500 mt-1">Deskripsi singkat untuk customer</p>
           </div>
 
           {/* Alamat - 12 cols (full width) */}
@@ -405,6 +419,217 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Business Hours - Collapsible */}
+          <div className="col-span-12">
+            <Card className="overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowBusinessHours(!showBusinessHours)}
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <span className="text-lg">🕐</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-gray-900">Jam Operasional</h3>
+                    <p className="text-xs text-gray-500">
+                      {formData.business_hours.filter(bh => bh.is_open).length} hari buka
+                    </p>
+                  </div>
+                </div>
+                <motion.div
+                  animate={{ rotate: showBusinessHours ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                </motion.div>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {showBusinessHours && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-4 pt-0 space-y-2 border-t">
+                      {formData.business_hours.map((bh, index) => (
+                        <div key={bh.day} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                          <div className="w-20 font-medium text-sm text-gray-700">
+                            {['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][bh.day]}
+                          </div>
+                          <div className="flex items-center gap-2 flex-1 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id={`day-${bh.day}`}
+                                checked={bh.is_open}
+                                onChange={(e) => {
+                                  const newHours = [...formData.business_hours]
+                                  newHours[index] = { ...bh, is_open: e.target.checked }
+                                  setFormData({ ...formData, business_hours: newHours })
+                                }}
+                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                              />
+                              <Label htmlFor={`day-${bh.day}`} className="text-sm text-gray-600 cursor-pointer">
+                                Buka
+                              </Label>
+                            </div>
+                            {bh.is_open && (
+                              <div className="flex items-center gap-2 ml-auto">
+                                <Input
+                                  type="time"
+                                  value={bh.open_time || '09:00'}
+                                  onChange={(e) => {
+                                    const newHours = [...formData.business_hours]
+                                    newHours[index] = { ...bh, open_time: e.target.value }
+                                    setFormData({ ...formData, business_hours: newHours })
+                                  }}
+                                  className="h-9 w-28 text-sm"
+                                />
+                                <span className="text-sm text-gray-400">-</span>
+                                <Input
+                                  type="time"
+                                  value={bh.close_time || '18:00'}
+                                  onChange={(e) => {
+                                    const newHours = [...formData.business_hours]
+                                    newHours[index] = { ...bh, close_time: e.target.value }
+                                    setFormData({ ...formData, business_hours: newHours })
+                                  }}
+                                  className="h-9 w-28 text-sm"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
+          </div>
+
+          {/* Booking Settings - Collapsible */}
+          <div className="col-span-12">
+            <Card className="overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowBookingSettings(!showBookingSettings)}
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <span className="text-lg">⚙️</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-gray-900">Pengaturan Booking</h3>
+                    <p className="text-xs text-gray-500">
+                      {formData.settings.accepts_online_booking ? 'Online booking aktif' : 'Online booking tidak aktif'}
+                    </p>
+                  </div>
+                </div>
+                <motion.div
+                  animate={{ rotate: showBookingSettings ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                </motion.div>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {showBookingSettings && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-4 pt-0 space-y-4 border-t">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="accepts_online_booking"
+                            checked={formData.settings.accepts_online_booking}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              settings: { ...formData.settings, accepts_online_booking: e.target.checked }
+                            })}
+                            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-2 focus:ring-purple-500"
+                          />
+                          <Label htmlFor="accepts_online_booking" className="text-sm cursor-pointer font-medium">
+                            Terima booking online
+                          </Label>
+                        </div>
+
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                          <input
+                            type="checkbox"
+                            id="walk_ins_allowed"
+                            checked={formData.settings.walk_ins_allowed}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              settings: { ...formData.settings, walk_ins_allowed: e.target.checked }
+                            })}
+                            className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-2 focus:ring-purple-500"
+                          />
+                          <Label htmlFor="walk_ins_allowed" className="text-sm cursor-pointer font-medium">
+                            Izinkan walk-in
+                          </Label>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="advance_booking_days" className="text-sm font-medium">
+                            Maksimal booking di muka (hari)
+                          </Label>
+                          <Input
+                            id="advance_booking_days"
+                            type="number"
+                            min="1"
+                            max="365"
+                            value={formData.settings.advance_booking_days}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              settings: { ...formData.settings, advance_booking_days: parseInt(e.target.value) || 30 }
+                            })}
+                            className="h-10 rounded-lg"
+                          />
+                          <p className="text-xs text-gray-500">Berapa hari customer bisa booking di muka</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="cancellation_hours" className="text-sm font-medium">
+                            Batas pembatalan (jam)
+                          </Label>
+                          <Input
+                            id="cancellation_hours"
+                            type="number"
+                            min="0"
+                            max="72"
+                            value={formData.settings.cancellation_hours}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              settings: { ...formData.settings, cancellation_hours: parseInt(e.target.value) || 24 }
+                            })}
+                            className="h-10 rounded-lg"
+                          />
+                          <p className="text-xs text-gray-500">Customer bisa cancel berapa jam sebelumnya</p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
           </div>
         </div>
 
