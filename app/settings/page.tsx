@@ -1300,7 +1300,7 @@ export default function SettingsPage() {
                       </div>
 
                       {/* Platform Fee Information */}
-                      <div className="p-4 border rounded-lg bg-blue-50">
+                      {/* <div className="p-4 border rounded-lg bg-blue-50">
                         <h4 className="text-sm font-semibold text-blue-900 mb-2">Platform Fees by Plan</h4>
                         <div className="space-y-1 text-xs text-blue-800">
                           <div className="flex justify-between">
@@ -1319,7 +1319,7 @@ export default function SettingsPage() {
                         <p className="text-xs text-blue-600 mt-2 italic">
                           Platform fees are automatically calculated and added to payment links
                         </p>
-                      </div>
+                      </div> */}
                     </div>
                   )}
 
