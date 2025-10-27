@@ -190,13 +190,21 @@ export default function SettingsPage() {
               }
             })
 
-            // Load Paper.id configuration from tenant data
-            setPaperIdForm({
-              enabled: !!(tenantData.paper_id_api_key && tenantData.paper_id_secret_key),
-              client_id: tenantData.paper_id_api_key || "",
-              client_secret: tenantData.paper_id_secret_key || "",
-              is_production: false // Default to sandbox, can be adjusted later
-            })
+            // Load Paper.id configuration from dedicated endpoint
+            try {
+              const paperIdResponse = await fetch('/api/tenants/paper-id-config')
+              if (paperIdResponse.ok) {
+                const paperIdData = await paperIdResponse.json()
+                setPaperIdForm({
+                  enabled: paperIdData.enabled || false,
+                  client_id: paperIdData.client_id || "",
+                  client_secret: paperIdData.enabled ? "••••••••••••" : "", // Hide if already set
+                  is_production: paperIdData.is_production || false
+                })
+              }
+            } catch (error) {
+              console.error('Failed to load Paper.id config:', error)
+            }
           }
         }
 
@@ -329,35 +337,36 @@ export default function SettingsPage() {
     try {
       setSavingPaperId(true)
 
+      // Prepare payload - only send client_secret if it was changed (not the masked value)
+      const payload: any = {
+        client_id: paperIdForm.client_id,
+        is_production: paperIdForm.is_production,
+        enabled: paperIdForm.enabled
+      }
+
+      // Only include client_secret if it's not the masked value (user changed it)
+      if (paperIdForm.client_secret && paperIdForm.client_secret !== "••••••••••••") {
+        payload.client_secret = paperIdForm.client_secret
+      }
+
       // Use dedicated Paper.id configuration endpoint
       const response = await fetch('/api/tenants/paper-id-config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: paperIdForm.client_id,
-          client_secret: paperIdForm.client_secret,
-          is_production: paperIdForm.is_production,
-          enabled: paperIdForm.enabled
-        })
+        body: JSON.stringify(payload)
       })
 
       if (response.ok) {
         const updatedData = await response.json()
 
-        // Reload tenant data to get updated paper_id_api_key and paper_id_secret_key
-        const tenantResponse = await fetch('/api/tenants/current')
-        if (tenantResponse.ok) {
-          const tenantData = await tenantResponse.json()
-          setTenantInfo(tenantData)
-
-          // Update form with latest data from tenant
-          setPaperIdForm(prev => ({
-            ...prev,
-            client_id: tenantData.paper_id_api_key || "",
-            client_secret: tenantData.paper_id_secret_key || "",
-            enabled: !!(tenantData.paper_id_api_key && tenantData.paper_id_secret_key)
-          }))
-        }
+        // After save, mask the client_secret again
+        setPaperIdForm(prev => ({
+          ...prev,
+          client_id: updatedData.client_id || prev.client_id,
+          client_secret: updatedData.enabled ? "••••••••••••" : "", // Hide after save
+          enabled: updatedData.enabled,
+          is_production: updatedData.is_production
+        }))
 
         toast({
           title: "Success",
@@ -1277,7 +1286,7 @@ export default function SettingsPage() {
                             type={showClientSecret ? "text" : "password"}
                             value={paperIdForm.client_secret}
                             onChange={(e) => setPaperIdForm(prev => ({ ...prev, client_secret: e.target.value }))}
-                            placeholder="••••••••••••••••••••"
+                            placeholder={paperIdForm.client_secret === "••••••••••••" ? "Enter new secret to update" : "Enter your client secret"}
                             className="font-mono pr-10"
                           />
                           <Button
@@ -1295,7 +1304,9 @@ export default function SettingsPage() {
                           </Button>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Keep this secret secure. Never share it publicly.
+                          {paperIdForm.client_secret === "••••••••••••"
+                            ? "Secret is hidden for security. Enter a new value to update it."
+                            : "Keep this secret secure. Never share it publicly."}
                         </p>
                       </div>
 
@@ -1380,16 +1391,16 @@ export default function SettingsPage() {
                   <div className="flex flex-col gap-3 pt-6 border-t">
                     <Button
                       onClick={handleSavePaperId}
-                      disabled={savingPaperId || (paperIdForm.enabled && (!paperIdForm.client_id || !paperIdForm.client_secret))}
+                      disabled={savingPaperId || (paperIdForm.enabled && !paperIdForm.client_id)}
                       size="lg"
                       className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-md w-full sm:w-auto"
                     >
                       <Save className="h-4 w-4 mr-2" />
                       {savingPaperId ? 'Saving...' : 'Save Configuration'}
                     </Button>
-                    {paperIdForm.enabled && (!paperIdForm.client_id || !paperIdForm.client_secret) && (
+                    {paperIdForm.enabled && !paperIdForm.client_id && (
                       <p className="text-sm text-red-600 font-medium">
-                        ⚠️ Both Client ID and Client Secret are required
+                        ⚠️ Client ID is required
                       </p>
                     )}
                   </div>
