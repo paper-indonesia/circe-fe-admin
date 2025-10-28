@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
 import { apiClient, ApiError } from "@/lib/api-client"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
-import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown, CheckCircle, AlertCircle, ArrowLeft, Loader2 } from "lucide-react"
+import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown, CheckCircle, AlertCircle, ArrowLeft, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { format, isToday, parseISO } from "date-fns"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -52,6 +52,7 @@ export default function StaffPage() {
   const [showAddStaffDialog, setShowAddStaffDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [staffToDelete, setStaffToDelete] = useState<any>(null)
+  const [showOptionalFields, setShowOptionalFields] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
   const [showErrorDialog, setShowErrorDialog] = useState(false)
   const [errorInfo, setErrorInfo] = useState<{ title: string; message: string; details?: string }>({
@@ -1592,13 +1593,23 @@ export default function StaffPage() {
       )}
 
       {/* Staff Profile Dialog */}
-      <Dialog open={showStaffDialog} onOpenChange={setShowStaffDialog}>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <Dialog open={showStaffDialog} onOpenChange={(open) => {
+        setShowStaffDialog(open)
+        if (!open) {
+          setShowOptionalFields(false) // Reset collapse state when closing
+        }
+      }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
+              <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Users className="h-5 w-5 text-[#8B5CF6]" />
                 {isEditMode ? "Edit Staff Profile" : "Staff Profile"}
               </DialogTitle>
+              {isEditMode && (
+                <p className="text-sm text-muted-foreground">
+                  Fields marked with * are required
+                </p>
+              )}
             </DialogHeader>
             {selectedStaff && (
               <div className="space-y-4">
@@ -1812,333 +1823,446 @@ export default function StaffPage() {
                   </>
                 ) : (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="edit-name" className="text-sm font-medium">
-                          Name *
-                        </Label>
-                        <Input
-                          id="edit-name"
-                          value={editStaffForm.name}
-                          onChange={(e) => {
-                            const fullName = e.target.value
-                            const nameParts = fullName.trim().split(' ')
-                            setEditStaffForm((prev) => ({
-                              ...prev,
-                              name: fullName,
-                              first_name: nameParts[0] || "",
-                              last_name: nameParts.slice(1).join(' ') || "",
-                              display_name: fullName
-                            }))
-                          }}
-                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        />
+                    {/* MANDATORY FIELDS SECTION */}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="edit-name" className="text-sm font-medium">
+                            Name *
+                          </Label>
+                          <Input
+                            id="edit-name"
+                            value={editStaffForm.name}
+                            onChange={(e) => {
+                              const fullName = e.target.value
+                              const nameParts = fullName.trim().split(' ')
+                              setEditStaffForm((prev) => ({
+                                ...prev,
+                                name: fullName,
+                                first_name: nameParts[0] || "",
+                                last_name: nameParts.slice(1).join(' ') || "",
+                                display_name: fullName
+                              }))
+                            }}
+                            className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-role" className="text-sm font-medium">
+                            Role / Posisi *
+                          </Label>
+                          {loadingPositions ? (
+                            <div className="h-11 flex items-center justify-center border rounded-md bg-gray-50 mt-1">
+                              <span className="text-sm text-gray-500">Loading positions...</span>
+                            </div>
+                          ) : positionTemplates.length > 0 ? (
+                            <Select
+                              value={editStaffForm.role}
+                              onValueChange={(value) => setEditStaffForm((prev) => ({
+                                ...prev,
+                                role: value,
+                                position: value
+                              }))}
+                            >
+                              <SelectTrigger className="mt-1 h-11 border-[#EDE9FE] focus:border-[#8B5CF6]">
+                                <SelectValue placeholder="Select a position" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {positionTemplates.map((position) => (
+                                  <SelectItem key={position} value={position}>
+                                    {position}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Input
+                              id="edit-role"
+                              value={editStaffForm.role}
+                              onChange={(e) => setEditStaffForm((prev) => ({
+                                ...prev,
+                                role: e.target.value,
+                                position: e.target.value
+                              }))}
+                              placeholder="e.g., Beauty Therapist, Massage Therapist"
+                              className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
+                              required
+                            />
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {positionTemplates.length > 0 ? "Select from your tenant's position templates" : "Enter staff position (customize in Settings)"}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <Label htmlFor="edit-role" className="text-sm font-medium">
-                          Role / Posisi *
-                        </Label>
-                        {loadingPositions ? (
-                          <div className="h-11 flex items-center justify-center border rounded-md bg-gray-50 mt-1">
-                            <span className="text-sm text-gray-500">Loading positions...</span>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="edit-email" className="text-sm font-medium">
+                            Email *
+                          </Label>
+                          <Input
+                            id="edit-email"
+                            type="email"
+                            value={editStaffForm.email}
+                            onChange={(e) => setEditStaffForm((prev) => ({ ...prev, email: e.target.value }))}
+                            className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-phone" className="text-sm font-medium">
+                            Nomor Telepon *
+                          </Label>
+                          <div className="flex gap-2 mt-1">
+                            <div className="flex items-center px-3 py-2 border border-[#EDE9FE] bg-gray-50 rounded-md text-gray-600 font-medium">
+                              +62
+                            </div>
+                            <Input
+                              id="edit-phone"
+                              type="tel"
+                              value={editStaffForm.phone}
+                              onChange={(e) => {
+                                // Only allow numbers and limit input
+                                const value = e.target.value.replace(/\D/g, '')
+                                setEditStaffForm((prev) => ({ ...prev, phone: value }))
+                              }}
+                              placeholder="81xxxxxxxxx"
+                              className="flex-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
+                              required
+                              minLength={9}
+                              maxLength={13}
+                            />
                           </div>
-                        ) : positionTemplates.length > 0 ? (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Masukkan nomor tanpa +62 (contoh: 81234567890)
+                          </p>
+                        </div>
+                      </div>
+
+                      {outlets.length > 0 && (
+                        <div>
+                          <Label htmlFor="edit-outlet" className="text-sm font-medium">
+                            Outlet
+                          </Label>
                           <Select
-                            value={editStaffForm.role}
-                            onValueChange={(value) => setEditStaffForm((prev) => ({
-                              ...prev,
-                              role: value,
-                              position: value
-                            }))}
+                            value={editStaffForm.outlet_id || outlets[0]?.id}
+                            onValueChange={(value) => setEditStaffForm((prev) => ({ ...prev, outlet_id: value }))}
                           >
-                            <SelectTrigger className="mt-1 h-11 border-[#EDE9FE] focus:border-[#8B5CF6]">
-                              <SelectValue placeholder="Select a position" />
+                            <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
+                              <SelectValue placeholder="Select outlet" />
                             </SelectTrigger>
                             <SelectContent>
-                              {positionTemplates.map((position) => (
-                                <SelectItem key={position} value={position}>
-                                  {position}
+                              {outlets.map((outlet: any) => (
+                                <SelectItem key={outlet.id} value={outlet.id}>
+                                  {outlet.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                        ) : (
-                          <Input
-                            id="edit-role"
-                            value={editStaffForm.role}
-                            onChange={(e) => setEditStaffForm((prev) => ({
-                              ...prev,
-                              role: e.target.value,
-                              position: e.target.value
-                            }))}
-                            placeholder="e.g., Beauty Therapist, Massage Therapist"
-                            className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
-                            required
-                          />
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {positionTemplates.length > 0 ? "Select from your tenant's position templates" : "Enter staff position (customize in Settings)"}
-                        </p>
-                      </div>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="edit-email" className="text-sm font-medium">
-                          Email *
-                        </Label>
-                        <Input
-                          id="edit-email"
-                          type="email"
-                          value={editStaffForm.email}
-                          onChange={(e) => setEditStaffForm((prev) => ({ ...prev, email: e.target.value }))}
-                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="edit-phone" className="text-sm font-medium">
-                          Phone
-                        </Label>
-                        <Input
-                          id="edit-phone"
-                          value={editStaffForm.phone}
-                          onChange={(e) => setEditStaffForm((prev) => ({ ...prev, phone: e.target.value }))}
-                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        />
-                      </div>
-                    </div>
+                    {/* COLLAPSIBLE OPTIONAL FIELDS BUTTON */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowOptionalFields(!showOptionalFields)}
+                      className="w-full justify-between border-2 border-purple-200 hover:bg-purple-50"
+                    >
+                      <span className="font-semibold text-purple-700">
+                        {showOptionalFields ? 'Hide' : 'Show'} Optional Fields
+                      </span>
+                      {showOptionalFields ? (
+                        <ChevronUp className="h-4 w-4 text-purple-700" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-purple-700" />
+                      )}
+                    </Button>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="edit-employment-type" className="text-sm font-medium">
-                          Jenis Pekerjaan
-                        </Label>
-                        <Select
-                          value={editStaffForm.employment_type}
-                          onValueChange={(value: "full_time" | "part_time" | "contract" | "freelance" | "intern") =>
-                            setEditStaffForm((prev) => ({ ...prev, employment_type: value }))
-                          }
-                        >
-                          <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="full_time">Full Time</SelectItem>
-                            <SelectItem value="part_time">Part Time</SelectItem>
-                            <SelectItem value="contract">Contract</SelectItem>
-                            <SelectItem value="freelance">Freelance</SelectItem>
-                            <SelectItem value="intern">Intern</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="edit-employee-id" className="text-sm font-medium">
-                          ID Karyawan
-                        </Label>
-                        <Input
-                          id="edit-employee-id"
-                          value={editStaffForm.employee_id}
-                          onChange={(e) => setEditStaffForm((prev) => ({ ...prev, employee_id: e.target.value }))}
-                          placeholder="EMP001"
-                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        />
-                      </div>
-                    </div>
+                    {/* OPTIONAL FIELDS SECTION (COLLAPSIBLE) */}
+                    {showOptionalFields && (
+                      <div className="space-y-4 p-4 bg-purple-50/30 border-2 border-purple-200 rounded-lg">
+                        <h3 className="font-semibold text-sm text-purple-900 mb-3">Optional Information</h3>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="edit-hire-date" className="text-sm font-medium">
-                          Tanggal Mulai Kerja
-                        </Label>
-                        <Input
-                          id="edit-hire-date"
-                          type="date"
-                          value={editStaffForm.hire_date}
-                          onChange={(e) => setEditStaffForm((prev) => ({ ...prev, hire_date: e.target.value }))}
-                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="edit-birth-date" className="text-sm font-medium">
-                          Tanggal Lahir
-                        </Label>
-                        <Input
-                          id="edit-birth-date"
-                          type="date"
-                          value={editStaffForm.birth_date}
-                          onChange={(e) => setEditStaffForm((prev) => ({ ...prev, birth_date: e.target.value }))}
-                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        />
-                      </div>
-                    </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="edit-employment-type" className="text-sm font-medium">
+                              Jenis Pekerjaan
+                            </Label>
+                            <Select
+                              value={editStaffForm.employment_type}
+                              onValueChange={(value: "full_time" | "part_time" | "contract" | "freelance" | "intern") =>
+                                setEditStaffForm((prev) => ({ ...prev, employment_type: value }))
+                              }
+                            >
+                              <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="full_time">Full Time</SelectItem>
+                                <SelectItem value="part_time">Part Time</SelectItem>
+                                <SelectItem value="contract">Contract</SelectItem>
+                                <SelectItem value="freelance">Freelance</SelectItem>
+                                <SelectItem value="intern">Intern</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="edit-employee-id" className="text-sm font-medium">
+                              ID Karyawan
+                            </Label>
+                            <Input
+                              id="edit-employee-id"
+                              value={editStaffForm.employee_id}
+                              onChange={(e) => setEditStaffForm((prev) => ({ ...prev, employee_id: e.target.value }))}
+                              placeholder="EMP001"
+                              className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                            />
+                          </div>
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="edit-hourly-rate" className="text-sm font-medium">
-                          Tarif Per Jam (Rp)
-                        </Label>
-                        <Input
-                          id="edit-hourly-rate"
-                          type="number"
-                          min="0"
-                          value={editStaffForm.hourly_rate || ""}
-                          onChange={(e) => setEditStaffForm((prev) => ({ ...prev, hourly_rate: e.target.value ? parseFloat(e.target.value) : null }))}
-                          placeholder="0"
-                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="edit-salary" className="text-sm font-medium">
-                          Gaji (Rp)
-                        </Label>
-                        <Input
-                          id="edit-salary"
-                          type="number"
-                          min="0"
-                          value={editStaffForm.salary || ""}
-                          onChange={(e) => setEditStaffForm((prev) => ({ ...prev, salary: e.target.value ? parseFloat(e.target.value) : null }))}
-                          placeholder="0"
-                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        />
-                      </div>
-                    </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="edit-hire-date" className="text-sm font-medium">
+                              Tanggal Mulai Kerja
+                            </Label>
+                            <Input
+                              id="edit-hire-date"
+                              type="date"
+                              value={editStaffForm.hire_date}
+                              onChange={(e) => setEditStaffForm((prev) => ({ ...prev, hire_date: e.target.value }))}
+                              className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="edit-birth-date" className="text-sm font-medium">
+                              Tanggal Lahir
+                            </Label>
+                            <Input
+                              id="edit-birth-date"
+                              type="date"
+                              value={editStaffForm.birth_date}
+                              onChange={(e) => setEditStaffForm((prev) => ({ ...prev, birth_date: e.target.value }))}
+                              className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                            />
+                          </div>
+                        </div>
 
-                    <div>
-                      <Label htmlFor="edit-photo" className="text-sm font-medium">
-                        Photo URL
-                      </Label>
-                      <Input
-                        id="edit-photo"
-                        value={editStaffForm.photo}
-                        onChange={(e) => setEditStaffForm((prev) => ({ ...prev, photo: e.target.value, profile_image_url: e.target.value }))}
-                        placeholder="https://example.com/photo.jpg"
-                        className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Enter a URL to the staff member's photo
-                      </p>
-                    </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="edit-hourly-rate" className="text-sm font-medium">
+                              Tarif Per Jam (Rp)
+                            </Label>
+                            <Input
+                              id="edit-hourly-rate"
+                              type="number"
+                              min="0"
+                              value={editStaffForm.hourly_rate || ""}
+                              onChange={(e) => setEditStaffForm((prev) => ({ ...prev, hourly_rate: e.target.value ? parseFloat(e.target.value) : null }))}
+                              placeholder="0"
+                              className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="edit-salary" className="text-sm font-medium">
+                              Gaji (Rp)
+                            </Label>
+                            <Input
+                              id="edit-salary"
+                              type="number"
+                              min="0"
+                              value={editStaffForm.salary || ""}
+                              onChange={(e) => setEditStaffForm((prev) => ({ ...prev, salary: e.target.value ? parseFloat(e.target.value) : null }))}
+                              placeholder="0"
+                              className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                            />
+                          </div>
+                        </div>
 
-                    <div>
-                      <Label htmlFor="edit-bio" className="text-sm font-medium">
-                        Bio / Deskripsi
-                      </Label>
-                      <Textarea
-                        id="edit-bio"
-                        value={editStaffForm.bio}
-                        onChange={(e) => setEditStaffForm((prev) => ({ ...prev, bio: e.target.value }))}
-                        placeholder="Deskripsi singkat tentang staff member..."
-                        className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        rows={2}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="edit-instagram" className="text-sm font-medium">
-                        Instagram Handle
-                      </Label>
-                      <Input
-                        id="edit-instagram"
-                        value={editStaffForm.instagram_handle}
-                        onChange={(e) => setEditStaffForm((prev) => ({ ...prev, instagram_handle: e.target.value }))}
-                        placeholder="@username"
-                        className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="edit-status" className="text-sm font-medium">
-                          Status
-                        </Label>
-                        <Select
-                          value={editStaffForm.status}
-                          onValueChange={(value: "active" | "inactive" | "terminated" | "on_leave") =>
-                            setEditStaffForm((prev) => ({ ...prev, status: value, is_active: value === "active" }))
-                          }
-                        >
-                          <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                            <SelectItem value="on_leave">On Leave</SelectItem>
-                            <SelectItem value="terminated">Terminated</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-end">
-                        <div className="flex items-center space-x-2 pb-2">
-                          <Checkbox
-                            id="edit-is-active"
-                            checked={editStaffForm.is_active}
-                            onCheckedChange={(checked) =>
-                              setEditStaffForm((prev) => ({ ...prev, is_active: checked as boolean }))
-                            }
-                            className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
-                          />
-                          <Label htmlFor="edit-is-active" className="text-sm cursor-pointer">
-                            Staff Aktif
+                        <div>
+                          <Label htmlFor="edit-photo" className="text-sm font-medium">
+                            Photo URL
                           </Label>
+                          <Input
+                            id="edit-photo"
+                            value={editStaffForm.photo}
+                            onChange={(e) => setEditStaffForm((prev) => ({ ...prev, photo: e.target.value, profile_image_url: e.target.value }))}
+                            placeholder="https://example.com/photo.jpg"
+                            className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Enter a URL to the staff member's photo
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="edit-bio" className="text-sm font-medium">
+                            Bio / Deskripsi
+                          </Label>
+                          <Textarea
+                            id="edit-bio"
+                            value={editStaffForm.bio}
+                            onChange={(e) => setEditStaffForm((prev) => ({ ...prev, bio: e.target.value }))}
+                            placeholder="Deskripsi singkat tentang staff member..."
+                            className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                            rows={2}
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="edit-instagram" className="text-sm font-medium">
+                            Instagram Handle
+                          </Label>
+                          <Input
+                            id="edit-instagram"
+                            value={editStaffForm.instagram_handle}
+                            onChange={(e) => setEditStaffForm((prev) => ({ ...prev, instagram_handle: e.target.value }))}
+                            placeholder="@username"
+                            className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="edit-status" className="text-sm font-medium">
+                              Status
+                            </Label>
+                            <Select
+                              value={editStaffForm.status}
+                              onValueChange={(value: "active" | "inactive" | "terminated" | "on_leave") =>
+                                setEditStaffForm((prev) => ({ ...prev, status: value, is_active: value === "active" }))
+                              }
+                            >
+                              <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="inactive">Inactive</SelectItem>
+                                <SelectItem value="on_leave">On Leave</SelectItem>
+                                <SelectItem value="terminated">Terminated</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-end">
+                            <div className="flex items-center space-x-2 pb-2">
+                              <Checkbox
+                                id="edit-is-active"
+                                checked={editStaffForm.is_active}
+                                onCheckedChange={(checked) =>
+                                  setEditStaffForm((prev) => ({ ...prev, is_active: checked as boolean }))
+                                }
+                                className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
+                              />
+                              <Label htmlFor="edit-is-active" className="text-sm cursor-pointer">
+                                Staff Aktif
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="border border-[#EDE9FE] rounded-lg p-4 space-y-3">
+                          <Label className="text-sm font-medium">Pengaturan Booking</Label>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="edit-is-bookable"
+                              checked={editStaffForm.is_bookable}
+                              onCheckedChange={(checked) =>
+                                setEditStaffForm((prev) => ({ ...prev, is_bookable: checked as boolean }))
+                              }
+                              className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
+                            />
+                            <Label htmlFor="edit-is-bookable" className="text-sm cursor-pointer">
+                              Staff dapat dibooking
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="edit-accepts-online"
+                              checked={editStaffForm.accepts_online_booking}
+                              onCheckedChange={(checked) =>
+                                setEditStaffForm((prev) => ({ ...prev, accepts_online_booking: checked as boolean }))
+                              }
+                              className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
+                            />
+                            <Label htmlFor="edit-accepts-online" className="text-sm cursor-pointer">
+                              Terima booking online
+                            </Label>
+                          </div>
+                          <div>
+                            <Label htmlFor="edit-max-days" className="text-sm font-medium">
+                              Maksimal hari booking di muka
+                            </Label>
+                            <Input
+                              id="edit-max-days"
+                              type="number"
+                              min="1"
+                              max="365"
+                              value={editStaffForm.max_advance_booking_days}
+                              onChange={(e) =>
+                                setEditStaffForm((prev) => ({ ...prev, max_advance_booking_days: parseInt(e.target.value) || 30 }))
+                              }
+                              placeholder="30"
+                              className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <Label className="text-sm font-medium">Skills & Specialties</Label>
+                          <div className="flex gap-2 mt-1">
+                            <Input
+                              value={editSkillInput}
+                              onChange={(e) => setEditSkillInput(e.target.value)}
+                              placeholder="Add a skill"
+                              className="border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
+                              onKeyPress={(e) => e.key === "Enter" && handleEditAddSkill()}
+                            />
+                            <Button
+                              type="button"
+                              onClick={handleEditAddSkill}
+                              size="sm"
+                              className="bg-[#EDE9FE] hover:bg-[#8B5CF6] text-[#6D28D9]"
+                            >
+                              Add
+                            </Button>
+                          </div>
+                          {editStaffForm.skills && editStaffForm.skills.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {editStaffForm.skills.map((skill) => (
+                                <Badge
+                                  key={skill}
+                                  variant="secondary"
+                                  className="text-xs bg-[#FCD6F5] text-[#6D28D9] hover:bg-[#EDE9FE]"
+                                >
+                                  {skill}
+                                  <button onClick={() => handleEditRemoveSkill(skill)} className="ml-1 hover:text-red-600">
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    )}
 
-                    <div className="border border-[#EDE9FE] rounded-lg p-4 space-y-3">
-                      <Label className="text-sm font-medium">Pengaturan Booking</Label>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="edit-is-bookable"
-                          checked={editStaffForm.is_bookable}
-                          onCheckedChange={(checked) =>
-                            setEditStaffForm((prev) => ({ ...prev, is_bookable: checked as boolean }))
-                          }
-                          className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
-                        />
-                        <Label htmlFor="edit-is-bookable" className="text-sm cursor-pointer">
-                          Staff dapat dibooking
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="edit-accepts-online"
-                          checked={editStaffForm.accepts_online_booking}
-                          onCheckedChange={(checked) =>
-                            setEditStaffForm((prev) => ({ ...prev, accepts_online_booking: checked as boolean }))
-                          }
-                          className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
-                        />
-                        <Label htmlFor="edit-accepts-online" className="text-sm cursor-pointer">
-                          Terima booking online
-                        </Label>
-                      </div>
-                      <div>
-                        <Label htmlFor="edit-max-days" className="text-sm font-medium">
-                          Maksimal hari booking di muka
-                        </Label>
-                        <Input
-                          id="edit-max-days"
-                          type="number"
-                          min="1"
-                          max="365"
-                          value={editStaffForm.max_advance_booking_days}
-                          onChange={(e) =>
-                            setEditStaffForm((prev) => ({ ...prev, max_advance_booking_days: parseInt(e.target.value) || 30 }))
-                          }
-                          placeholder="30"
-                          className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium">Assigned Products</Label>
-                      <div className="space-y-2 mt-2 max-h-40 overflow-y-auto border border-[#EDE9FE] rounded-lg p-3">
+                    {/* SERVICE ASSIGNMENT SECTION - Always visible as mandatory */}
+                    <div className="border-t-2 border-purple-100 pt-6">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        Assign Products / Services *
+                        <Badge variant="destructive" className="text-xs">Wajib</Badge>
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1 mb-2">
+                        Pilih minimal 1 layanan yang dapat dilakukan oleh staff ini
+                      </p>
+                      <div className="space-y-2 mt-2 max-h-60 overflow-y-auto border-2 border-[#C4B5FD] rounded-lg p-4 bg-gray-50">
                         {treatments.map((treatment) => (
                           <div key={treatment.id} className="flex items-center space-x-2">
                             <Checkbox
-                              id={`treatment-${treatment.id}`}
+                              id={`edit-treatment-${treatment.id}`}
                               checked={editStaffForm.assignedTreatments?.includes(treatment.id) || false}
                               onCheckedChange={(checked) => {
                                 setEditStaffForm((prev) => {
@@ -2160,55 +2284,18 @@ export default function StaffPage() {
                               }}
                               className="border-[#EDE9FE] data-[state=checked]:bg-[#8B5CF6]"
                             />
-                            <Label htmlFor={`treatment-${treatment.id}`} className="text-sm cursor-pointer flex-1">
+                            <Label htmlFor={`edit-treatment-${treatment.id}`} className="text-sm cursor-pointer flex-1">
                               <div className="flex items-center gap-2">
                                 <span>{treatment.name}</span>
                                 <Badge variant="outline" className="text-xs">
                                   {treatment.duration}min
                                 </Badge>
-                                <span className="text-muted-foreground">{formatCurrency(treatment.price || 0)}</span>
+                                <span className="text-muted-foreground text-xs">{formatCurrency(treatment.price || 0)}</span>
                               </div>
                             </Label>
                           </div>
                         ))}
                       </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-sm font-medium">Skills & Specialties</Label>
-                      <div className="flex gap-2 mt-1">
-                        <Input
-                          value={editSkillInput}
-                          onChange={(e) => setEditSkillInput(e.target.value)}
-                          placeholder="Add a skill"
-                          className="border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
-                          onKeyPress={(e) => e.key === "Enter" && handleEditAddSkill()}
-                        />
-                        <Button
-                          type="button"
-                          onClick={handleEditAddSkill}
-                          size="sm"
-                          className="bg-[#EDE9FE] hover:bg-[#8B5CF6] text-[#6D28D9]"
-                        >
-                          Add
-                        </Button>
-                      </div>
-                      {editStaffForm.skills && editStaffForm.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {editStaffForm.skills.map((skill) => (
-                            <Badge
-                              key={skill}
-                              variant="secondary"
-                              className="text-xs bg-[#FCD6F5] text-[#6D28D9] hover:bg-[#EDE9FE]"
-                            >
-                              {skill}
-                              <button onClick={() => handleEditRemoveSkill(skill)} className="ml-1 hover:text-red-600">
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
                     <div className="flex gap-3">
@@ -2677,15 +2764,25 @@ export default function StaffPage() {
         </Dialog>
 
         {/* Add Staff Member Dialog */}
-        <Dialog open={showAddStaffDialog} onOpenChange={setShowAddStaffDialog}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <Dialog open={showAddStaffDialog} onOpenChange={(open) => {
+          setShowAddStaffDialog(open)
+          if (!open) {
+            setShowOptionalFields(false) // Reset collapse state when closing
+          }
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
                 <Users className="h-5 w-5 text-[#8B5CF6]" />
                 Add New Staff Member
               </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Fields marked with * are required
+              </p>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* MANDATORY FIELDS SECTION */}
+              <div className="space-y-4 pb-4 border-b-2 border-purple-100">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="first_name" className="text-sm font-medium">
@@ -2792,58 +2889,117 @@ export default function StaffPage() {
                   <Label htmlFor="phone" className="text-sm font-medium">
                     Nomor Telepon *
                   </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={newStaffForm.phone}
-                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, phone: e.target.value }))}
-                    placeholder="+6281xxxxxxxxx atau 081xxxxxxxxx"
-                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
-                    required
-                    minLength={10}
-                  />
+                  <div className="flex gap-2 mt-1">
+                    <div className="flex items-center px-3 py-2 border border-[#EDE9FE] bg-gray-50 rounded-md text-gray-600 font-medium">
+                      +62
+                    </div>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={newStaffForm.phone}
+                      onChange={(e) => {
+                        // Only allow numbers and limit input
+                        const value = e.target.value.replace(/\D/g, '')
+                        setNewStaffForm((prev) => ({ ...prev, phone: value }))
+                      }}
+                      placeholder="81xxxxxxxxx"
+                      className="flex-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
+                      required
+                      minLength={9}
+                      maxLength={13}
+                    />
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Minimal 10 karakter
+                    Masukkan nomor tanpa +62 (contoh: 81234567890)
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {outlets.length > 0 && (
                 <div>
-                  <Label htmlFor="employment_type" className="text-sm font-medium">
-                    Jenis Pekerjaan *
+                  <Label htmlFor="outlet_id" className="text-sm font-medium">
+                    Outlet *
                   </Label>
                   <Select
-                    value={newStaffForm.employment_type}
-                    onValueChange={(value: "full_time" | "part_time" | "contract" | "freelance" | "intern") =>
-                      setNewStaffForm((prev) => ({ ...prev, employment_type: value }))
-                    }
+                    value={newStaffForm.outlet_id}
+                    onValueChange={(value) => setNewStaffForm((prev) => ({ ...prev, outlet_id: value }))}
                   >
                     <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
-                      <SelectValue />
+                      <SelectValue placeholder="Pilih outlet" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="full_time">Full Time</SelectItem>
-                      <SelectItem value="part_time">Part Time</SelectItem>
-                      <SelectItem value="contract">Contract</SelectItem>
-                      <SelectItem value="freelance">Freelance</SelectItem>
-                      <SelectItem value="intern">Intern</SelectItem>
+                      {outlets.map((outlet) => (
+                        <SelectItem key={outlet._id || outlet.id} value={outlet._id || outlet.id}>
+                          {outlet.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Pilih outlet tempat staff akan ditempatkan
+                  </p>
                 </div>
-                <div>
-                  <Label htmlFor="employee_id" className="text-sm font-medium">
-                    ID Karyawan
-                  </Label>
-                  <Input
-                    id="employee_id"
-                    value={newStaffForm.employee_id}
-                    onChange={(e) => setNewStaffForm((prev) => ({ ...prev, employee_id: e.target.value }))}
-                    placeholder="Contoh: EMP001"
-                    className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
-                  />
-                </div>
+              )}
+
+              <div>
+                <Label htmlFor="employment_type" className="text-sm font-medium">
+                  Jenis Pekerjaan *
+                </Label>
+                <Select
+                  value={newStaffForm.employment_type}
+                  onValueChange={(value: "full_time" | "part_time" | "contract" | "freelance" | "intern") =>
+                    setNewStaffForm((prev) => ({ ...prev, employment_type: value }))
+                  }
+                >
+                  <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full_time">Full Time</SelectItem>
+                    <SelectItem value="part_time">Part Time</SelectItem>
+                    <SelectItem value="contract">Contract</SelectItem>
+                    <SelectItem value="freelance">Freelance</SelectItem>
+                    <SelectItem value="intern">Intern</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+              </div>
+
+              {/* OPTIONAL FIELDS SECTION - Collapsible */}
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowOptionalFields(!showOptionalFields)}
+                  className="w-full justify-between border-2 border-purple-200 hover:bg-purple-50"
+                >
+                  <span className="font-semibold text-purple-700">
+                    {showOptionalFields ? 'Hide' : 'Show'} Optional Fields
+                  </span>
+                  {showOptionalFields ? (
+                    <ChevronUp className="h-4 w-4 text-purple-700" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-purple-700" />
+                  )}
+                </Button>
+              </div>
+
+              {showOptionalFields && (
+                <div className="space-y-4 p-4 bg-purple-50/30 border-2 border-purple-200 rounded-lg">
+                  <h3 className="font-semibold text-sm text-purple-900 mb-3">Optional Information</h3>
+
+                  <div>
+                    <Label htmlFor="employee_id" className="text-sm font-medium">
+                      ID Karyawan
+                    </Label>
+                    <Input
+                      id="employee_id"
+                      value={newStaffForm.employee_id}
+                      onChange={(e) => setNewStaffForm((prev) => ({ ...prev, employee_id: e.target.value }))}
+                      placeholder="Contoh: EMP001"
+                      className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
+                    />
+                  </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -2935,32 +3091,6 @@ export default function StaffPage() {
                 </div>
               </div>
 
-              {outlets.length > 0 && (
-                <div>
-                  <Label htmlFor="outlet_id" className="text-sm font-medium">
-                    Outlet *
-                  </Label>
-                  <Select
-                    value={newStaffForm.outlet_id}
-                    onValueChange={(value) => setNewStaffForm((prev) => ({ ...prev, outlet_id: value }))}
-                  >
-                    <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
-                      <SelectValue placeholder="Pilih outlet" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {outlets.map((outlet) => (
-                        <SelectItem key={outlet._id || outlet.id} value={outlet._id || outlet.id}>
-                          {outlet.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Pilih outlet tempat staff akan ditempatkan (wajib diisi)
-                  </p>
-                </div>
-              )}
-
               <div>
                 <Label htmlFor="profile_image_url" className="text-sm font-medium">
                   Profile Image URL
@@ -2972,9 +3102,6 @@ export default function StaffPage() {
                   placeholder="https://example.com/photo.jpg"
                   className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6] focus:ring-[#8B5CF6]"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Enter a URL to the staff member's profile image
-                </p>
               </div>
 
               <div>
@@ -2991,7 +3118,7 @@ export default function StaffPage() {
                 />
               </div>
 
-              <div className="border border-[#EDE9FE] rounded-lg p-4 space-y-3">
+              <div className="border border-purple-300 rounded-lg p-4 space-y-3">
                 <Label className="text-sm font-medium">Pengaturan Booking</Label>
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -3159,9 +3286,18 @@ export default function StaffPage() {
                   </div>
                 )}
               </div>
+                </div>
+              )}
 
-              <div>
-                <Label className="text-sm font-medium">Assign Products / Services *</Label>
+              {/* Service Assignment - Always visible as it's mandatory */}
+              <div className="border-t-2 border-purple-100 pt-6">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  Assign Products / Services *
+                  <Badge variant="destructive" className="text-xs">Wajib</Badge>
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                  Pilih minimal 1 layanan yang dapat dilakukan oleh staff ini
+                </p>
                 <div className="mt-2 border-2 border-[#C4B5FD] rounded-lg p-4 bg-gray-50">
                   {/* Select All Option */}
                   <div className="flex items-center space-x-3 pb-3 border-b-2 border-[#C4B5FD] mb-3 bg-white p-3 rounded-md shadow-sm">
