@@ -69,6 +69,23 @@ interface SecuritySettings {
   passwordExpiry: string
 }
 
+// Utility functions to convert between display and API formats
+const formatDisplayName = (apiFormat: string): string => {
+  // Convert "facial_treatment" to "Facial Treatment"
+  return apiFormat
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+const formatApiName = (displayFormat: string): string => {
+  // Convert "Facial Treatment" to "facial_treatment"
+  return displayFormat
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+}
+
 export default function SettingsPage() {
   const { toast } = useToast()
   const { user, isAdmin } = useAuth()
@@ -704,6 +721,9 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">
                       Define position templates that will appear as suggestions when creating/updating staff members
                     </p>
+                    <p className="text-xs text-muted-foreground italic">
+                      e.g., Massage Therapist, Receptionist
+                    </p>
                     <div className="space-y-3">
                       <div className="flex gap-2">
                         <Input
@@ -713,15 +733,18 @@ export default function SettingsPage() {
                           onKeyPress={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault()
-                              if (newStaffPosition.trim() && !tenantForm.settings.staff_position_templates.includes(newStaffPosition.trim())) {
-                                setTenantForm(prev => ({
-                                  ...prev,
-                                  settings: {
-                                    ...prev.settings,
-                                    staff_position_templates: [...prev.settings.staff_position_templates, newStaffPosition.trim()]
-                                  }
-                                }))
-                                setNewStaffPosition("")
+                              if (newStaffPosition.trim()) {
+                                const formatted = formatApiName(newStaffPosition)
+                                if (!tenantForm.settings.staff_position_templates.includes(formatted)) {
+                                  setTenantForm(prev => ({
+                                    ...prev,
+                                    settings: {
+                                      ...prev.settings,
+                                      staff_position_templates: [...prev.settings.staff_position_templates, formatted]
+                                    }
+                                  }))
+                                  setNewStaffPosition("")
+                                }
                               }
                             }
                           }}
@@ -731,15 +754,18 @@ export default function SettingsPage() {
                           type="button"
                           variant="outline"
                           onClick={() => {
-                            if (newStaffPosition.trim() && !tenantForm.settings.staff_position_templates.includes(newStaffPosition.trim())) {
-                              setTenantForm(prev => ({
-                                ...prev,
-                                settings: {
-                                  ...prev.settings,
-                                  staff_position_templates: [...prev.settings.staff_position_templates, newStaffPosition.trim()]
-                                }
-                              }))
-                              setNewStaffPosition("")
+                            if (newStaffPosition.trim()) {
+                              const formatted = formatApiName(newStaffPosition)
+                              if (!tenantForm.settings.staff_position_templates.includes(formatted)) {
+                                setTenantForm(prev => ({
+                                  ...prev,
+                                  settings: {
+                                    ...prev.settings,
+                                    staff_position_templates: [...prev.settings.staff_position_templates, formatted]
+                                  }
+                                }))
+                                setNewStaffPosition("")
+                              }
                             }
                           }}
                         >
@@ -749,7 +775,7 @@ export default function SettingsPage() {
                       <div className="flex flex-wrap gap-2">
                         {tenantForm.settings.staff_position_templates.map((position, index) => (
                           <Badge key={index} variant="secondary" className="text-sm py-1 px-3">
-                            {position}
+                            {formatDisplayName(position)}
                             <button
                               type="button"
                               onClick={() => {
@@ -783,17 +809,42 @@ export default function SettingsPage() {
                     <p className="text-sm text-muted-foreground">
                       Define service categories that will appear as options when creating products/services
                     </p>
+                    <p className="text-xs text-muted-foreground italic">
+                      e.g., Massage, Facial, Hair Cut
+                    </p>
                     <div className="space-y-3">
                       <div className="flex gap-2">
                         <Input
-                          placeholder="e.g., massage, facial, hair_cut (lowercase with underscores)"
+                          placeholder="e.g., Massage, Facial, Hair Cut"
                           value={newServiceCategory}
                           onChange={(e) => setNewServiceCategory(e.target.value)}
                           onKeyPress={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault()
-                              const formatted = newServiceCategory.trim().toLowerCase().replace(/\s+/g, '_')
-                              if (formatted && !tenantForm.settings.service_category_templates.includes(formatted)) {
+                              if (newServiceCategory.trim()) {
+                                const formatted = formatApiName(newServiceCategory)
+                                if (!tenantForm.settings.service_category_templates.includes(formatted)) {
+                                  setTenantForm(prev => ({
+                                    ...prev,
+                                    settings: {
+                                      ...prev.settings,
+                                      service_category_templates: [...prev.settings.service_category_templates, formatted]
+                                    }
+                                  }))
+                                  setNewServiceCategory("")
+                                }
+                              }
+                            }
+                          }}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            if (newServiceCategory.trim()) {
+                              const formatted = formatApiName(newServiceCategory)
+                              if (!tenantForm.settings.service_category_templates.includes(formatted)) {
                                 setTenantForm(prev => ({
                                   ...prev,
                                   settings: {
@@ -805,24 +856,6 @@ export default function SettingsPage() {
                               }
                             }
                           }}
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            const formatted = newServiceCategory.trim().toLowerCase().replace(/\s+/g, '_')
-                            if (formatted && !tenantForm.settings.service_category_templates.includes(formatted)) {
-                              setTenantForm(prev => ({
-                                ...prev,
-                                settings: {
-                                  ...prev.settings,
-                                  service_category_templates: [...prev.settings.service_category_templates, formatted]
-                                }
-                              }))
-                              setNewServiceCategory("")
-                            }
-                          }}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
@@ -830,7 +863,7 @@ export default function SettingsPage() {
                       <div className="flex flex-wrap gap-2">
                         {tenantForm.settings.service_category_templates.map((category, index) => (
                           <Badge key={index} variant="secondary" className="text-sm py-1 px-3">
-                            {category}
+                            {formatDisplayName(category)}
                             <button
                               type="button"
                               onClick={() => {
