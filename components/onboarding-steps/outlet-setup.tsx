@@ -171,6 +171,19 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
           .replace(/^-+|-+$/g, '')
       }
 
+      // Ensure all open days have open_time and close_time
+      const validatedBusinessHours = formData.business_hours.map(bh => {
+        if (bh.is_open) {
+          return {
+            day: bh.day,
+            is_open: true,
+            open_time: bh.open_time || "09:00",
+            close_time: bh.close_time || "18:00"
+          }
+        }
+        return { day: bh.day, is_open: false }
+      })
+
       const outletData = {
         tenant_id: tenantId,
         name: formData.name.trim(),
@@ -188,7 +201,7 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
           ...(formData.contact.email?.trim() && { email: formData.contact.email.trim() })
         },
         status: formData.status,
-        business_hours: formData.business_hours,
+        business_hours: validatedBusinessHours,
         settings: formData.settings
       }
 
@@ -471,7 +484,18 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
                                 checked={bh.is_open}
                                 onChange={(e) => {
                                   const newHours = [...formData.business_hours]
-                                  newHours[index] = { ...bh, is_open: e.target.checked }
+                                  if (e.target.checked) {
+                                    // When opening, ensure open_time and close_time are set
+                                    newHours[index] = {
+                                      ...bh,
+                                      is_open: true,
+                                      open_time: bh.open_time || "09:00",
+                                      close_time: bh.close_time || "18:00"
+                                    }
+                                  } else {
+                                    // When closing, remove open_time and close_time
+                                    newHours[index] = { day: bh.day, is_open: false }
+                                  }
                                   setFormData({ ...formData, business_hours: newHours })
                                 }}
                                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"

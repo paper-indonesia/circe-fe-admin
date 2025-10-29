@@ -233,9 +233,23 @@ export default function OutletManagementPage() {
         return
       }
 
+      // Ensure all open days have open_time and close_time
+      const validatedBusinessHours = formData.business_hours.map(bh => {
+        if (bh.is_open) {
+          return {
+            day: bh.day,
+            is_open: true,
+            open_time: bh.open_time || "09:00",
+            close_time: bh.close_time || "18:00"
+          }
+        }
+        return { day: bh.day, is_open: false }
+      })
+
       // Add tenant_id to formData
       const outletData = {
         ...formData,
+        business_hours: validatedBusinessHours,
         tenant_id: tenant.id
       }
 
@@ -250,7 +264,7 @@ export default function OutletManagementPage() {
         setIsAddDialogOpen(false)
         resetForm()
         fetchOutlets()
-        fetchUsage() // Refresh usage after adding outlet
+        // Usage data is refreshed automatically by subscription context
         setTimeout(() => setSuccess(""), 3000)
       } else {
         const data = await response.json()
@@ -291,10 +305,29 @@ export default function OutletManagementPage() {
 
     try {
       setError("")
+
+      // Ensure all open days have open_time and close_time
+      const validatedBusinessHours = formData.business_hours.map(bh => {
+        if (bh.is_open) {
+          return {
+            day: bh.day,
+            is_open: true,
+            open_time: bh.open_time || "09:00",
+            close_time: bh.close_time || "18:00"
+          }
+        }
+        return { day: bh.day, is_open: false }
+      })
+
+      const outletData = {
+        ...formData,
+        business_hours: validatedBusinessHours
+      }
+
       const response = await fetch(`/api/outlets/${selectedOutlet.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(outletData)
       })
 
       if (response.ok) {
@@ -456,7 +489,22 @@ export default function OutletManagementPage() {
 
   const updateBusinessHour = (dayIndex: number, field: keyof BusinessHour, value: any) => {
     const newHours = [...formData.business_hours]
-    newHours[dayIndex] = { ...newHours[dayIndex], [field]: value }
+    if (field === 'is_open') {
+      if (value) {
+        // When opening, ensure open_time and close_time are set
+        newHours[dayIndex] = {
+          ...newHours[dayIndex],
+          is_open: true,
+          open_time: newHours[dayIndex].open_time || "09:00",
+          close_time: newHours[dayIndex].close_time || "18:00"
+        }
+      } else {
+        // When closing, keep only day and is_open
+        newHours[dayIndex] = { day: newHours[dayIndex].day, is_open: false }
+      }
+    } else {
+      newHours[dayIndex] = { ...newHours[dayIndex], [field]: value }
+    }
     setFormData({ ...formData, business_hours: newHours })
   }
 
