@@ -510,17 +510,36 @@ export default function SettingsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="tenantDescription" className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                          Description
-                        </Label>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="tenantDescription" className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-blue-600" />
+                            Description
+                          </Label>
+                          <span className={`text-xs ${
+                            tenantForm.description.length > 150
+                              ? 'text-red-600 font-semibold'
+                              : tenantForm.description.length > 130
+                              ? 'text-orange-600 font-semibold'
+                              : 'text-gray-500'
+                          }`}>
+                            {tenantForm.description.length}/150 karakter
+                          </span>
+                        </div>
                         <Textarea
                           id="tenantDescription"
                           value={tenantForm.description}
                           onChange={(e) => setTenantForm(prev => ({ ...prev, description: e.target.value }))}
                           placeholder="Premium beauty and wellness services"
+                          maxLength={150}
                           rows={3}
+                          className={tenantForm.description.length > 150 ? 'border-red-500 focus-visible:ring-red-500' : ''}
                         />
+                        {tenantForm.description.length > 150 && (
+                          <p className="text-xs text-red-600 flex items-center gap-1 animate-fadeIn">
+                            <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                            Deskripsi maksimal 150 karakter
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

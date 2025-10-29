@@ -185,13 +185,35 @@ export default function SignUpPage() {
     return ""
   }
 
-  const validateName = (name: string, fieldName: string): string => {
+  const validateName = (name: string, fieldName: string, maxLength: number = 50): string => {
     if (!name) return ""
     if (name.length < 2) {
       return `${fieldName} minimal 2 karakter`
     }
+    if (name.length > maxLength) {
+      return `${fieldName} maksimal ${maxLength} karakter`
+    }
     if (!/^[a-zA-Z\s]+$/.test(name)) {
       return `${fieldName} hanya boleh berisi huruf`
+    }
+    return ""
+  }
+
+  const validateBusinessName = (name: string): string => {
+    if (!name) return ""
+    if (name.length < 2) {
+      return "Nama bisnis minimal 2 karakter"
+    }
+    if (name.length > 100) {
+      return "Nama bisnis maksimal 100 karakter"
+    }
+    return ""
+  }
+
+  const validateDescription = (description: string): string => {
+    if (!description) return "" // Optional field
+    if (description.length > 100) {
+      return "Deskripsi maksimal 100 karakter"
     }
     return ""
   }
@@ -231,13 +253,16 @@ export default function SignUpPage() {
         error = validatePhone(value)
         break
       case 'business_name':
-        error = validateName(value, "Nama bisnis")
+        error = validateBusinessName(value)
+        break
+      case 'description':
+        error = validateDescription(value)
         break
       case 'admin_first_name':
-        error = validateName(value, "Nama depan")
+        error = validateName(value, "Nama depan", 50)
         break
       case 'admin_last_name':
-        error = validateName(value, "Nama belakang")
+        error = validateName(value, "Nama belakang", 50)
         break
       case 'admin_password':
         error = validatePassword(value)
@@ -763,14 +788,17 @@ export default function SignUpPage() {
                             value={formData.business_name}
                             onChange={handleChange}
                             onBlur={handleBlur}
+                            maxLength={100}
                             className={`h-11 ${fieldErrors.business_name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                             disabled={isLoading}
                           />
-                          {fieldErrors.business_name && (
+                          {fieldErrors.business_name ? (
                             <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
                               <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
                               {fieldErrors.business_name}
                             </p>
+                          ) : (
+                            <p className="text-xs text-gray-500">{formData.business_name.length}/100 karakter</p>
                           )}
                         </div>
 
@@ -863,15 +891,34 @@ export default function SignUpPage() {
                         </div>
 
                         <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="description">Business Description (Optional)</Label>
+                          <div className="flex items-center justify-between">
+                            <Label htmlFor="description">Business Description (Optional)</Label>
+                            <span className={`text-xs ${
+                              formData.description.length > 150
+                                ? 'text-red-600 font-semibold'
+                                : formData.description.length > 50
+                                ? 'text-orange-600 font-semibold'
+                                : 'text-gray-500'
+                            }`}>
+                              {formData.description.length}/150 karakter
+                            </span>
+                          </div>
                           <Textarea
                             id="description"
                             placeholder="Tell us about your business..."
                             value={formData.description}
                             onChange={handleChange}
-                            className="min-h-[80px] resize-none"
+                            onBlur={handleBlur}
+                            maxLength={150}
+                            className={`min-h-[80px] resize-none ${fieldErrors.description ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                             disabled={isLoading}
                           />
+                          {fieldErrors.description && (
+                            <p className="text-sm text-red-600 flex items-center gap-1 animate-fadeIn">
+                              <span className="inline-block w-1 h-1 bg-red-600 rounded-full"></span>
+                              {fieldErrors.description}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </motion.div>
@@ -900,6 +947,7 @@ export default function SignUpPage() {
                               value={formData.admin_first_name}
                               onChange={handleChange}
                               onBlur={handleBlur}
+                              maxLength={50}
                               className={`pl-10 h-11 ${fieldErrors.admin_first_name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               disabled={isLoading}
                             />
@@ -923,6 +971,7 @@ export default function SignUpPage() {
                               value={formData.admin_last_name}
                               onChange={handleChange}
                               onBlur={handleBlur}
+                              maxLength={50}
                               className={`pl-10 h-11 ${fieldErrors.admin_last_name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               disabled={isLoading}
                             />
