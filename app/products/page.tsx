@@ -68,7 +68,7 @@ export default function TreatmentsPage() {
     maxParallelBookings: 1,
     tags: [] as string[],
     isActive: true,
-    status: "active" as "active" | "inactive" | "draft",
+    status: "active" as "active" | "inactive" | "archived",
   })
 
   useEffect(() => {
@@ -427,6 +427,19 @@ export default function TreatmentsPage() {
     })
   }
 
+  function getStatusBadge(status: string) {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
+      case "inactive":
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Inactive</Badge>
+      case "archived":
+        return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Archived</Badge>
+      default:
+        return <Badge variant="outline">{status}</Badge>
+    }
+  }
+
   function getPopularityBadge(popularity: string) {
     switch (popularity) {
       case "high":
@@ -547,6 +560,7 @@ export default function TreatmentsPage() {
                       <TableHead>Product</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Duration & Price</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Popularity</TableHead>
                       <TableHead>Bookings</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -594,6 +608,7 @@ export default function TreatmentsPage() {
                             </div>
                           </div>
                         </TableCell>
+                        <TableCell className="p-4">{getStatusBadge(treatment.status || "active")}</TableCell>
                         <TableCell className="p-4">{getPopularityBadge(treatment.popularity)}</TableCell>
                         <TableCell className="p-4">
                           <div className="text-sm">
@@ -859,35 +874,59 @@ export default function TreatmentsPage() {
             </div>
 
             {/* Status & Active Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  id="isActive"
-                  checked={treatmentForm.isActive}
-                  onCheckedChange={(checked) => setTreatmentForm((prev) => ({ ...prev, isActive: !!checked }))}
-                  className="h-5 w-5"
-                />
-                <div>
-                  <Label htmlFor="isActive" className="cursor-pointer font-medium text-sm">
-                    Active Product
-                  </Label>
-                  <p className="text-xs text-gray-500">Make this product available for booking</p>
-                </div>
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <Settings className="h-4 w-4 text-[#8B5CF6]" />
+                Status & Availability
               </div>
 
-              <Select
-                value={treatmentForm.status}
-                onValueChange={(value: any) => setTreatmentForm((prev) => ({ ...prev, status: value }))}
-              >
-                <SelectTrigger className="w-32 h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="status" className="text-sm font-medium">
+                    Product Status <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={treatmentForm.status}
+                    onValueChange={(value: any) => {
+                      setTreatmentForm((prev) => ({
+                        ...prev,
+                        status: value,
+                        // Auto-sync isActive based on status
+                        isActive: value === "active"
+                      }))
+                    }}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                          <span>Active - Available for booking</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="inactive">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-gray-500"></div>
+                          <span>Inactive - Hidden from booking</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="archived">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-orange-500"></div>
+                          <span>Archived - Discontinued product</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500">
+                    {treatmentForm.status === "active" && "Product is visible and can be booked by customers"}
+                    {treatmentForm.status === "inactive" && "Product is hidden and cannot be booked (use for temporary unavailability)"}
+                    {treatmentForm.status === "archived" && "Product is archived and no longer offered"}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Advanced Settings - Collapsible */}

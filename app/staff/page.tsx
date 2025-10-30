@@ -146,9 +146,11 @@ export default function StaffPage() {
   }))
   const [dateRange, setDateRange] = useState(() => {
     const today = new Date()
+    const thirtyDaysLater = new Date(today)
+    thirtyDaysLater.setDate(today.getDate() + 30)
     return {
-      start: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0],
-      end: new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0],
+      start: today.toISOString().split('T')[0],
+      end: thirtyDaysLater.toISOString().split('T')[0],
     }
   })
 
@@ -1327,9 +1329,9 @@ export default function StaffPage() {
                     <TableCell>
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
                         {(() => {
-                          // Get assigned products
+                          // Get assigned products (only active products)
                           const assignedProducts = treatments.filter((treatment) =>
-                            treatment.assignedStaff?.includes(staffMember.id)
+                            treatment.status === "active" && treatment.assignedStaff?.includes(staffMember.id)
                           )
 
                           // Get service_ids from skills
@@ -1338,9 +1340,9 @@ export default function StaffPage() {
                             serviceIds = staffMember.skills.service_ids || []
                           }
 
-                          // Get products by service_ids if available, otherwise use assignedStaff
+                          // Get products by service_ids if available, otherwise use assignedStaff (only active products)
                           const productsToShow = serviceIds.length > 0
-                            ? treatments.filter(t => serviceIds.includes(t.id))
+                            ? treatments.filter(t => t.status === "active" && serviceIds.includes(t.id))
                             : assignedProducts
 
                           if (productsToShow.length === 0) {
@@ -1679,9 +1681,9 @@ export default function StaffPage() {
                         <Label className="text-sm text-muted-foreground">Products</Label>
                         <div className="space-y-2 mt-1">
                           {(() => {
-                            // Get assigned products from assignedStaff (backward compatibility)
+                            // Get assigned products from assignedStaff (backward compatibility) - only active
                             const assignedProducts = treatments.filter((treatment) =>
-                              treatment.assignedStaff?.includes(selectedStaff.id),
+                              treatment.status === "active" && treatment.assignedStaff?.includes(selectedStaff.id),
                             )
 
                             // Get service_ids from skills (source of truth from API)
@@ -1690,9 +1692,9 @@ export default function StaffPage() {
                               serviceIds = selectedStaff.skills.service_ids || []
                             }
 
-                            // Priority: use service_ids from API, fallback to assignedStaff
+                            // Priority: use service_ids from API, fallback to assignedStaff - only active products
                             const productsToShow = serviceIds.length > 0
-                              ? treatments.filter(t => serviceIds.includes(t.id))
+                              ? treatments.filter(t => t.status === "active" && serviceIds.includes(t.id))
                               : assignedProducts
 
                             if (productsToShow.length === 0) {
@@ -2259,7 +2261,7 @@ export default function StaffPage() {
                         Pilih minimal 1 layanan yang dapat dilakukan oleh staff ini
                       </p>
                       <div className="space-y-2 mt-2 max-h-60 overflow-y-auto border-2 border-[#C4B5FD] rounded-lg p-4 bg-gray-50">
-                        {treatments.map((treatment) => (
+                        {treatments.filter((treatment) => treatment.status === "active").map((treatment) => (
                           <div key={treatment.id} className="flex items-center space-x-2">
                             <Checkbox
                               id={`edit-treatment-${treatment.id}`}
@@ -2363,16 +2365,18 @@ export default function StaffPage() {
                   <Button
                     onClick={() => {
                       const today = new Date()
+                      const thirtyDaysLater = new Date(today)
+                      thirtyDaysLater.setDate(today.getDate() + 30)
                       setDateRange({
-                        start: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0],
-                        end: new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0],
+                        start: today.toISOString().split('T')[0],
+                        end: thirtyDaysLater.toISOString().split('T')[0],
                       })
                     }}
                     variant="outline"
                     size="sm"
                     className="mt-5"
                   >
-                    Bulan Ini
+                    30 Hari Ke Depan
                   </Button>
                 </div>
 
@@ -2457,7 +2461,7 @@ export default function StaffPage() {
                                 )}
                                 {entry.service_ids && entry.service_ids.length > 0 && (
                                   <div className="text-xs text-[#8B5CF6] mt-1">
-                                    Layanan: {treatments.filter(t => entry.service_ids.includes(t.id)).map(t => t.name).join(', ')}
+                                    Layanan: {treatments.filter(t => t.status === "active" && entry.service_ids.includes(t.id)).map(t => t.name).join(', ')}
                                   </div>
                                 )}
                               </div>
@@ -2618,10 +2622,10 @@ export default function StaffPage() {
 
                     {/* Service-Specific Availability */}
                     {availabilityTab === 'working_hours' && (() => {
-                      // Filter treatments to only show services assigned to this staff
+                      // Filter treatments to only show services assigned to this staff (only active)
                       // Handle both nested (skills.service_ids) and flat (service_ids) structure
                       const staffServiceIds = selectedStaff?.skills?.service_ids || selectedStaff?.service_ids || []
-                      const assignedTreatments = treatments.filter(t => staffServiceIds.includes(t.id))
+                      const assignedTreatments = treatments.filter(t => t.status === "active" && staffServiceIds.includes(t.id))
 
                       return (
                         <div>
@@ -3303,13 +3307,17 @@ export default function StaffPage() {
                   <div className="flex items-center space-x-3 pb-3 border-b-2 border-[#C4B5FD] mb-3 bg-white p-3 rounded-md shadow-sm">
                     <Checkbox
                       id="new-service-all"
-                      checked={newStaffForm.skills.service_ids.length === treatments.length && treatments.length > 0}
+                      checked={(() => {
+                        const activeTreatments = treatments.filter(t => t.status === "active")
+                        return newStaffForm.skills.service_ids.length === activeTreatments.length && activeTreatments.length > 0
+                      })()}
                       onCheckedChange={(checked) => {
+                        const activeTreatments = treatments.filter(t => t.status === "active")
                         setNewStaffForm((prev) => ({
                           ...prev,
                           skills: {
                             ...prev.skills,
-                            service_ids: checked ? treatments.map(t => t.id) : []
+                            service_ids: checked ? activeTreatments.map(t => t.id) : []
                           }
                         }))
                       }}
@@ -3319,13 +3327,13 @@ export default function StaffPage() {
                       htmlFor="new-service-all"
                       className="text-sm font-bold cursor-pointer leading-none text-[#6D28D9]"
                     >
-                      Pilih Semua Layanan
+                      Pilih Semua Layanan Aktif
                     </label>
                   </div>
 
                   {/* Individual Services */}
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {treatments.map((treatment) => (
+                    {treatments.filter((treatment) => treatment.status === "active").map((treatment) => (
                       <div key={treatment.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-white transition-colors">
                         <Checkbox
                           id={`new-treatment-${treatment.id}`}

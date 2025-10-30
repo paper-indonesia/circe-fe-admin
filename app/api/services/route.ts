@@ -72,6 +72,7 @@ export async function GET(req: NextRequest) {
       price: service.pricing?.base_price || service.price || 0,
       currency: service.pricing?.currency || 'IDR',
       isActive: service.is_active !== false && service.isActive !== false,
+      status: service.status || 'active',
     })
 
     // Handle different response formats
@@ -233,6 +234,7 @@ export async function POST(req: NextRequest) {
       price: data.pricing?.base_price || data.price || 0,
       currency: data.pricing?.currency || 'IDR',
       isActive: data.is_active !== false,
+      status: data.status || 'active',
     }
 
     return NextResponse.json(frontendData, { status: 201 })
@@ -380,6 +382,7 @@ export async function PUT(req: NextRequest) {
       price: data.pricing?.base_price || data.price || 0,
       currency: data.pricing?.currency || 'IDR',
       isActive: data.is_active !== false,
+      status: data.status || 'active',
     }
 
     return NextResponse.json(frontendData)

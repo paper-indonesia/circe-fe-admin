@@ -110,6 +110,20 @@ export function DeleteEntityDialog({
               </Alert>
             )}
 
+            {/* Better Alternative Suggestion for Products */}
+            {entityType === "Product" && (
+              <Alert className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-300">
+                <Info className="h-4 w-4 text-green-700" />
+                <AlertDescription>
+                  <p className="font-semibold text-sm text-green-900 mb-1">💡 Better Alternative</p>
+                  <p className="text-xs text-green-800">
+                    Consider changing status to <strong>Inactive</strong> instead of deleting.
+                    This keeps the product available for future use while hiding it from current bookings.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Soft Delete Info Panel */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3.5">
               <div className="flex items-start gap-2 mb-2">

@@ -617,13 +617,17 @@ export function AddStaffForm({
                   <div className="flex items-center space-x-3 pb-4 border-b-2 border-pink-200 mb-4 bg-gradient-to-r from-pink-50 to-rose-50 p-4 rounded-lg">
                     <Checkbox
                       id="new-service-all"
-                      checked={newStaffForm.skills.service_ids.length === treatments.length && treatments.length > 0}
+                      checked={(() => {
+                        const activeTreatments = treatments.filter((t) => t.status === "active")
+                        return newStaffForm.skills.service_ids.length === activeTreatments.length && activeTreatments.length > 0
+                      })()}
                       onCheckedChange={(checked) => {
+                        const activeTreatments = treatments.filter((t) => t.status === "active")
                         setNewStaffForm((prev: any) => ({
                           ...prev,
                           skills: {
                             ...prev.skills,
-                            service_ids: checked ? treatments.map(t => t.id) : []
+                            service_ids: checked ? activeTreatments.map(t => t.id) : []
                           }
                         }))
                       }}
@@ -634,13 +638,13 @@ export function AddStaffForm({
                       className="text-sm font-bold cursor-pointer leading-none text-pink-800 flex items-center gap-2"
                     >
                       <Star className="h-4 w-4" />
-                      Select All Services
+                      Select All Active Services
                     </label>
                   </div>
 
                   {/* Individual Services */}
                   <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                    {treatments.map((treatment) => (
+                    {treatments.filter((treatment) => treatment.status === "active").map((treatment) => (
                       <div key={treatment.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-pink-50 transition-colors border border-transparent hover:border-pink-200">
                         <Checkbox
                           id={`new-treatment-${treatment.id}`}
@@ -687,13 +691,13 @@ export function AddStaffForm({
                 </div>
                 <p className="text-sm text-muted-foreground mt-4 flex items-center gap-2 bg-white/50 p-3 rounded-lg">
                   <span className="text-lg">
-                    {newStaffForm.skills.service_ids.length === 0 ? "⚠️" : newStaffForm.skills.service_ids.length === treatments.length ? "✅" : "📝"}
+                    {newStaffForm.skills.service_ids.length === 0 ? "⚠️" : newStaffForm.skills.service_ids.length === treatments.filter((t) => t.status === "active").length ? "✅" : "📝"}
                   </span>
                   <span className="font-medium">
                     {newStaffForm.skills.service_ids.length === 0
-                      ? 'Please select at least 1 service (required)'
-                      : newStaffForm.skills.service_ids.length === treatments.length
-                      ? 'All services selected'
+                      ? 'Please select at least 1 active service (required)'
+                      : newStaffForm.skills.service_ids.length === treatments.filter((t) => t.status === "active").length
+                      ? 'All active services selected'
                       : `${newStaffForm.skills.service_ids.length} service${newStaffForm.skills.service_ids.length > 1 ? 's' : ''} selected`}
                   </span>
                 </p>
