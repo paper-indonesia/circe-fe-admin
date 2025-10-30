@@ -2503,10 +2503,12 @@ export default function CalendarPage() {
                           </div>
                           {/* Filtered Results */}
                           {(() => {
-                            const filtered = treatments.filter(t =>
-                              t.name.toLowerCase().includes(treatmentSearch.toLowerCase()) ||
-                              t.category?.toLowerCase().includes(treatmentSearch.toLowerCase())
-                            )
+                            const filtered = treatments
+                              .filter(t => t.status === "active")
+                              .filter(t =>
+                                t.name.toLowerCase().includes(treatmentSearch.toLowerCase()) ||
+                                t.category?.toLowerCase().includes(treatmentSearch.toLowerCase())
+                              )
                             return filtered.length > 0 ? (
                               filtered.map((treatment) => (
                                 <SelectItem key={treatment.id} value={treatment.id} className="group relative text-sm py-2.5">

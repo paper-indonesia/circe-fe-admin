@@ -158,9 +158,10 @@ export default function WalkInPage() {
   const [errors, setErrors] = useState<any>({})
   const [selectedCategory, setSelectedCategory] = useState("All")
 
-  // Get unique categories from treatments
+  // Get unique categories from active treatments only
   const categories = useMemo(() => {
-    const uniqueCategories = Array.from(new Set(treatments.map(t => t.category)))
+    const activeTreatments = treatments.filter(t => t.status === "active")
+    const uniqueCategories = Array.from(new Set(activeTreatments.map(t => t.category)))
     return uniqueCategories.sort()
   }, [treatments])
 
@@ -1142,6 +1143,7 @@ export default function WalkInPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {(() => {
                         const filteredTreatments = treatments
+                          .filter(t => t.status === "active")
                           .filter(t => selectedCategory === "All" || t.category === selectedCategory)
                           .filter(t => t.name.toLowerCase().includes(treatmentSearchQuery.toLowerCase()))
 
