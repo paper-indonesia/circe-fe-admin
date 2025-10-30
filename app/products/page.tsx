@@ -1116,12 +1116,24 @@ export default function TreatmentsPage() {
         ]}
         onConfirmDelete={confirmDeleteProduct}
         blocker={
-          productToDelete && bookings.filter((b) => b.treatmentId === productToDelete.id).length > 0
+          productToDelete && bookings.filter((b) =>
+            b.treatmentId === productToDelete.id &&
+            b.status !== 'cancelled' &&
+            b.status !== 'completed' &&
+            b.status !== 'cancel' &&
+            b.status !== 'complete'
+          ).length > 0
             ? {
                 type: "active_bookings",
                 message: "Cannot delete product with active bookings",
                 details: [
-                  `This product has ${bookings.filter((b) => b.treatmentId === productToDelete.id).length} associated bookings`,
+                  `This product has ${bookings.filter((b) =>
+                    b.treatmentId === productToDelete.id &&
+                    b.status !== 'cancelled' &&
+                    b.status !== 'completed' &&
+                    b.status !== 'cancel' &&
+                    b.status !== 'complete'
+                  ).length} active bookings`,
                   "Please cancel or complete all bookings before deleting this product"
                 ]
               }
