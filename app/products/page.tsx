@@ -34,6 +34,20 @@ export default function TreatmentsPage() {
     deleteTreatment,
   } = useAppContext()
 
+  // Generate unique slug from name with timestamp
+  const generateUniqueSlug = (name: string): string => {
+    const baseSlug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+
+    // Add timestamp to ensure uniqueness
+    const timestamp = Date.now()
+    return `${baseSlug}-${timestamp}`
+  }
+
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editingTreatment, setEditingTreatment] = useState<any>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -161,6 +175,9 @@ export default function TreatmentsPage() {
 
     setIsSubmitting(true)
     try {
+      // Generate unique slug if not provided
+      const uniqueSlug = treatmentForm.slug || generateUniqueSlug(treatmentForm.name)
+
       // Call API directly using POST /api/v1/services
       const response = await fetch('/api/services', {
         method: 'POST',
@@ -169,7 +186,7 @@ export default function TreatmentsPage() {
         },
         body: JSON.stringify({
           name: treatmentForm.name,
-          slug: treatmentForm.slug || undefined,
+          slug: uniqueSlug,
           category: treatmentForm.category,
           description: treatmentForm.description || undefined,
           duration_minutes: treatmentForm.durationMin,
@@ -225,6 +242,12 @@ export default function TreatmentsPage() {
 
     setIsSubmitting(true)
     try {
+      // Generate new unique slug if name changed and slug is empty
+      let slugToUse = treatmentForm.slug
+      if (!slugToUse && treatmentForm.name !== editingTreatment.name) {
+        slugToUse = generateUniqueSlug(treatmentForm.name)
+      }
+
       const response = await fetch('/api/services', {
         method: 'PUT',
         headers: {
@@ -233,7 +256,7 @@ export default function TreatmentsPage() {
         body: JSON.stringify({
           id: editingTreatment.id,
           name: treatmentForm.name,
-          slug: treatmentForm.slug || undefined,
+          slug: slugToUse || undefined,
           category: treatmentForm.category,
           description: treatmentForm.description || undefined,
           duration_minutes: treatmentForm.durationMin,
