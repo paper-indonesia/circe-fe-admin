@@ -1138,33 +1138,10 @@ export default function TreatmentsPage() {
           { label: "Status", value: productToDelete?.status || "active" },
         ]}
         onConfirmDelete={confirmDeleteProduct}
-        blocker={
-          productToDelete && bookings.filter((b) =>
-            b.treatmentId === productToDelete.id &&
-            b.status !== 'cancelled' &&
-            b.status !== 'completed' &&
-            b.status !== 'cancel' &&
-            b.status !== 'complete'
-          ).length > 0
-            ? {
-                type: "active_bookings",
-                message: "Cannot delete product with active bookings",
-                details: [
-                  `This product has ${bookings.filter((b) =>
-                    b.treatmentId === productToDelete.id &&
-                    b.status !== 'cancelled' &&
-                    b.status !== 'completed' &&
-                    b.status !== 'cancel' &&
-                    b.status !== 'complete'
-                  ).length} active bookings`,
-                  "Please cancel or complete all bookings before deleting this product"
-                ]
-              }
-            : undefined
-        }
         softDeleteImpacts={[
           "Product will be marked as deleted and inactive",
           "Product will not appear in booking forms",
+          "Existing bookings with this product will remain unchanged",
           "Historical booking data will be preserved",
           "Product data can be restored within 10 seconds"
         ]}

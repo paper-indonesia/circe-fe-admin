@@ -48,7 +48,6 @@ export async function GET(req: NextRequest) {
         'Content-Type': 'application/json',
       },
       cache: 'no-store', // Disable caching for real-time availability
-      next: { revalidate: 0 } // Force fresh data every request
     })
 
     const data = await response.json()
