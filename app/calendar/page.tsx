@@ -1511,6 +1511,13 @@ export default function CalendarPage() {
                         phone: booking.patientPhone,
                         email: booking.patientEmail,
                       }
+
+                      // Get service name from booking services array
+                      const firstService = booking.services && booking.services.length > 0
+                        ? booking.services[0]
+                        : null
+                      const serviceName = firstService?.service_name || null
+
                       const treatment = treatments.find(t => t.id === booking.treatmentId)
                       const staffMember = staff.find(s => s.id === booking.staffId)
 
@@ -1541,7 +1548,7 @@ export default function CalendarPage() {
                               <span className="text-sm font-medium">{patient?.name || "Unknown"}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="py-3 px-4 text-sm text-gray-600">{treatment?.name || "Unknown"}</TableCell>
+                          <TableCell className="py-3 px-4 text-sm text-gray-600">{serviceName || treatment?.name || "Unknown"}</TableCell>
                           <TableCell className="py-3 px-4 text-sm text-gray-600">
                             {format(new Date(booking.startAt), "MMM dd, yyyy HH:mm")}
                           </TableCell>
@@ -1751,6 +1758,13 @@ export default function CalendarPage() {
                               phone: booking.patientPhone,
                               email: booking.patientEmail,
                             }
+
+                            // Get service name from booking services array
+                            const firstService = booking.services && booking.services.length > 0
+                              ? booking.services[0]
+                              : null
+                            const serviceName = firstService?.service_name || null
+
                             const treatment = treatments.find(t => t.id === booking.treatmentId)
                             const staffMember = staff.find(s => s.id === booking.staffId)
                             const endTime = format(new Date(booking.endAt), "HH:mm")
@@ -1812,7 +1826,7 @@ export default function CalendarPage() {
                                           <Star className="h-3.5 w-3.5 text-[#8B5CF6] flex-shrink-0" />
                                           <div className="min-w-0">
                                             <p className="text-gray-400 text-[10px]">Treatment</p>
-                                            <p className="font-medium text-gray-900 truncate">{treatment?.name || "Unknown"}</p>
+                                            <p className="font-medium text-gray-900 truncate">{serviceName || treatment?.name || "Unknown"}</p>
                                           </div>
                                         </div>
 
@@ -1882,6 +1896,15 @@ export default function CalendarPage() {
                 phone: selectedBooking.patientPhone,
                 email: selectedBooking.patientEmail,
               }
+
+              // Get service info from booking services array (new API format) or fallback to treatments
+              const firstService = selectedBooking.services && selectedBooking.services.length > 0
+                ? selectedBooking.services[0]
+                : null
+              const serviceName = firstService?.service_name || null
+              const servicePrice = firstService?.price || null
+
+              // Fallback to treatment lookup for backward compatibility
               const treatment = treatments.find(t => t.id === selectedBooking.treatmentId)
               const staffMember = staff.find(s => s.id === selectedBooking.staffId)
 
@@ -2013,7 +2036,7 @@ export default function CalendarPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Service</p>
-                          <p className="font-bold text-gray-900 text-sm">{treatment?.name || "Unknown"}</p>
+                          <p className="font-bold text-gray-900 text-sm">{serviceName || treatment?.name || "Unknown"}</p>
                           <p className="text-xs text-gray-500">{treatment?.category || "N/A"}</p>
                         </div>
                       </div>
