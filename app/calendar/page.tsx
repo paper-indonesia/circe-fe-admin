@@ -632,7 +632,8 @@ export default function CalendarPage() {
       case "confirmed": return "bg-green-100 text-green-800"
       case "completed": return "bg-blue-100 text-blue-800"
       case "cancelled": return "bg-red-100 text-red-800"
-      case "no-show": return "bg-gray-100 text-gray-800"
+      case "no-show":
+      case "no_show": return "bg-gray-100 text-gray-800"
       default: return "bg-yellow-100 text-yellow-800"
     }
   }
@@ -1894,7 +1895,7 @@ export default function CalendarPage() {
                         <span className="text-xs text-gray-500 font-medium">Booking ID #{selectedBooking.id?.slice(0, 8).toUpperCase() || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        {!isEditMode && !['completed', 'cancelled'].includes(selectedBooking.status) && (
+                        {!isEditMode && !['completed', 'cancelled', 'no-show', 'no_show'].includes(selectedBooking.status) && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -1913,13 +1914,36 @@ export default function CalendarPage() {
                         </button>
                       </div>
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-3">{patient?.name || "Unknown Customer"}</h2>
+                    <div className="flex items-center gap-3 mb-3">
+                      <h2 className="text-xl font-bold text-gray-900">{patient?.name || "Unknown Customer"}</h2>
+                      <Badge className={cn("text-xs", getStatusColor(selectedBooking.status))}>
+                        {selectedBooking.status}
+                      </Badge>
+                    </div>
                     <Select
                       value={tempStatus}
                       onValueChange={setTempStatus}
                     >
                       <SelectTrigger className="w-full h-9">
-                        <SelectValue />
+                        <SelectValue>
+                          {tempStatus && (
+                            <div className="flex items-center gap-2">
+                              <div className={cn(
+                                "w-2 h-2 rounded-full",
+                                tempStatus === "pending" && "bg-yellow-500",
+                                tempStatus === "confirmed" && "bg-green-500",
+                                tempStatus === "completed" && "bg-blue-500",
+                                tempStatus === "cancelled" && "bg-red-500",
+                                (tempStatus === "no-show" || tempStatus === "no_show") && "bg-gray-500"
+                              )}></div>
+                              {tempStatus === "pending" && "Pending"}
+                              {tempStatus === "confirmed" && "Confirmed"}
+                              {tempStatus === "completed" && "Completed"}
+                              {tempStatus === "cancelled" && "Cancelled"}
+                              {(tempStatus === "no-show" || tempStatus === "no_show") && "No Show"}
+                            </div>
+                          )}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">
@@ -1946,7 +1970,7 @@ export default function CalendarPage() {
                             Cancelled
                           </div>
                         </SelectItem>
-                        <SelectItem value="no-show">
+                        <SelectItem value="no_show">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-gray-500"></div>
                             No Show
@@ -1988,7 +2012,7 @@ export default function CalendarPage() {
                           <Star className="h-4 w-4 text-[#8B5CF6]" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Treatment</p>
+                          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide mb-1">Service</p>
                           <p className="font-bold text-gray-900 text-sm">{treatment?.name || "Unknown"}</p>
                           <p className="text-xs text-gray-500">{treatment?.category || "N/A"}</p>
                         </div>
@@ -2027,7 +2051,7 @@ export default function CalendarPage() {
                           ) : (
                             <>
                               <p className="font-bold text-gray-900 text-sm">
-                                {format(new Date(selectedBooking.startAt), "EEE, MMM dd")}
+                                {format(new Date(selectedBooking.startAt), "EEE, MMM dd, yyyy")}
                               </p>
                               <p className="text-xs text-gray-500">
                                 {format(new Date(selectedBooking.startAt), "HH:mm")} - {format(new Date(selectedBooking.endAt), "HH:mm")}
@@ -2060,20 +2084,22 @@ export default function CalendarPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-[10px] text-gray-400 font-semibold mb-1">FULL NAME</p>
-                          <p className="text-gray-900 font-medium text-xs">{patient?.name || "Unknown"}</p>
+                          <p className="text-[10px] text-gray-400 font-semibold mb-1">STATUS</p>
+                          <Badge className={cn("text-xs w-fit", getStatusColor(selectedBooking.status))}>
+                            {selectedBooking.status}
+                          </Badge>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-[10px] text-gray-400 font-semibold mb-1">PHONE NUMBER</p>
-                          <p className="text-gray-900 font-medium text-xs">{patient?.phone || "Not provided"}</p>
+                          <p className="text-[10px] text-gray-400 font-semibold mb-1">PAYMENT STATUS</p>
+                          {getPaymentStatusBadge((selectedBooking as any).payment_status)}
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-[10px] text-gray-400 font-semibold mb-1">EMAIL</p>
-                          <p className="text-gray-900 font-medium text-xs truncate">{patient?.email || "Not provided"}</p>
+                          <p className="text-[10px] text-gray-400 font-semibold mb-1">APPOINTMENT TYPE</p>
+                          <p className="text-gray-900 font-medium text-xs capitalize">{(selectedBooking as any).appointment_type || selectedBooking.source || "N/A"}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-[10px] text-gray-400 font-semibold mb-1">PRICE</p>
-                          <p className="text-gray-900 font-bold text-base">{formatCurrency(treatment?.price || 0)}</p>
+                          <p className="text-[10px] text-gray-400 font-semibold mb-1">TOTAL PRICE</p>
+                          <p className="text-gray-900 font-bold text-base">{formatCurrency((selectedBooking as any).total_price || treatment?.price || 0)}</p>
                         </div>
                       </div>
                     </div>
@@ -2121,13 +2147,18 @@ export default function CalendarPage() {
                           {isSaving ? "Saving..." : "Save Changes"}
                         </Button>
                       </>
+                    ) : ['completed', 'cancelled', 'no-show', 'no_show'].includes(selectedBooking.status) ? (
+                      <div className="flex-1 text-center py-2">
+                        <p className="text-sm text-gray-500">
+                          This appointment has been {(selectedBooking.status === 'no-show' || selectedBooking.status === 'no_show') ? 'marked as no-show' : selectedBooking.status}
+                        </p>
+                      </div>
                     ) : (
                       <>
                         <Button
                           variant="outline"
                           className="flex-1 h-10 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-sm"
                           onClick={() => handleDeleteBooking(selectedBooking.id)}
-                          disabled={['completed', 'cancelled'].includes(selectedBooking.status)}
                         >
                           <Trash2 className="h-3.5 w-3.5 mr-2" />
                           Cancel
@@ -2136,7 +2167,6 @@ export default function CalendarPage() {
                           variant="outline"
                           className="flex-1 h-10 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 text-sm"
                           onClick={handleOpenReschedule}
-                          disabled={['completed', 'cancelled', 'no-show'].includes(selectedBooking.status)}
                         >
                           <Clock className="h-3.5 w-3.5 mr-2" />
                           Reschedule
@@ -2145,7 +2175,6 @@ export default function CalendarPage() {
                           variant="outline"
                           className="flex-1 h-10 border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 text-sm"
                           onClick={handleOpenNoShow}
-                          disabled={selectedBooking.status !== 'confirmed'}
                         >
                           <AlertCircle className="h-3.5 w-3.5 mr-2" />
                           No Show
@@ -2153,7 +2182,6 @@ export default function CalendarPage() {
                         <Button
                           className="flex-1 h-10 bg-[#8B5CF6] hover:bg-[#B8A6EF] text-white text-sm font-medium"
                           onClick={handleFinishBooking}
-                          disabled={['completed', 'cancelled', 'no-show'].includes(selectedBooking.status)}
                         >
                           Finish
                         </Button>
