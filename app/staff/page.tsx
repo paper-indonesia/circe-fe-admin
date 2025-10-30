@@ -146,9 +146,11 @@ export default function StaffPage() {
   }))
   const [dateRange, setDateRange] = useState(() => {
     const today = new Date()
+    const thirtyDaysLater = new Date(today)
+    thirtyDaysLater.setDate(today.getDate() + 30)
     return {
-      start: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0],
-      end: new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0],
+      start: today.toISOString().split('T')[0],
+      end: thirtyDaysLater.toISOString().split('T')[0],
     }
   })
 
@@ -2363,16 +2365,18 @@ export default function StaffPage() {
                   <Button
                     onClick={() => {
                       const today = new Date()
+                      const thirtyDaysLater = new Date(today)
+                      thirtyDaysLater.setDate(today.getDate() + 30)
                       setDateRange({
-                        start: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0],
-                        end: new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0],
+                        start: today.toISOString().split('T')[0],
+                        end: thirtyDaysLater.toISOString().split('T')[0],
                       })
                     }}
                     variant="outline"
                     size="sm"
                     className="mt-5"
                   >
-                    Bulan Ini
+                    30 Hari Ke Depan
                   </Button>
                 </div>
 
