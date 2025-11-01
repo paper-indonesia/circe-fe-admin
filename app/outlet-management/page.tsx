@@ -92,16 +92,16 @@ interface OutletData {
   updated_at?: string
 }
 
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 const DEFAULT_BUSINESS_HOURS: BusinessHour[] = [
-  { day: 0, is_open: false },
-  { day: 1, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 2, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 3, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 4, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 5, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 6, is_open: false },
+  { day: 0, is_open: true, open_time: "09:00", close_time: "18:00" }, // Monday
+  { day: 1, is_open: true, open_time: "09:00", close_time: "18:00" }, // Tuesday
+  { day: 2, is_open: true, open_time: "09:00", close_time: "18:00" }, // Wednesday
+  { day: 3, is_open: true, open_time: "09:00", close_time: "18:00" }, // Thursday
+  { day: 4, is_open: true, open_time: "09:00", close_time: "18:00" }, // Friday
+  { day: 5, is_open: false }, // Saturday
+  { day: 6, is_open: false }, // Sunday
 ]
 
 const DEFAULT_SETTINGS: OutletSettings = {
