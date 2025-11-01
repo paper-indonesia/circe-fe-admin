@@ -20,13 +20,13 @@ interface StaffAvailabilityStepProps {
 }
 
 const WEEKDAYS = [
-  { value: 0, label: "Minggu" },
-  { value: 1, label: "Senin" },
-  { value: 2, label: "Selasa" },
-  { value: 3, label: "Rabu" },
-  { value: 4, label: "Kamis" },
-  { value: 5, label: "Jumat" },
-  { value: 6, label: "Sabtu" },
+  { value: 0, label: "Senin" },    // Monday
+  { value: 1, label: "Selasa" },   // Tuesday
+  { value: 2, label: "Rabu" },     // Wednesday
+  { value: 3, label: "Kamis" },    // Thursday
+  { value: 4, label: "Jumat" },    // Friday
+  { value: 5, label: "Sabtu" },    // Saturday
+  { value: 6, label: "Minggu" },   // Sunday
 ]
 
 const EMPLOYMENT_TYPES = [
