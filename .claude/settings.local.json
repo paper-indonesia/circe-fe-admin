@@ -11,7 +11,16 @@
       "Bash(done)",
       "Bash(do echo \"=== $file ===\")",
       "Bash(awk:*)",
-      "Bash(tr:*)"
+      "Bash(tr:*)",
+      "Bash(powershell:*)",
+      "Bash(git clone:*)",
+      "Bash(mkdir:*)",
+      "Bash(git init:*)",
+      "Bash(xcopy:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

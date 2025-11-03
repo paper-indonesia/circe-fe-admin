@@ -217,6 +217,7 @@ export default function CalendarPage() {
   const [searchingCustomer, setSearchingCustomer] = useState(false)
   const [customerSearchResult, setCustomerSearchResult] = useState<'not_searched' | 'found' | 'not_found'>('not_searched')
   const [customerConfirmed, setCustomerConfirmed] = useState(false)
+  const [phoneValidationError, setPhoneValidationError] = useState<string>('')
 
   // Calculate date range based on selection
   const { startDate, endDate } = useMemo(() => {
@@ -461,6 +462,7 @@ export default function CalendarPage() {
       // Reset when dialog closes
       setCustomerSearchResult('not_searched')
       setCustomerConfirmed(false)
+      setPhoneValidationError('')
     } else {
       // Reset when phone number changes or switching to new client tab
       if (newBookingData.isNewClient) {
@@ -512,15 +514,24 @@ export default function CalendarPage() {
       return
     }
 
-    // Validate phone format
+    // Validate phone format (min 8, max 15 digits)
     const phoneDigits = newBookingData.newClientPhone.startsWith('+62')
       ? newBookingData.newClientPhone.slice(3)
       : newBookingData.newClientPhone
 
-    if (phoneDigits.length < 8 || !phoneDigits.startsWith('8')) {
+    if (phoneDigits.length < 8 || phoneDigits.length > 13) {
       toast({
         title: "Invalid Phone",
-        description: "Phone must start with 8 and have at least 8 digits",
+        description: "Nomor telepon harus minimal 8 dan maksimal 15 digit",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (!phoneDigits.startsWith('8')) {
+      toast({
+        title: "Invalid Phone",
+        description: "Phone must start with 8",
         variant: "destructive"
       })
       return
@@ -2426,6 +2437,14 @@ export default function CalendarPage() {
                             onChange={(e) => {
                               const input = e.target.value.replace(/\D/g, '') // Only allow digits
                               const fullPhone = input ? `+62${input}` : ''
+
+                              // Validate phone number length (min 8, max 15 digits)
+                              if (input && (input.length < 8 || input.length > 13)) {
+                                setPhoneValidationError('Nomor telepon harus minimal 8 dan maksimal 15 digit')
+                              } else {
+                                setPhoneValidationError('')
+                              }
+
                               setNewBookingData({ ...newBookingData, newClientPhone: fullPhone })
                               // Reset search result when phone changes
                               if (customerSearchResult !== 'not_searched') {
@@ -2433,13 +2452,13 @@ export default function CalendarPage() {
                                 setCustomerConfirmed(false)
                               }
                             }}
-                            className="flex-1 h-11 text-sm border-gray-300 focus:border-indigo-500"
+                            className={`flex-1 h-11 text-sm ${phoneValidationError ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-indigo-500'}`}
                           />
                           <Button
                             type="button"
                             variant="outline"
                             onClick={handleSearchCustomerByPhone}
-                            disabled={searchingCustomer || !newBookingData.newClientPhone || newBookingData.newClientPhone.length < 11}
+                            disabled={searchingCustomer || !newBookingData.newClientPhone || phoneValidationError !== ''}
                             className="h-11 px-4 text-sm flex-shrink-0"
                           >
                             {searchingCustomer ? (
@@ -2455,6 +2474,14 @@ export default function CalendarPage() {
                             )}
                           </Button>
                         </div>
+
+                        {/* Phone Validation Error */}
+                        {phoneValidationError && (
+                          <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                            <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-red-600">{phoneValidationError}</p>
+                          </div>
+                        )}
 
                         {/* Search Result Messages */}
                         {customerSearchResult === 'found' && (
