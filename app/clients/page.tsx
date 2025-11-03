@@ -280,8 +280,11 @@ export default function ClientsPage() {
 
   const validatePhone = (phone: string): boolean => {
     if (!phone) return false
-    // Must start with +628 and have 8-12 total digits after +62
-    return /^\+628\d{7,11}$/.test(phone)
+    // Must start with +628 and have minimum 8 digits, maximum 15 digits total (including +62)
+    // This means 5-12 digits after +628 (since +628 = 4 chars, total 8-15 includes that)
+    const phoneWithoutPrefix = phone.replace('+62', '')
+    if (phoneWithoutPrefix.length < 6 || phoneWithoutPrefix.length > 13) return false
+    return /^\+628\d{5,12}$/.test(phone)
   }
 
   const validateForm = (): boolean => {
@@ -294,7 +297,7 @@ export default function ClientsPage() {
     if (!clientForm.phone.trim()) {
       errors.phone = "Phone number is required"
     } else if (!validatePhone(clientForm.phone)) {
-      errors.phone = "Phone must start with 8 and have 8-12 digits (e.g., 81xxxxxxxxx)"
+      errors.phone = "Phone must start with 8 and have 8-15 digits (e.g., 81234567890)"
     }
 
     if (clientForm.email && !validateEmail(clientForm.email)) {
@@ -1421,11 +1424,16 @@ export default function ClientsPage() {
                   <Input
                     id="phone"
                     placeholder="81xxxxxxxxx"
+                    maxLength={15}
                     value={clientForm.phone.startsWith('+62') ? clientForm.phone.slice(3) : clientForm.phone}
                     onChange={(e) => {
                       const input = e.target.value.replace(/\D/g, '') // Only allow digits
                       setClientForm((prev) => ({ ...prev, phone: input ? `+62${input}` : '' }))
-                      if (formErrors.phone) {
+
+                      // Real-time validation (min 8, max 15 digits)
+                      if (input && (input.length < 8 || input.length > 13)) {
+                        setFormErrors((prev) => ({ ...prev, phone: "Phone must have 8-15 digits (e.g., 81234567890)" }))
+                      } else {
                         setFormErrors((prev) => ({ ...prev, phone: "" }))
                       }
                     }}
@@ -1477,14 +1485,18 @@ export default function ClientsPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-800 font-medium mb-1">Format Guidelines:</p>
                 <ul className="text-xs text-blue-700 space-y-0.5">
-                  <li>• Phone: Start with 8 followed by 7-11 digits (e.g., 81xxxxxxxxx)</li>
+                  <li>• Phone: Start with 8 followed by 7-14 digits (min 8, max 15 digits total, e.g., 81234567890)</li>
                   <li>• Email: example@email.com (optional)</li>
                   <li>• Last name is optional</li>
                 </ul>
               </div>
 
               <div className="flex gap-2">
-                <Button onClick={handleAddClient} className="flex-1">
+                <Button
+                  onClick={handleAddClient}
+                  className="flex-1"
+                  disabled={!!formErrors.phone || !!formErrors.email || !!formErrors.first_name}
+                >
                   Add Customer
                 </Button>
                 <Button variant="outline" onClick={() => setShowAddDialog(false)}>
@@ -1577,11 +1589,16 @@ export default function ClientsPage() {
                         <Input
                           id="edit-phone"
                           placeholder="81xxxxxxxxx"
+                          maxLength={15}
                           value={clientForm.phone.startsWith('+62') ? clientForm.phone.slice(3) : clientForm.phone}
                           onChange={(e) => {
                             const input = e.target.value.replace(/\D/g, '') // Only allow digits
                             setClientForm((prev) => ({ ...prev, phone: input ? `+62${input}` : '' }))
-                            if (formErrors.phone) {
+
+                            // Real-time validation (min 8, max 15 digits)
+                            if (input && (input.length < 8 || input.length > 13)) {
+                              setFormErrors((prev) => ({ ...prev, phone: "Phone must have 8-15 digits (e.g., 81234567890)" }))
+                            } else {
                               setFormErrors((prev) => ({ ...prev, phone: "" }))
                             }
                           }}
@@ -1633,14 +1650,18 @@ export default function ClientsPage() {
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-xs text-blue-800 font-medium mb-1">Format Guidelines:</p>
                       <ul className="text-xs text-blue-700 space-y-0.5">
-                        <li>• Phone: Start with 8 followed by 7-11 digits (e.g., 81xxxxxxxxx)</li>
+                        <li>• Phone: Start with 8 followed by 7-14 digits (min 8, max 15 digits total, e.g., 81234567890)</li>
                         <li>• Email: example@email.com (optional)</li>
                         <li>• Last name is optional</li>
                       </ul>
                     </div>
 
                     <div className="flex gap-2">
-                      <Button onClick={handleEditClient} className="flex-1">
+                      <Button
+                        onClick={handleEditClient}
+                        className="flex-1"
+                        disabled={!!formErrors.phone || !!formErrors.email || !!formErrors.first_name}
+                      >
                         Save Changes
                       </Button>
                       <Button variant="outline" onClick={() => setEditingClient(null)}>

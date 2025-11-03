@@ -614,6 +614,19 @@ export default function StaffPage() {
       return
     }
 
+    // Validate phone number (min 8, max 15 digits)
+    if (editStaffForm.phone) {
+      const phoneDigits = editStaffForm.phone.replace(/\D/g, ''); // Extract only digits
+      if (phoneDigits.length < 8 || phoneDigits.length > 13) {
+        toast({
+          title: "Error",
+          description: "Nomor telepon harus minimal 8 dan maksimal 15 digit (contoh: +6281234567890 atau 081234567890)",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     if (!editStaffForm.position?.trim() && !editStaffForm.role?.trim()) {
       toast({
         title: "Error",
@@ -945,10 +958,12 @@ export default function StaffPage() {
       return
     }
 
-    if (!newStaffForm.phone || newStaffForm.phone.trim().length < 10) {
+    // Validate phone number (min 8, max 15 digits)
+    const phoneDigits = newStaffForm.phone.replace(/\D/g, ''); // Extract only digits
+    if (!newStaffForm.phone || phoneDigits.length < 8 || phoneDigits.length > 13) {
       toast({
         title: "Error",
-        description: "Nomor telepon wajib diisi dengan minimal 10 karakter (contoh: +6281xxxxxxxxx atau 081xxxxxxxxx)",
+        description: "Nomor telepon wajib diisi dengan minimal 8 dan maksimal 15 digit (contoh: +6281234567890 atau 081234567890)",
         variant: "destructive",
       })
       return

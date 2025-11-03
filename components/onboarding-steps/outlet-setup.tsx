@@ -115,8 +115,13 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
     }
     if (!formData.contact.phone.trim()) {
       newErrors.phone = "Nomor telepon wajib diisi"
-    } else if (!/^\+?[\d\s\-()]+$/.test(formData.contact.phone)) {
-      newErrors.phone = "Format nomor telepon tidak valid"
+    } else {
+      const phoneDigits = formData.contact.phone.replace(/\D/g, '');
+      if (phoneDigits.length < 8 || phoneDigits.length > 13) {
+        newErrors.phone = "Nomor telepon harus minimal 8 dan maksimal 15 digit"
+      } else if (!/^\+?[\d\s\-()]+$/.test(formData.contact.phone)) {
+        newErrors.phone = "Format nomor telepon tidak valid"
+      }
     }
 
     setErrors(newErrors)
