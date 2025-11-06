@@ -1,16 +1,26 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
-import { Check, ChevronRight, ChevronLeft, Building2, Users, Package, Calendar, Briefcase, Layers } from "lucide-react"
+import { Check, ChevronRight, ChevronLeft, Building2, Users, Package, Calendar, Briefcase, Layers, X, AlertTriangle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useOperationalOnboarding } from "@/lib/operational-onboarding-context"
 import { OutletSetupStep } from "./onboarding-steps/outlet-setup"
 import { ProductServicesStep } from "./onboarding-steps/product-services"
 import { StaffAvailabilityStep } from "./onboarding-steps/staff-availability"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface OperationalOnboardingWizardProps {
   open: boolean
@@ -44,9 +54,10 @@ const STEPS = [
 
 export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 }: OperationalOnboardingWizardProps) {
   const { toast } = useToast()
-  const { progress, setCurrentStep, completeOnboarding, resetOnboarding } = useOperationalOnboarding()
+  const { progress, setCurrentStep, completeOnboarding, resetOnboarding, dismissWizard } = useOperationalOnboarding()
   const [loading, setLoading] = useState(false)
   const [canProceed, setCanProceed] = useState(false)
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false)
 
   // Debug: Log canProceed changes
   useEffect(() => {
@@ -147,6 +158,16 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
     }
   }
 
+  const handleCloseClick = () => {
+    setShowCloseConfirm(true)
+  }
+
+  const handleConfirmClose = () => {
+    dismissWizard()
+    setShowCloseConfirm(false)
+    onComplete() // Close the wizard
+  }
+
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
     animate: { opacity: 1, x: 0 },
@@ -155,24 +176,40 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
 
   const pageTransition = {
     duration: 0.2,
-    ease: "easeInOut"
+    ease: "easeInOut" as const
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-[95vw] w-full sm:max-w-[1120px] max-h-[90vh] p-0 gap-0 border-0 rounded-2xl shadow-2xl overflow-hidden overflow-x-hidden">
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-[95vw] w-full sm:max-w-[1120px] max-h-[90vh] p-0 gap-0 border-0 rounded-2xl shadow-2xl overflow-hidden overflow-x-hidden"
+      >
         <div className="flex flex-col h-full max-h-[90vh] overflow-x-hidden">
         {/* Header with Progress */}
         <div className="flex-shrink-0 bg-white border-b px-6 py-5 rounded-t-2xl overflow-x-hidden">
           <div className="flex items-start justify-between gap-6 mb-4 max-w-full">
             {/* Left: Title + Subtitle */}
-            <div className="flex-shrink-0 min-w-0">
+            <div className="flex-1 min-w-0">
               <h2 className="text-2xl font-bold text-gray-900 truncate">
                 Setup Awal Sistem
               </h2>
               <p className="text-sm text-gray-600 mt-1 truncate">Lengkapi {STEPS.length} langkah berikut agar siap melakukan booking</p>
             </div>
 
+            {/* Close Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex-shrink-0 h-8 w-8 rounded-full hover:bg-gray-100"
+              onClick={handleCloseClick}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between gap-6 max-w-full">
             {/* Center: Stepper (one line on desktop) */}
             <div className="flex-1 flex items-center justify-center min-w-0 overflow-x-auto">
               <div className="flex items-center gap-2 min-w-max">
@@ -364,5 +401,40 @@ export function OperationalOnboardingWizard({ open, onComplete, initialStep = 1 
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Close Confirmation Dialog */}
+    <AlertDialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            Tutup Setup?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="space-y-3 pt-2">
+            <p>
+              Progress Anda akan disimpan. Namun, Anda <strong>wajib melengkapi setup Outlet, Products, dan Staff</strong> untuk dapat menggunakan fitur booking di Calendar atau Walk-in.
+            </p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+              <p className="font-semibold mb-1">Yang sudah Anda selesaikan:</p>
+              <ul className="list-disc list-inside space-y-1">
+                {progress.outlets.length > 0 && <li>Outlet: {progress.outlets.length} dibuat</li>}
+                {progress.products.length > 0 && <li>Products: {progress.products.length} dibuat</li>}
+                {progress.staff.length > 0 && <li>Staff: {progress.staff.length} dibuat</li>}
+              </ul>
+              {progress.outlets.length === 0 && progress.products.length === 0 && progress.staff.length === 0 && (
+                <p className="text-yellow-700">Belum ada data yang disimpan</p>
+              )}
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Lanjut Setup</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmClose}>
+            Tutup & Lanjutkan Nanti
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

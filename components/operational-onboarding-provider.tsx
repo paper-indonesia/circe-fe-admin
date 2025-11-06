@@ -9,6 +9,7 @@ import { OperationalOnboardingProvider as ContextProvider, useOperationalOnboard
 function OperationalOnboardingWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { user, isAdmin } = useAuth()
+  const { progress } = useOperationalOnboarding()
   const [isMounted, setIsMounted] = useState(false)
   const [showWizard, setShowWizard] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -105,9 +106,10 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
           }
         }
 
-        console.log('OperationalOnboardingProvider: Final decision -', { needsOnboarding, startStep, showWizard: needsOnboarding })
+        console.log('OperationalOnboardingProvider: Final decision -', { needsOnboarding, startStep, isDismissed: progress.isDismissed, showWizard: needsOnboarding && !progress.isDismissed })
 
-        setShowWizard(needsOnboarding)
+        // Only show wizard if needed AND not dismissed
+        setShowWizard(needsOnboarding && !progress.isDismissed)
         setInitialStep(startStep)
 
         // Clear completion flag AND localStorage data if onboarding is needed again
@@ -126,7 +128,7 @@ function OperationalOnboardingWrapper({ children }: { children: React.ReactNode 
     }
 
     checkOnboardingStatus()
-  }, [user, isAdmin, pathname, isMounted])
+  }, [user, isAdmin, pathname, isMounted, progress.isDismissed])
 
   const handleComplete = () => {
     setShowWizard(false)

@@ -16,6 +16,7 @@ import GradientLoading from "@/components/gradient-loading"
 import { OnboardingResumeBanner } from "@/components/onboarding-resume-banner"
 import { OperationalOnboardingWizard } from "@/components/operational-onboarding-wizard"
 import { OperationalOnboardingProvider as OnboardingContext, useOperationalOnboarding } from "@/lib/operational-onboarding-context"
+import { DashboardSetupCard } from "@/components/dashboard-setup-card"
 import {
   Calendar,
   Banknote,
@@ -367,6 +368,11 @@ function DashboardContent() {
         {/* Operational Onboarding Banner - Only for tenant_admin */}
         {authUser && isAdmin() && (
           <OnboardingResumeBanner onResume={() => setShowOnboarding(true)} />
+        )}
+
+        {/* Dashboard Setup Card - Only for tenant_admin */}
+        {authUser && isAdmin() && (
+          <DashboardSetupCard />
         )}
 
         {/* Operational Onboarding Wizard */}

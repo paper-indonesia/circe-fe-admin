@@ -21,6 +21,7 @@ import RecordPaymentDialog from "@/components/record-payment-dialog"
 import CreatePaymentLinkDialog from "@/components/create-payment-link-dialog"
 import { searchCustomers, createCustomer, type Customer, completeWalkInBooking, type PaymentStatusResponse } from '@/lib/api/walk-in'
 import { debounce } from 'lodash'
+import { SetupIncompleteBanner } from "@/components/setup-incomplete-banner"
 import {
   format,
   startOfMonth,
@@ -1210,6 +1211,9 @@ export default function CalendarPage() {
             </AddButton>
           </div>
         </div>
+
+        {/* Setup Incomplete Banner */}
+        <SetupIncompleteBanner showOn="calendar" />
 
         {/* Controls */}
         <Card>
