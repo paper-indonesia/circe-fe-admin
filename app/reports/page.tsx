@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { apiClient } from "@/lib/api-client"
 import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays } from "date-fns"
+import * as XLSX from 'xlsx'
 import {
   FileText,
   Download,
@@ -92,6 +93,8 @@ export default function ReportsPage() {
   const [data, setData] = useState<any>(null)
   const [clients, setClients] = useState<any[]>([])
   const [treatmentsList, setTreatmentsList] = useState<string[]>([])
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [rawAppointments, setRawAppointments] = useState<any[]>([]) // For Excel export
 
   // Set current time only on client side to avoid hydration mismatch
   useEffect(() => {
@@ -193,6 +196,9 @@ export default function ReportsPage() {
 
         // No need to filter appointments - already filtered by API
         console.log('[Reports] Total appointments in range:', appointments.length)
+
+        // Save raw appointments for Excel export
+        setRawAppointments(appointments)
 
         // Process data for reports (calculate metrics client-side)
         const processedData = processReportsData(appointments, customers, dateFrom, dateTo)
@@ -468,6 +474,85 @@ export default function ReportsPage() {
         peakDay
       },
       topClients
+    }
+  }
+
+  // Download report as Excel
+  const handleDownloadExcel = () => {
+    if (!rawAppointments || rawAppointments.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No appointments data available to export",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsDownloading(true)
+    toast({
+      title: "Generating Excel",
+      description: "Please wait while we prepare your report..."
+    })
+
+    try {
+      // Format data for Excel
+      const excelData = rawAppointments.map((appointment: any) => {
+        // Get services info
+        const services = appointment.services || []
+        const treatmentNames = services.map((s: any) => s.service_name || 'N/A').join(', ')
+        const staffNames = services.map((s: any) => s.staff_name || 'N/A').join(', ')
+
+        return {
+          'Tanggal': appointment.appointment_date || 'N/A',
+          'Order ID': appointment.id || appointment._id || 'N/A',
+          'Customer': appointment.customer_name || 'N/A',
+          'Treatment': treatmentNames || 'N/A',
+          'Staff': staffNames || 'N/A',
+          'Time': appointment.start_time || 'N/A',
+          'Harga': appointment.total_price || 0
+        }
+      })
+
+      // Create workbook and worksheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Appointments Report')
+
+      // Auto-size columns
+      const maxWidth = 50
+      const colWidths = [
+        { wch: 12 }, // Tanggal
+        { wch: 25 }, // Order ID
+        { wch: 20 }, // Customer
+        { wch: 30 }, // Treatment
+        { wch: 20 }, // Staff
+        { wch: 10 }, // Time
+        { wch: 15 }  // Harga
+      ]
+      worksheet['!cols'] = colWidths
+
+      // Generate filename with date range
+      const dateRangeText = appliedDateRange === 'customRange'
+        ? `${appliedStartDate}_to_${appliedEndDate}`
+        : appliedDateRange
+      const filename = `appointments-report-${dateRangeText}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+
+      // Download
+      XLSX.writeFile(workbook, filename)
+
+      toast({
+        title: "Download Successful",
+        description: `Report saved as ${filename}`
+      })
+    } catch (error: any) {
+      console.error('Excel generation error:', error)
+      toast({
+        title: "Download Failed",
+        description: error?.message || "Failed to generate Excel file",
+        variant: "destructive"
+      })
+    } finally {
+      setIsDownloading(false)
     }
   }
 
@@ -874,6 +959,25 @@ export default function ReportsPage() {
 
               <Button
                 variant="outline"
+                onClick={handleDownloadExcel}
+                disabled={isDownloading || isLoading || !rawAppointments || rawAppointments.length === 0}
+                className="bg-white dark:bg-gray-800 gap-2"
+              >
+                {isDownloading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download Excel
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={() => setRefreshKey(prev => prev + 1)}
                 className={`bg-white dark:bg-gray-800 ${isLoading ? "animate-spin" : ""}`}
@@ -978,6 +1082,7 @@ export default function ReportsPage() {
         )}
 
         {/* KPI Cards */}
+        <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-primary/20 hover:border-primary/40 hover:-translate-y-1">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-pink-400/20 to-pink-600/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-300" />
@@ -1943,6 +2048,8 @@ export default function ReportsPage() {
             )}
           </div>
         )}
+        </div>
+        {/* End Reportable Content */}
       </div>
     </>
   )
