@@ -1,13 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { apiClient } from "@/lib/api-client"
 import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays } from "date-fns"
+import * as XLSX from 'xlsx'
 import {
   FileText,
   Download,
@@ -70,8 +73,17 @@ export default function ReportsPage() {
   const { toast } = useToast()
   const router = useRouter()
   const [dateRange, setDateRange] = useState("30days")
+  const [customStartDate, setCustomStartDate] = useState<string>(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
+  const [customEndDate, setCustomEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
   const [selectedMonth, setSelectedMonth] = useState<string>("")
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
+
+  // Applied filters (actual filters used for API calls)
+  const [appliedDateRange, setAppliedDateRange] = useState("30days")
+  const [appliedStartDate, setAppliedStartDate] = useState<string>(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
+  const [appliedEndDate, setAppliedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
+  const [appliedMonth, setAppliedMonth] = useState<string>("")
+  const [appliedYear, setAppliedYear] = useState<string>(new Date().getFullYear().toString())
   const [selectedMetric, setSelectedMetric] = useState("all")
   const [selectedClient, setSelectedClient] = useState("all")
   const [selectedTreatment, setSelectedTreatment] = useState("all")
@@ -81,8 +93,8 @@ export default function ReportsPage() {
   const [data, setData] = useState<any>(null)
   const [clients, setClients] = useState<any[]>([])
   const [treatmentsList, setTreatmentsList] = useState<string[]>([])
-  const [customerStatistics, setCustomerStatistics] = useState<any>(null)
-  const [loadingCustomerStats, setLoadingCustomerStats] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [rawAppointments, setRawAppointments] = useState<any[]>([]) // For Excel export
 
   // Set current time only on client side to avoid hydration mismatch
   useEffect(() => {
@@ -93,24 +105,7 @@ export default function ReportsPage() {
     return () => clearInterval(timer)
   }, [])
 
-  // Fetch customer statistics
-  useEffect(() => {
-    const fetchCustomerStatistics = async () => {
-      try {
-        setLoadingCustomerStats(true)
-        const response = await fetch('/api/customers/statistics/summary')
-        if (response.ok) {
-          const data = await response.json()
-          setCustomerStatistics(data.statistics || null)
-        }
-      } catch (error) {
-        console.error('Error fetching customer statistics:', error)
-      } finally {
-        setLoadingCustomerStats(false)
-      }
-    }
-    fetchCustomerStatistics()
-  }, [])
+  // Removed: Customer statistics API call - not needed for current charts
 
   // Fetch reports data directly from individual APIs
   useEffect(() => {
@@ -119,23 +114,28 @@ export default function ReportsPage() {
       try {
         console.log('[Reports] Fetching data from APIs...')
 
-        // Calculate date range
+        // Calculate date range using APPLIED filters
         const getDateRange = () => {
           const now = new Date()
           let dateFrom: Date
           let dateTo: Date = now
 
-          if (dateRange === 'custom' && selectedMonth && selectedYear) {
-            dateFrom = startOfMonth(new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1))
+          if (appliedDateRange === 'customRange') {
+            // Use custom start and end date
+            dateFrom = new Date(appliedStartDate)
+            dateTo = new Date(appliedEndDate)
+          } else if (appliedDateRange === 'custom' && appliedMonth && appliedYear) {
+            // Legacy: custom month picker
+            dateFrom = startOfMonth(new Date(parseInt(appliedYear), parseInt(appliedMonth) - 1))
             dateTo = endOfMonth(dateFrom)
-          } else if (dateRange === 'thisMonth') {
+          } else if (appliedDateRange === 'thisMonth') {
             dateFrom = startOfMonth(now)
             dateTo = endOfMonth(now)
-          } else if (dateRange === 'thisYear') {
+          } else if (appliedDateRange === 'thisYear') {
             dateFrom = new Date(now.getFullYear(), 0, 1)
             dateTo = now
           } else {
-            const days = dateRange === '7days' ? 7 : dateRange === '90days' ? 90 : 30
+            const days = appliedDateRange === '7days' ? 7 : appliedDateRange === '90days' ? 90 : 30
             dateFrom = subDays(now, days)
           }
 
@@ -143,63 +143,65 @@ export default function ReportsPage() {
         }
 
         const { dateFrom, dateTo } = getDateRange()
-        console.log('[Reports] Date range:', format(dateFrom, 'yyyy-MM-dd'), 'to', format(dateTo, 'yyyy-MM-dd'))
+        const dateFromStr = format(dateFrom, 'yyyy-MM-dd')
+        const dateToStr = format(dateTo, 'yyyy-MM-dd')
 
-        // Fetch data from individual APIs in parallel
-        const [appointmentsRes, customersRes, staffRes, servicesRes] = await Promise.all([
-          fetch('/api/appointments?size=100').catch(() => null),
-          fetch('/api/customers?size=100').catch(() => null),
-          fetch('/api/staff?size=100').catch(() => null),
-          fetch('/api/services?size=100').catch(() => null)
+        console.log('[Reports] Date range:', dateFromStr, 'to', dateToStr)
+
+        // Fetch data from APIs with date filters (only 2 APIs needed!)
+        const [appointmentsRes, customersRes] = await Promise.all([
+          fetch(`/api/appointments?page=1&size=100&date_from=${dateFromStr}&date_to=${dateToStr}&sort_by=created_at&sort_order=desc`).catch((err) => {
+            console.error('[Reports] Appointments fetch error:', err)
+            return null
+          }),
+          fetch(`/api/customers?page=1&size=100&created_from=${dateFromStr}&created_to=${dateToStr}`).catch((err) => {
+            console.error('[Reports] Customers fetch error:', err)
+            return null
+          })
         ])
 
         console.log('[Reports] API responses received')
 
-        // Parse responses
+        // Parse responses with detailed error logging
         let appointments: any[] = []
         let customers: any[] = []
-        let staffList: any[] = []
-        let servicesList: any[] = []
 
         if (appointmentsRes?.ok) {
           const data = await appointmentsRes.json()
           appointments = data.items || []
           console.log('[Reports] Appointments loaded:', appointments.length)
+        } else if (appointmentsRes) {
+          const errorText = await appointmentsRes.text()
+          console.error('[Reports] Appointments error:', appointmentsRes.status, errorText)
+          toast({
+            title: "Error Loading Appointments",
+            description: `Status ${appointmentsRes.status}: ${errorText.substring(0, 100)}`,
+            variant: "destructive"
+          })
         }
 
         if (customersRes?.ok) {
           const data = await customersRes.json()
           customers = data.items || []
           console.log('[Reports] Customers loaded:', customers.length)
+        } else if (customersRes) {
+          const errorText = await customersRes.text()
+          console.error('[Reports] Customers error:', customersRes.status, errorText)
+          toast({
+            title: "Error Loading Customers",
+            description: `Status ${customersRes.status}: ${errorText.substring(0, 100)}`,
+            variant: "destructive"
+          })
         }
 
-        if (staffRes?.ok) {
-          const data = await staffRes.json()
-          staffList = data.items || []
-          console.log('[Reports] Staff loaded:', staffList.length)
-        }
+        // No need to filter appointments - already filtered by API
+        console.log('[Reports] Total appointments in range:', appointments.length)
 
-        if (servicesRes?.ok) {
-          const data = await servicesRes.json()
-          servicesList = data.items || []
-          console.log('[Reports] Services loaded:', servicesList.length)
-        }
-
-        // Filter appointments by date range
-        const filteredAppointments = appointments.filter((apt: any) => {
-          if (!apt.appointment_date) return false
-          try {
-            const aptDate = new Date(apt.appointment_date)
-            return aptDate >= dateFrom && aptDate <= dateTo
-          } catch (e) {
-            return false
-          }
-        })
-
-        console.log('[Reports] Filtered appointments:', filteredAppointments.length)
+        // Save raw appointments for Excel export
+        setRawAppointments(appointments)
 
         // Process data for reports (calculate metrics client-side)
-        const processedData = processReportsData(filteredAppointments, customers, staffList, servicesList, dateFrom, dateTo)
+        const processedData = processReportsData(appointments, customers, dateFrom, dateTo)
 
         console.log('[Reports] Processed data:', processedData)
         setData(processedData)
@@ -207,14 +209,17 @@ export default function ReportsPage() {
         setTreatmentsList(processedData.treatments?.map((t: any) => t.name) || [])
       } catch (error: any) {
         console.error('[Reports] Error fetching reports:', error)
+        toast({
+          title: "Error Loading Reports",
+          description: error?.message || "Failed to fetch reports data",
+          variant: "destructive"
+        })
         // Set empty data on error
         setData({
           dailyRevenue: [],
           treatments: [],
-          staffPerformance: [],
           timeSlotAnalysis: [],
           demographics: [],
-          paymentMethods: [],
           summary: {
             totalRevenue: 0,
             totalBookings: 0,
@@ -233,15 +238,72 @@ export default function ReportsPage() {
     }
 
     fetchReports()
-  }, [dateRange, selectedMonth, selectedYear, refreshKey])
+  }, [appliedDateRange, appliedMonth, appliedYear, appliedStartDate, appliedEndDate, refreshKey])
+
+  // Apply filter handler
+  const handleApplyFilter = () => {
+    // Validate custom range
+    if (dateRange === 'customRange') {
+      if (!customStartDate || !customEndDate) {
+        toast({
+          title: "Invalid Date Range",
+          description: "Please select both start and end dates",
+          variant: "destructive"
+        })
+        return
+      }
+      if (new Date(customStartDate) > new Date(customEndDate)) {
+        toast({
+          title: "Invalid Date Range",
+          description: "Start date must be before end date",
+          variant: "destructive"
+        })
+        return
+      }
+    }
+
+    // Validate custom month
+    if (dateRange === 'custom' && (!selectedMonth || !selectedYear)) {
+      toast({
+        title: "Incomplete Selection",
+        description: "Please select both month and year",
+        variant: "destructive"
+      })
+      return
+    }
+
+    // Apply filters
+    setAppliedDateRange(dateRange)
+    setAppliedStartDate(customStartDate)
+    setAppliedEndDate(customEndDate)
+    setAppliedMonth(selectedMonth)
+    setAppliedYear(selectedYear)
+
+    toast({
+      title: "Filter Applied",
+      description: "Reports updated successfully"
+    })
+  }
+
+  // Handle preset range change (7days, 30days, etc) - auto apply
+  const handlePresetRangeChange = (value: string) => {
+    setDateRange(value)
+
+    // Auto-apply for preset ranges (not custom)
+    if (value !== 'customRange' && value !== 'custom') {
+      setAppliedDateRange(value)
+      setAppliedStartDate(customStartDate)
+      setAppliedEndDate(customEndDate)
+      setAppliedMonth("")
+      setAppliedYear(new Date().getFullYear().toString())
+    }
+  }
 
   // Process reports data client-side
-  const processReportsData = (appointments: any[], customers: any[], staffList: any[], servicesList: any[], dateFrom: Date, dateTo: Date) => {
+  const processReportsData = (appointments: any[], customers: any[], dateFrom: Date, dateTo: Date) => {
     const dailyRevenueMap = new Map<string, { revenue: number; bookings: number; newClients: Set<string> }>()
     const treatmentsMap = new Map<string, { bookings: number; revenue: number }>()
-    const staffPerformanceMap = new Map<string, { bookings: number; revenue: number }>()
     const timeSlotMap = new Map<string, number>()
-    const paymentMethodsMap = new Map<string, { count: number; amount: number }>()
     const customerVisitsMap = new Map<string, number>()
 
     let totalRevenue = 0
@@ -286,34 +348,13 @@ export default function ReportsPage() {
           const treatment = treatmentsMap.get(serviceName)!
           treatment.bookings += 1
           treatment.revenue += servicePrice
-
-          // Staff performance
-          if (service.staff_id) {
-            if (!staffPerformanceMap.has(service.staff_id)) {
-              staffPerformanceMap.set(service.staff_id, { bookings: 0, revenue: 0 })
-            }
-            const staffPerf = staffPerformanceMap.get(service.staff_id)!
-            staffPerf.bookings += 1
-            staffPerf.revenue += servicePrice
-          }
         })
       }
 
-      // Time slot analysis
+      // Time slot analysis (Peak Hour)
       if (apt.start_time) {
         const hour = apt.start_time.split(':')[0] + ':00'
         timeSlotMap.set(hour, (timeSlotMap.get(hour) || 0) + 1)
-      }
-
-      // Payment methods
-      if (apt.payment_status === 'paid') {
-        const method = apt.payment_method || 'Cash'
-        if (!paymentMethodsMap.has(method)) {
-          paymentMethodsMap.set(method, { count: 0, amount: 0 })
-        }
-        const paymentData = paymentMethodsMap.get(method)!
-        paymentData.count += 1
-        paymentData.amount += price
       }
 
       // Customer visits
@@ -347,36 +388,13 @@ export default function ReportsPage() {
         growth: Math.floor(Math.random() * 30) - 10
       }))
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 8)
-
-    const staffPerformance = Array.from(staffPerformanceMap.entries())
-      .map(([staffId, data]) => {
-        const staff = staffList.find((s: any) => s._id === staffId || s.id === staffId)
-        return {
-          id: staffId,
-          name: staff?.name || staff?.full_name || 'Unknown',
-          bookings: data.bookings,
-          revenue: data.revenue,
-          rating: staff?.rating || staff?.average_rating || 4.5,
-          efficiency: totalBookings > 0 ? Math.min(100, Math.floor((data.bookings / totalBookings) * 100 * 10)) : 0,
-          retention: Math.floor(Math.random() * 40) + 60
-        }
-      })
-      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10) // Top 10 products
 
     const timeSlotAnalysis = Array.from(timeSlotMap.entries())
       .map(([time, bookings]) => ({ time, bookings }))
       .sort((a, b) => a.time.localeCompare(b.time))
 
-    const paymentMethods = Array.from(paymentMethodsMap.entries())
-      .map(([method, data]) => ({
-        method,
-        count: data.count,
-        amount: data.amount
-      }))
-      .sort((a, b) => b.amount - a.amount)
-
-    // Demographics
+    // Demographics (not used in current charts but keeping for future)
     const demographicsMap = new Map<string, number>()
     customers.forEach((customer: any) => {
       if (customer.date_of_birth) {
@@ -430,9 +448,8 @@ export default function ReportsPage() {
       }
     })
 
-    const avgRating = staffPerformance.length > 0
-      ? staffPerformance.reduce((sum, s) => sum + s.rating, 0) / staffPerformance.length
-      : 0
+    // Average rating calculation removed - not used in current charts
+    const avgRating = 4.5 // Default value
 
     const peakDay = dailyRevenue.length > 0
       ? format(new Date(dailyRevenue.reduce((max, day) => day.bookings > max.bookings ? day : max, dailyRevenue[0]).date), 'EEEE')
@@ -444,10 +461,8 @@ export default function ReportsPage() {
     return {
       dailyRevenue,
       treatments,
-      staffPerformance,
       timeSlotAnalysis,
       demographics,
-      paymentMethods,
       summary: {
         totalRevenue,
         totalBookings,
@@ -459,6 +474,85 @@ export default function ReportsPage() {
         peakDay
       },
       topClients
+    }
+  }
+
+  // Download report as Excel
+  const handleDownloadExcel = () => {
+    if (!rawAppointments || rawAppointments.length === 0) {
+      toast({
+        title: "No Data",
+        description: "No appointments data available to export",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsDownloading(true)
+    toast({
+      title: "Generating Excel",
+      description: "Please wait while we prepare your report..."
+    })
+
+    try {
+      // Format data for Excel
+      const excelData = rawAppointments.map((appointment: any) => {
+        // Get services info
+        const services = appointment.services || []
+        const treatmentNames = services.map((s: any) => s.service_name || 'N/A').join(', ')
+        const staffNames = services.map((s: any) => s.staff_name || 'N/A').join(', ')
+
+        return {
+          'Tanggal': appointment.appointment_date || 'N/A',
+          'Order ID': appointment.id || appointment._id || 'N/A',
+          'Customer': appointment.customer_name || 'N/A',
+          'Treatment': treatmentNames || 'N/A',
+          'Staff': staffNames || 'N/A',
+          'Time': appointment.start_time || 'N/A',
+          'Harga': appointment.total_price || 0
+        }
+      })
+
+      // Create workbook and worksheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Appointments Report')
+
+      // Auto-size columns
+      const maxWidth = 50
+      const colWidths = [
+        { wch: 12 }, // Tanggal
+        { wch: 25 }, // Order ID
+        { wch: 20 }, // Customer
+        { wch: 30 }, // Treatment
+        { wch: 20 }, // Staff
+        { wch: 10 }, // Time
+        { wch: 15 }  // Harga
+      ]
+      worksheet['!cols'] = colWidths
+
+      // Generate filename with date range
+      const dateRangeText = appliedDateRange === 'customRange'
+        ? `${appliedStartDate}_to_${appliedEndDate}`
+        : appliedDateRange
+      const filename = `appointments-report-${dateRangeText}-${format(new Date(), 'yyyy-MM-dd')}.xlsx`
+
+      // Download
+      XLSX.writeFile(workbook, filename)
+
+      toast({
+        title: "Download Successful",
+        description: `Report saved as ${filename}`
+      })
+    } catch (error: any) {
+      console.error('Excel generation error:', error)
+      toast({
+        title: "Download Failed",
+        description: error?.message || "Failed to generate Excel file",
+        variant: "destructive"
+      })
+    } finally {
+      setIsDownloading(false)
     }
   }
 
@@ -584,8 +678,8 @@ export default function ReportsPage() {
                 </h1>
                 <p className="text-muted-foreground mt-2">Comprehensive business insights and performance metrics</p>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <Select value={dateRange} onValueChange={setDateRange}>
+              <div className="flex flex-wrap gap-3 items-center">
+                <Select value={dateRange} onValueChange={handlePresetRangeChange}>
                   <SelectTrigger className="w-[160px]">
                     <Calendar className="h-4 w-4 mr-2" />
                     <SelectValue />
@@ -596,8 +690,42 @@ export default function ReportsPage() {
                     <SelectItem value="90days">Last 90 days</SelectItem>
                     <SelectItem value="thisMonth">This month</SelectItem>
                     <SelectItem value="thisYear">This year</SelectItem>
+                    <SelectItem value="customRange">Custom Range</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {/* Custom Date Range Inputs */}
+                {dateRange === 'customRange' && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="start-date" className="text-sm font-medium whitespace-nowrap">From:</Label>
+                      <Input
+                        id="start-date"
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        max={customEndDate}
+                        className="w-[150px]"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="end-date" className="text-sm font-medium whitespace-nowrap">To:</Label>
+                      <Input
+                        id="end-date"
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        min={customStartDate}
+                        max={format(new Date(), 'yyyy-MM-dd')}
+                        className="w-[150px]"
+                      />
+                    </div>
+                    <Button onClick={handleApplyFilter} size="sm" className="gap-2">
+                      <Filter className="h-4 w-4" />
+                      Apply
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -687,13 +815,15 @@ export default function ReportsPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               <Select value={dateRange} onValueChange={(value) => {
                 setDateRange(value)
                 // Reset month/year when selecting preset ranges
-                if (value !== "custom") {
+                if (value !== "custom" && value !== "customRange") {
                   setSelectedMonth("")
                   setSelectedYear(new Date().getFullYear().toString())
+                  // Auto-apply preset ranges
+                  handlePresetRangeChange(value)
                 }
               }}>
                 <SelectTrigger className="w-[160px] bg-white dark:bg-gray-800">
@@ -706,10 +836,45 @@ export default function ReportsPage() {
                   <SelectItem value="90days">Last 90 days</SelectItem>
                   <SelectItem value="thisMonth">This month</SelectItem>
                   <SelectItem value="thisYear">This year</SelectItem>
+                  <SelectItem value="customRange">Custom Range</SelectItem>
                   <SelectItem value="custom">Custom Month</SelectItem>
                 </SelectContent>
               </Select>
 
+              {/* Custom Date Range Inputs */}
+              {dateRange === 'customRange' && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="start-date-main" className="text-sm font-medium whitespace-nowrap">From:</Label>
+                    <Input
+                      id="start-date-main"
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      max={customEndDate}
+                      className="w-[150px] bg-white dark:bg-gray-800"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="end-date-main" className="text-sm font-medium whitespace-nowrap">To:</Label>
+                    <Input
+                      id="end-date-main"
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      min={customStartDate}
+                      max={format(new Date(), 'yyyy-MM-dd')}
+                      className="w-[150px] bg-white dark:bg-gray-800"
+                    />
+                  </div>
+                  <Button onClick={handleApplyFilter} size="sm" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    Apply
+                  </Button>
+                </>
+              )}
+
+              {/* Custom Month Picker (Legacy) */}
               {dateRange === "custom" && (
                 <>
                   <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -742,6 +907,10 @@ export default function ReportsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button onClick={handleApplyFilter} size="sm" className="gap-2">
+                    <Filter className="h-4 w-4" />
+                    Apply
+                  </Button>
                 </>
               )}
 
@@ -787,6 +956,25 @@ export default function ReportsPage() {
                   <SelectItem value="clients">Clients</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Button
+                variant="outline"
+                onClick={handleDownloadExcel}
+                disabled={isDownloading || isLoading || !rawAppointments || rawAppointments.length === 0}
+                className="bg-white dark:bg-gray-800 gap-2"
+              >
+                {isDownloading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Download Excel
+                  </>
+                )}
+              </Button>
 
               <Button
                 variant="outline"
@@ -894,6 +1082,7 @@ export default function ReportsPage() {
         )}
 
         {/* KPI Cards */}
+        <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-primary/20 hover:border-primary/40 hover:-translate-y-1">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-pink-400/20 to-pink-600/10 rounded-full -translate-y-16 translate-x-16 group-hover:scale-110 transition-transform duration-300" />
@@ -1859,6 +2048,8 @@ export default function ReportsPage() {
             )}
           </div>
         )}
+        </div>
+        {/* End Reportable Content */}
       </div>
     </>
   )

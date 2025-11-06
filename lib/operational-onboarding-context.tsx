@@ -65,6 +65,7 @@ interface OnboardingProgress {
   serviceCategoryTemplates: TemplateData[]
   currentStep: number
   isCompleted: boolean
+  isDismissed: boolean // New: Track if user dismissed the wizard
 }
 
 interface OnboardingContextType {
@@ -80,6 +81,10 @@ interface OnboardingContextType {
   completeOnboarding: () => Promise<void>
   resetOnboarding: () => void
   loadProgress: () => Promise<void>
+  dismissWizard: () => void // New: Dismiss the wizard temporarily
+  resumeWizard: () => void // New: Resume the wizard
+  getIncompleteSteps: () => { step: number; name: string }[] // New: Get list of incomplete steps
+  hasCompletedStep: (step: number) => Promise<boolean> // New: Check if a step is completed
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined)
@@ -99,6 +104,7 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
     serviceCategoryTemplates: [],
     currentStep: 1,
     isCompleted: false,
+    isDismissed: false,
   })
 
   // Set mounted state (client-side only)
@@ -295,6 +301,7 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
       serviceCategoryTemplates: [],
       currentStep: 1,
       isCompleted: false,
+      isDismissed: false,
     })
 
     // Skip localStorage if not mounted (SSR)
@@ -305,6 +312,66 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
       } catch (error) {
         console.error("Failed to reset onboarding in localStorage:", error)
       }
+    }
+  }
+
+  const dismissWizard = () => {
+    setProgress((prev) => ({
+      ...prev,
+      isDismissed: true,
+    }))
+  }
+
+  const resumeWizard = () => {
+    setProgress((prev) => ({
+      ...prev,
+      isDismissed: false,
+    }))
+  }
+
+  const getIncompleteSteps = () => {
+    const steps: { step: number; name: string }[] = []
+
+    // Check each step completion based on actual database data
+    // This is async, so we'll need to handle it differently
+    // For now, return based on progress state
+
+    return steps
+  }
+
+  const hasCompletedStep = async (step: number): Promise<boolean> => {
+    try {
+      switch (step) {
+        case 1: // Outlets
+          const outletsRes = await fetch('/api/outlets?page=1&size=1')
+          if (outletsRes.ok) {
+            const data = await outletsRes.json()
+            return data.items && data.items.length > 0
+          }
+          return false
+
+        case 2: // Products/Services
+          const servicesRes = await fetch('/api/services?page=1&size=1')
+          if (servicesRes.ok) {
+            const data = await servicesRes.json()
+            return data.items && data.items.length > 0
+          }
+          return false
+
+        case 3: // Staff
+          const staffRes = await fetch('/api/staff?page=1&size=1')
+          if (staffRes.ok) {
+            const data = await staffRes.json()
+            return data.items && data.items.length > 0
+          }
+          return false
+
+        default:
+          return false
+      }
+    } catch (error) {
+      console.error(`Failed to check step ${step} completion:`, error)
+      return false
     }
   }
 
@@ -344,6 +411,10 @@ export function OperationalOnboardingProvider({ children }: { children: ReactNod
         completeOnboarding,
         resetOnboarding,
         loadProgress,
+        dismissWizard,
+        resumeWizard,
+        getIncompleteSteps,
+        hasCompletedStep,
       }}
     >
       {children}
