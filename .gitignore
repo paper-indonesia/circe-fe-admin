@@ -16,8 +16,18 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
-.env*
+# env files (environment variables and secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.env
+.env.*
+
+# Exception: Allow .env.example to be committed
+!.env.example
 
 # vercel
 .vercel
@@ -28,3 +38,20 @@ next-env.d.ts
 
 # claude
 .claude/
+
+# secrets and credentials
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials/
+config/secrets.*
+*.secret
+
+# IDE and editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
