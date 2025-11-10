@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { HelpCircle, MessageSquare, BookOpen, Mail, Phone, Send, CheckCircle, AlertCircle, ExternalLink, MessageCircle } from "lucide-react"
+import { HelpCircle, MessageSquare, Mail, Phone, Send, CheckCircle, AlertCircle, MessageCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function HelpDeskPage() {
@@ -87,30 +87,8 @@ export default function HelpDeskPage() {
         <p className="text-lg text-gray-600">Get assistance and support for your questions</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quick Help Cards */}
-        <Card className="shadow-sm border-gray-200 hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <BookOpen className="h-5 w-5 text-blue-600" />
-              Documentation
-            </CardTitle>
-            <CardDescription>
-              Browse our comprehensive guides and tutorials
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => window.open('https://docs.reserva.com', '_blank')}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              View Documentation
-            </Button>
-          </CardContent>
-        </Card>
-
         <Card className="shadow-sm border-gray-200 hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">

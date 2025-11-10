@@ -45,9 +45,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MultiStaffGrid } from "@/components/availability/multi-staff-grid"
 import { AddAvailabilityDialog } from "@/components/availability/add-availability-dialog"
 import { EditAvailabilityDialog } from "@/components/availability/edit-availability-dialog"
-import { LayoutGrid, CalendarDays, List, MoreVertical, Copy, Users as UsersGroup, FileText, Download } from "lucide-react"
+import { LayoutGrid, CalendarDays, MoreVertical, Copy, Users as UsersGroup, FileText, Download } from "lucide-react"
 
-type DisplayMode = "calendar" | "grid" | "list"
+type DisplayMode = "calendar" | "grid"
 
 // Color scheme for availability types
 const AVAILABILITY_COLORS = {
@@ -261,13 +261,21 @@ export default function AvailabilityCalendarPage() {
     return splitTimeRanges(entries)
   }
 
-  // Navigation functions (always week view)
+  // Navigation functions - Grid mode navigates by day, others by week
   const goToPrevious = () => {
-    setCurrentDate(subWeeks(currentDate, 1))
+    if (displayMode === 'grid') {
+      setCurrentDate(addDays(currentDate, -1))
+    } else {
+      setCurrentDate(subWeeks(currentDate, 1))
+    }
   }
 
   const goToNext = () => {
-    setCurrentDate(addWeeks(currentDate, 1))
+    if (displayMode === 'grid') {
+      setCurrentDate(addDays(currentDate, 1))
+    } else {
+      setCurrentDate(addWeeks(currentDate, 1))
+    }
   }
 
   const goToToday = () => {
@@ -433,54 +441,6 @@ export default function AvailabilityCalendarPage() {
               Tambah
             </Button>
 
-            {/* Quick Actions */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <MoreVertical className="h-4 w-4" />
-                  Quick Actions
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => {
-                  toast({
-                    title: "Coming Soon",
-                    description: "Copy to next week feature will be available soon",
-                  })
-                }}>
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy to Next Week
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  toast({
-                    title: "Coming Soon",
-                    description: "Apply to all staff feature will be available soon",
-                  })
-                }}>
-                  <UsersGroup className="h-4 w-4 mr-2" />
-                  Apply to All Staff
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => {
-                  toast({
-                    title: "Coming Soon",
-                    description: "Export feature will be available soon",
-                  })
-                }}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export to CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  toast({
-                    title: "Info",
-                    description: `Total ${availabilityData.length} entries in current view`,
-                  })
-                }}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  View Summary
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
 
             {/* Display Mode Toggle */}
             <Tabs value={displayMode} onValueChange={(v) => setDisplayMode(v as DisplayMode)} className="w-auto">
@@ -492,10 +452,6 @@ export default function AvailabilityCalendarPage() {
                 <TabsTrigger value="grid" className="gap-2">
                   <LayoutGrid className="h-4 w-4" />
                   Grid
-                </TabsTrigger>
-                <TabsTrigger value="list" className="gap-2">
-                  <List className="h-4 w-4" />
-                  List
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -520,13 +476,17 @@ export default function AvailabilityCalendarPage() {
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 <div className="text-sm lg:text-lg font-semibold ml-2 lg:ml-4 hidden lg:block">
-                  {`${format(dateRange.start, 'd MMM', { locale: localeId })} - ${format(dateRange.end, 'd MMM yyyy', { locale: localeId })}`}
+                  {displayMode === 'grid'
+                    ? format(currentDate, 'd MMMM yyyy', { locale: localeId })
+                    : `${format(dateRange.start, 'd MMM', { locale: localeId })} - ${format(dateRange.end, 'd MMM yyyy', { locale: localeId })}`}
                 </div>
               </div>
 
               {/* Date Display for Mobile */}
               <div className="text-sm font-semibold lg:hidden w-full text-center">
-                {`${format(dateRange.start, 'd MMM', { locale: localeId })} - ${format(dateRange.end, 'd MMM yyyy', { locale: localeId })}`}
+                {displayMode === 'grid'
+                  ? format(currentDate, 'd MMMM yyyy', { locale: localeId })
+                  : `${format(dateRange.start, 'd MMM', { locale: localeId })} - ${format(dateRange.end, 'd MMM yyyy', { locale: localeId })}`}
               </div>
 
               {/* Filters */}
@@ -703,7 +663,7 @@ export default function AvailabilityCalendarPage() {
               )}
           </CardContent>
         </Card>
-        ) : displayMode === "grid" ? (
+        ) : (
           /* Multi-Staff Grid View */
           loading ? (
             <div className="flex items-center justify-center py-12">
@@ -728,71 +688,6 @@ export default function AvailabilityCalendarPage() {
               }}
             />
           )
-        ) : (
-          /* List View */
-          <Card>
-            <CardContent className="p-6">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <GradientLoading />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {availabilityData.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8">
-                      <List className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Tidak ada data ketersediaan untuk periode ini</p>
-                    </div>
-                  ) : (
-                    availabilityData.map((entry) => {
-                      const staffData = staff.find(s => s.id === entry.staff_id)
-                      const colors = AVAILABILITY_COLORS[entry.availability_type as keyof typeof AVAILABILITY_COLORS]
-
-                      return (
-                        <div
-                          key={entry.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                          onClick={() => {
-                            setSelectedEntry(entry)
-                            setDetailDialogOpen(true)
-                          }}
-                        >
-                          <div className="flex items-center gap-4 flex-1">
-                            <div className={cn("w-1 h-12 rounded-full", colors.bg, colors.border)} />
-                            <div>
-                              <div className="font-medium">{staffData?.display_name || staffData?.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {format(new Date(entry.date), 'dd MMM yyyy', { locale: localeId })}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <Badge className={cn(colors.bg, colors.text, "mb-1")}>
-                                {colors.label}
-                              </Badge>
-                              <div className="text-sm text-muted-foreground flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {entry.start_time.substring(0, 5)} - {entry.end_time.substring(0, 5)}
-                              </div>
-                            </div>
-
-                            {entry.capacity && entry.capacity > 1 && (
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Users className="h-4 w-4" />
-                                <span>{entry.current_bookings || 0}/{entry.capacity}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         )}
 
         {/* Entry Detail Dialog */}
