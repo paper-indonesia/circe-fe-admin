@@ -432,13 +432,6 @@ export function ImportCustomerDialog({ open, onOpenChange, onImportSuccess }: Im
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600">Indonesian phone number (9-13 digits)</p>
-                      <div className="text-xs text-gray-500 mt-2 space-y-1">
-                        <p className="font-medium">✨ We automatically fix these formats:</p>
-                        <p>• 08123456789 → +628123456789</p>
-                        <p>• 8123456789 → +628123456789</p>
-                        <p>• 628123456789 → +628123456789</p>
-                        <p>• 0812-3456-789 → +628123456789</p>
-                      </div>
                     </div>
                   </div>
 
