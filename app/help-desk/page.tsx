@@ -53,8 +53,32 @@ export default function HelpDeskPage() {
     try {
       setSubmitting(true)
 
-      // TODO: Implement API call to submit support ticket
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+      // Prepare user name
+      const userName = user?.first_name && user?.last_name
+        ? `${user.first_name} ${user.last_name}`
+        : user?.name || 'Anonymous'
+
+      // Send support ticket via email API
+      const response = await fetch('/api/support-ticket', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          category: supportForm.category,
+          subject: supportForm.subject,
+          message: supportForm.message,
+          priority: supportForm.priority,
+          userName: userName,
+          userEmail: user?.email || '',
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit support ticket')
+      }
 
       toast({
         title: "Success",
@@ -69,9 +93,10 @@ export default function HelpDeskPage() {
         priority: "medium"
       })
     } catch (error) {
+      console.error('Support ticket error:', error)
       toast({
         title: "Error",
-        description: "Failed to submit support ticket. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit support ticket. Please try again.",
         variant: "destructive"
       })
     } finally {
