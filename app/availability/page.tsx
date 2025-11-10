@@ -40,8 +40,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { MultiStaffGrid } from "@/components/availability/multi-staff-grid"
+import { AddAvailabilityDialog } from "@/components/availability/add-availability-dialog"
+import { EditAvailabilityDialog } from "@/components/availability/edit-availability-dialog"
+import { LayoutGrid, CalendarDays, List, MoreVertical, Copy, Users as UsersGroup, FileText, Download } from "lucide-react"
 
-type ViewMode = "week" | "month"
+type DisplayMode = "calendar" | "grid" | "list"
 
 // Color scheme for availability types
 const AVAILABILITY_COLORS = {
@@ -76,28 +82,29 @@ export default function AvailabilityCalendarPage() {
   const { staff = [], loading: staffLoading } = useStaff()
   const { treatments = [] } = useTreatments()
 
-  const [viewMode, setViewMode] = useState<ViewMode>("week")
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("calendar")
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [selectedStaffFilter, setSelectedStaffFilter] = useState<string>("all")
+  const [selectedServiceFilter, setSelectedServiceFilter] = useState<string>("all")
   const [availabilityData, setAvailabilityData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<any>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [prefilledData, setPrefilledData] = useState<{
+    staffId?: string
+    date?: string
+    time?: string
+  }>({})
 
-  // Calculate date range based on view mode
+  // Calculate date range for week view (always week now)
   const dateRange = useMemo(() => {
-    if (viewMode === "week") {
-      return {
-        start: startOfWeek(currentDate, { weekStartsOn: 1 }), // Monday
-        end: endOfWeek(currentDate, { weekStartsOn: 1 })
-      }
-    } else {
-      return {
-        start: startOfMonth(currentDate),
-        end: endOfMonth(currentDate)
-      }
+    return {
+      start: startOfWeek(currentDate, { weekStartsOn: 1 }), // Monday
+      end: endOfWeek(currentDate, { weekStartsOn: 1 })
     }
-  }, [currentDate, viewMode])
+  }, [currentDate])
 
   // Generate days for display
   const displayDays = useMemo(() => {
@@ -124,9 +131,21 @@ export default function AvailabilityCalendarPage() {
         start_date: format(dateRange.start, 'yyyy-MM-dd'),
         end_date: format(dateRange.end, 'yyyy-MM-dd'),
         staff_id: selectedStaffFilter !== "all" ? selectedStaffFilter : undefined,
+        service_id: selectedServiceFilter !== "all" ? selectedServiceFilter : undefined,
       })
 
-      const entries = Array.isArray(response) ? response : response.items || []
+      let entries = Array.isArray(response) ? response : response.items || []
+
+      // Client-side filter for service if backend doesn't support it
+      if (selectedServiceFilter !== "all") {
+        entries = entries.filter(entry => {
+          if (!entry.service_ids || entry.service_ids.length === 0) {
+            // If no service_ids, it's available for all services
+            return true
+          }
+          return entry.service_ids.includes(selectedServiceFilter)
+        })
+      }
       setAvailabilityData(entries)
     } catch (error: any) {
       toast({
@@ -142,40 +161,124 @@ export default function AvailabilityCalendarPage() {
   // Fetch data when date range or filters change
   useEffect(() => {
     fetchAvailability()
-  }, [dateRange, selectedStaffFilter])
+  }, [dateRange, selectedStaffFilter, selectedServiceFilter])
+
+  // Helper function to split overlapping time ranges
+  const splitTimeRanges = (entries: any[]) => {
+    if (entries.length === 0) return []
+
+    // Sort entries by start time
+    const sorted = [...entries].sort((a, b) => a.start_time.localeCompare(b.start_time))
+
+    // Find working_hours entries
+    const workingHours = sorted.filter(e => e.availability_type === 'working_hours')
+    const breaks = sorted.filter(e => e.availability_type !== 'working_hours')
+
+    const result: any[] = []
+
+    // For each working_hours entry
+    workingHours.forEach(work => {
+      const workStart = work.start_time.substring(0, 5)
+      const workEnd = work.end_time.substring(0, 5)
+
+      // Find all breaks that overlap with this working hours
+      const overlappingBreaks = breaks.filter(brk => {
+        const brkStart = brk.start_time.substring(0, 5)
+        const brkEnd = brk.end_time.substring(0, 5)
+        // Check if break overlaps with working hours
+        return brkStart < workEnd && brkEnd > workStart
+      }).sort((a, b) => a.start_time.localeCompare(b.start_time))
+
+      if (overlappingBreaks.length === 0) {
+        // No breaks, add the whole working hours
+        result.push(work)
+      } else {
+        // Split working hours around breaks
+        let currentStart = workStart
+
+        overlappingBreaks.forEach(brk => {
+          const brkStart = brk.start_time.substring(0, 5)
+          const brkEnd = brk.end_time.substring(0, 5)
+
+          // Add working segment before break (if any)
+          if (currentStart < brkStart) {
+            result.push({
+              ...work,
+              id: `${work.id}-split-${currentStart}`,
+              start_time: currentStart + work.start_time.substring(5),
+              end_time: brkStart + work.end_time.substring(5),
+              _isSplit: true,
+              _originalEntry: work  // Keep reference to original entry
+            })
+          }
+
+          // Add the break itself
+          result.push(brk)
+
+          // Update current start to after the break
+          currentStart = brkEnd
+        })
+
+        // Add remaining working segment after last break (if any)
+        if (currentStart < workEnd) {
+          result.push({
+            ...work,
+            id: `${work.id}-split-${currentStart}`,
+            start_time: currentStart + work.start_time.substring(5),
+            end_time: workEnd + work.end_time.substring(5),
+            _isSplit: true,
+            _originalEntry: work  // Keep reference to original entry
+          })
+        }
+      }
+    })
+
+    // Add any standalone breaks/blocked/vacation that don't overlap with working hours
+    breaks.forEach(brk => {
+      const isOverlapping = workingHours.some(work => {
+        const workStart = work.start_time.substring(0, 5)
+        const workEnd = work.end_time.substring(0, 5)
+        const brkStart = brk.start_time.substring(0, 5)
+        const brkEnd = brk.end_time.substring(0, 5)
+        return brkStart < workEnd && brkEnd > workStart
+      })
+      if (!isOverlapping) {
+        result.push(brk)
+      }
+    })
+
+    // Sort final result by start time
+    return result.sort((a, b) => a.start_time.localeCompare(b.start_time))
+  }
 
   // Get availability entries for a specific staff and date
   const getEntriesForStaffAndDate = (staffId: string, date: Date) => {
-    return availabilityData.filter(entry =>
+    const entries = availabilityData.filter(entry =>
       entry.staff_id === staffId &&
       isSameDay(new Date(entry.date), date)
     )
+    // Apply time range splitting to remove overlaps
+    return splitTimeRanges(entries)
   }
 
-  // Navigation functions
+  // Navigation functions (always week view)
   const goToPrevious = () => {
-    if (viewMode === "week") {
-      setCurrentDate(subWeeks(currentDate, 1))
-    } else {
-      setCurrentDate(subMonths(currentDate, 1))
-    }
+    setCurrentDate(subWeeks(currentDate, 1))
   }
 
   const goToNext = () => {
-    if (viewMode === "week") {
-      setCurrentDate(addWeeks(currentDate, 1))
-    } else {
-      setCurrentDate(addMonths(currentDate, 1))
-    }
+    setCurrentDate(addWeeks(currentDate, 1))
   }
 
   const goToToday = () => {
     setCurrentDate(new Date())
   }
 
-  // Open entry detail
+  // Open entry detail - use original entry if it's a split segment
   const handleEntryClick = (entry: any) => {
-    setSelectedEntry(entry)
+    // If this is a split segment, use the original entry for editing
+    const entryToShow = entry._isSplit && entry._originalEntry ? entry._originalEntry : entry
+    setSelectedEntry(entryToShow)
     setDetailDialogOpen(true)
   }
 
@@ -200,6 +303,106 @@ export default function AvailabilityCalendarPage() {
     }
   }
 
+  // Update existing availability
+  const handleUpdateAvailability = async (data: any) => {
+    try {
+      // Get tenant_id from selected staff
+      const selectedStaff = staff.find(s => s.id === data.staff_id)
+      let tenantId = selectedStaff?.tenant_id
+
+      // If tenant_id not available from staff, fetch from API
+      if (!tenantId) {
+        const tenantResponse = await fetch('/api/tenant')
+        if (tenantResponse.ok) {
+          const tenantData = await tenantResponse.json()
+          tenantId = tenantData.tenant_id
+        }
+      }
+
+      // Add tenant_id and outlet_id to payload
+      const payload = {
+        ...data,
+        tenant_id: tenantId,
+        // is_available: true for working_hours, false for others (break, blocked, vacation)
+        is_available: data.availability_type === 'working_hours',
+        // Allow overlap for break, blocked, and vacation (they can overlap with working_hours)
+        allow_overlap: data.availability_type !== 'working_hours',
+      }
+
+      // Add outlet_id if available from staff
+      if (selectedStaff?.outlet_id || selectedStaff?.outletId) {
+        payload.outlet_id = selectedStaff.outlet_id || selectedStaff.outletId
+      }
+
+      await apiClient.updateAvailability(selectedEntry.id, payload)
+      toast({
+        title: "Berhasil",
+        description: "Ketersediaan berhasil diperbarui",
+      })
+      fetchAvailability()
+      setDetailDialogOpen(false)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Gagal memperbarui ketersediaan",
+        variant: "destructive",
+      })
+      throw error
+    }
+  }
+
+  // Save new availability
+  const handleSaveNewAvailability = async (data: any) => {
+    try {
+      // Get tenant_id from selected staff
+      const selectedStaff = staff.find(s => s.id === data.staff_id)
+      let tenantId = selectedStaff?.tenant_id
+
+      // If tenant_id not available from staff, fetch from API
+      if (!tenantId) {
+        const tenantResponse = await fetch('/api/tenant')
+        if (tenantResponse.ok) {
+          const tenantData = await tenantResponse.json()
+          tenantId = tenantData.tenant_id
+        }
+      }
+
+      // Add tenant_id and outlet_id to payload
+      const payload = {
+        ...data,
+        tenant_id: tenantId,
+        // is_available: true for working_hours, false for others (break, blocked, vacation)
+        is_available: data.availability_type === 'working_hours',
+        // Allow overlap for break, blocked, and vacation (they can overlap with working_hours)
+        allow_overlap: data.availability_type !== 'working_hours',
+      }
+
+      // Add outlet_id if available from staff
+      if (selectedStaff?.outlet_id || selectedStaff?.outletId) {
+        payload.outlet_id = selectedStaff.outlet_id || selectedStaff.outletId
+      }
+
+      // Debug: Log payload
+      console.log('[Availability] Create payload:', JSON.stringify(payload, null, 2))
+
+      await apiClient.createAvailability(payload)
+      toast({
+        title: "Berhasil",
+        description: data.recurrence_type === "none"
+          ? "Ketersediaan berhasil ditambahkan"
+          : "Ketersediaan recurring berhasil ditambahkan",
+      })
+      fetchAvailability()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Gagal menambahkan ketersediaan",
+        variant: "destructive",
+      })
+      throw error
+    }
+  }
+
   if (staffLoading) {
     return (
       <>
@@ -214,71 +417,152 @@ export default function AvailabilityCalendarPage() {
     <>
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Kalender Ketersediaan</h1>
-            <p className="text-muted-foreground">Lihat jadwal ketersediaan seluruh staff</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Kalender Ketersediaan</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Lihat jadwal ketersediaan seluruh staff</p>
           </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex gap-2">
-            <Button
-              variant={viewMode === "week" ? "default" : "outline"}
-              onClick={() => setViewMode("week")}
-              className={viewMode === "week" ? "bg-purple-600" : ""}
-            >
-              Minggu
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            {/* Add Button */}
+            <Button onClick={() => {
+              setPrefilledData({}) // Reset prefilled data
+              setAddDialogOpen(true)
+            }} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Tambah
             </Button>
-            <Button
-              variant={viewMode === "month" ? "default" : "outline"}
-              onClick={() => setViewMode("month")}
-              className={viewMode === "month" ? "bg-purple-600" : ""}
-            >
-              Bulan
-            </Button>
+
+            {/* Quick Actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <MoreVertical className="h-4 w-4" />
+                  Quick Actions
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => {
+                  toast({
+                    title: "Coming Soon",
+                    description: "Copy to next week feature will be available soon",
+                  })
+                }}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy to Next Week
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  toast({
+                    title: "Coming Soon",
+                    description: "Apply to all staff feature will be available soon",
+                  })
+                }}>
+                  <UsersGroup className="h-4 w-4 mr-2" />
+                  Apply to All Staff
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => {
+                  toast({
+                    title: "Coming Soon",
+                    description: "Export feature will be available soon",
+                  })
+                }}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export to CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  toast({
+                    title: "Info",
+                    description: `Total ${availabilityData.length} entries in current view`,
+                  })
+                }}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  View Summary
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Display Mode Toggle */}
+            <Tabs value={displayMode} onValueChange={(v) => setDisplayMode(v as DisplayMode)} className="w-auto">
+              <TabsList>
+                <TabsTrigger value="calendar" className="gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  Kalender
+                </TabsTrigger>
+                <TabsTrigger value="grid" className="gap-2">
+                  <LayoutGrid className="h-4 w-4" />
+                  Grid
+                </TabsTrigger>
+                <TabsTrigger value="list" className="gap-2">
+                  <List className="h-4 w-4" />
+                  List
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
+
+        {/* Week/Month Toggle removed - always use week view */}
 
         {/* Filters and Navigation */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
               {/* Date Navigation */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full lg:w-auto">
                 <Button variant="outline" size="sm" onClick={goToPrevious}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" onClick={goToToday}>
+                <Button variant="outline" size="sm" onClick={goToToday} className="flex-1 lg:flex-none">
                   Hari Ini
                 </Button>
                 <Button variant="outline" size="sm" onClick={goToNext}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-                <div className="text-lg font-semibold ml-4">
-                  {viewMode === "week" ? (
-                    `${format(dateRange.start, 'd MMM', { locale: localeId })} - ${format(dateRange.end, 'd MMM yyyy', { locale: localeId })}`
-                  ) : (
-                    format(currentDate, 'MMMM yyyy', { locale: localeId })
-                  )}
+                <div className="text-sm lg:text-lg font-semibold ml-2 lg:ml-4 hidden lg:block">
+                  {`${format(dateRange.start, 'd MMM', { locale: localeId })} - ${format(dateRange.end, 'd MMM yyyy', { locale: localeId })}`}
                 </div>
               </div>
 
-              {/* Staff Filter */}
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={selectedStaffFilter} onValueChange={setSelectedStaffFilter}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Pilih Staff" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Semua Staff</SelectItem>
-                    {staff.map(s => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.display_name || s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Date Display for Mobile */}
+              <div className="text-sm font-semibold lg:hidden w-full text-center">
+                {`${format(dateRange.start, 'd MMM', { locale: localeId })} - ${format(dateRange.end, 'd MMM yyyy', { locale: localeId })}`}
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full lg:w-auto">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select value={selectedStaffFilter} onValueChange={setSelectedStaffFilter}>
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                      <SelectValue placeholder="Pilih Staff" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Staff</SelectItem>
+                      {staff.map(s => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.display_name || s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Select value={selectedServiceFilter} onValueChange={setSelectedServiceFilter}>
+                    <SelectTrigger className="w-full sm:w-[160px]">
+                      <SelectValue placeholder="Pilih Layanan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Layanan</SelectItem>
+                      {treatments.map(t => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -288,7 +572,7 @@ export default function AvailabilityCalendarPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-6">
-              <span className="text-sm font-medium text-muted-foreground">Legenda:</span>
+              <span className="text-sm font-medium text-muted-foreground">Notes:</span>
               {Object.entries(AVAILABILITY_COLORS).map(([type, colors]) => (
                 <div key={type} className="flex items-center gap-2">
                   <div className={cn("w-4 h-4 rounded border-2", colors.bg, colors.border)} />
@@ -299,17 +583,18 @@ export default function AvailabilityCalendarPage() {
           </CardContent>
         </Card>
 
-        {/* Calendar Grid */}
-        <Card>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <GradientLoading />
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                {viewMode === "week" ? (
-                  /* Week View */
+        {/* Main Content Area */}
+        {displayMode === "calendar" ? (
+          /* Calendar View */
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <GradientLoading />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  {/* Week View */}
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b bg-muted/50">
@@ -344,35 +629,68 @@ export default function AvailabilityCalendarPage() {
                           {displayDays.map(day => {
                             const entries = getEntriesForStaffAndDate(staffMember.id, day)
                             return (
-                              <td key={day.toISOString()} className={cn(
-                                "p-1 align-top",
-                                isToday(day) && "bg-[#EDE9FE]"
-                              )}>
-                                <div className="space-y-1 min-h-[80px]">
-                                  {entries.map(entry => {
-                                    const colors = AVAILABILITY_COLORS[entry.availability_type as keyof typeof AVAILABILITY_COLORS]
-                                    return (
-                                      <div
-                                        key={entry.id}
-                                        onClick={() => handleEntryClick(entry)}
-                                        className={cn(
-                                          "p-1.5 rounded border-l-2 cursor-pointer hover:opacity-80 transition-opacity",
-                                          colors.bg,
-                                          colors.border,
-                                          colors.text
-                                        )}
-                                      >
-                                        <div className="text-xs font-medium">
-                                          {entry.start_time.substring(0, 5)} - {entry.end_time.substring(0, 5)}
-                                        </div>
-                                        {entry.notes && (
-                                          <div className="text-xs opacity-70 truncate">
-                                            {entry.notes}
+                              <td
+                                key={day.toISOString()}
+                                className={cn(
+                                  "p-1 align-top relative group",
+                                  isToday(day) && "bg-[#EDE9FE]"
+                                )}
+                              >
+                                {/* Floating Add Button - Always visible on hover */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setPrefilledData({
+                                      staffId: staffMember.id,
+                                      date: format(day, 'yyyy-MM-dd'),
+                                      time: "09:00"
+                                    })
+                                    setAddDialogOpen(true)
+                                  }}
+                                  className="absolute top-1 right-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1 shadow-lg"
+                                  title="Tambah availability"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </button>
+
+                                <div className="space-y-1 min-h-[80px] empty-cell-clickable relative">
+                                  {/* Entries are already sorted and split by splitTimeRanges */}
+                                  {entries.map((entry) => {
+                                      const colors = AVAILABILITY_COLORS[entry.availability_type as keyof typeof AVAILABILITY_COLORS]
+
+                                      return (
+                                        <div
+                                          key={entry.id}
+                                          onClick={() => handleEntryClick(entry)}
+                                          className={cn(
+                                            "p-1.5 rounded border-l-3 cursor-pointer hover:opacity-80 transition-opacity",
+                                            colors.bg,
+                                            colors.border,
+                                            colors.text
+                                          )}
+                                        >
+                                          <div className="flex items-center justify-between gap-2">
+                                            <div className="text-xs font-semibold">
+                                              {entry.start_time.substring(0, 5)} - {entry.end_time.substring(0, 5)}
+                                            </div>
+                                            <Badge variant="outline" className={cn("text-[10px] px-1 py-0 whitespace-nowrap", colors.text, colors.border)}>
+                                              {colors.label}
+                                            </Badge>
                                           </div>
-                                        )}
-                                      </div>
-                                    )
-                                  })}
+                                          {entry.capacity && entry.capacity > 1 && (
+                                            <div className="flex items-center gap-1 text-[10px] mt-0.5">
+                                              <Users className="h-3 w-3" />
+                                              <span>{entry.current_bookings || 0}/{entry.capacity}</span>
+                                            </div>
+                                          )}
+                                          {entry.notes && (
+                                            <div className="text-xs opacity-70 truncate mt-0.5">
+                                              {entry.notes}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )
+                                    })}
                                 </div>
                               </td>
                             )
@@ -381,20 +699,101 @@ export default function AvailabilityCalendarPage() {
                       ))}
                     </tbody>
                   </table>
-                ) : (
-                  /* Month View - Simplified */
-                  <div className="p-4">
-                    <div className="text-center text-muted-foreground py-8">
-                      <CalendarIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Tampilan bulan - Pilih tampilan minggu untuk detail lebih lanjut</p>
-                      <p className="text-sm mt-2">Total {availabilityData.length} entri ketersediaan</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
           </CardContent>
         </Card>
+        ) : displayMode === "grid" ? (
+          /* Multi-Staff Grid View */
+          loading ? (
+            <div className="flex items-center justify-center py-12">
+              <GradientLoading />
+            </div>
+          ) : (
+            <MultiStaffGrid
+              staff={filteredStaff}
+              date={currentDate}
+              availabilityData={availabilityData}
+              onEntryClick={(entry) => {
+                setSelectedEntry(entry)
+                setDetailDialogOpen(true)
+              }}
+              onAddClick={(staffId, time) => {
+                setPrefilledData({
+                  staffId: staffId,
+                  date: format(currentDate, 'yyyy-MM-dd'),
+                  time: time
+                })
+                setAddDialogOpen(true)
+              }}
+            />
+          )
+        ) : (
+          /* List View */
+          <Card>
+            <CardContent className="p-6">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <GradientLoading />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {availabilityData.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                      <List className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>Tidak ada data ketersediaan untuk periode ini</p>
+                    </div>
+                  ) : (
+                    availabilityData.map((entry) => {
+                      const staffData = staff.find(s => s.id === entry.staff_id)
+                      const colors = AVAILABILITY_COLORS[entry.availability_type as keyof typeof AVAILABILITY_COLORS]
+
+                      return (
+                        <div
+                          key={entry.id}
+                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => {
+                            setSelectedEntry(entry)
+                            setDetailDialogOpen(true)
+                          }}
+                        >
+                          <div className="flex items-center gap-4 flex-1">
+                            <div className={cn("w-1 h-12 rounded-full", colors.bg, colors.border)} />
+                            <div>
+                              <div className="font-medium">{staffData?.display_name || staffData?.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {format(new Date(entry.date), 'dd MMM yyyy', { locale: localeId })}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <Badge className={cn(colors.bg, colors.text, "mb-1")}>
+                                {colors.label}
+                              </Badge>
+                              <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {entry.start_time.substring(0, 5)} - {entry.end_time.substring(0, 5)}
+                              </div>
+                            </div>
+
+                            {entry.capacity && entry.capacity > 1 && (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Users className="h-4 w-4" />
+                                <span>{entry.current_bookings || 0}/{entry.capacity}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Entry Detail Dialog */}
         <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
@@ -473,8 +872,7 @@ export default function AvailabilityCalendarPage() {
                     variant="outline"
                     onClick={() => {
                       setDetailDialogOpen(false)
-                      // Navigate to staff page to edit
-                      window.location.href = `/staff`
+                      setEditDialogOpen(true)
                     }}
                     className="flex-1"
                   >
@@ -493,6 +891,28 @@ export default function AvailabilityCalendarPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Add Availability Dialog */}
+        <AddAvailabilityDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          staff={filteredStaff}
+          services={treatments}
+          onSave={handleSaveNewAvailability}
+          preselectedStaffId={prefilledData.staffId}
+          preselectedDate={prefilledData.date}
+          preselectedTime={prefilledData.time}
+        />
+
+        {/* Edit Availability Dialog */}
+        <EditAvailabilityDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          entry={selectedEntry}
+          staff={staff}
+          services={treatments}
+          onSave={handleUpdateAvailability}
+        />
       </div>
     </>
   )

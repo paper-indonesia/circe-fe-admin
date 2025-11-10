@@ -143,6 +143,8 @@ export default function StaffPage() {
     is_available: true,
     notes: "",
     service_ids: [] as string[],
+    capacity: 1,
+    is_group_service: false,
   }))
   const [dateRange, setDateRange] = useState(() => {
     const today = new Date()
@@ -929,13 +931,23 @@ export default function StaffPage() {
       return
     }
 
-    if (!newStaffForm.last_name || !newStaffForm.last_name.trim()) {
-      toast({
-        title: "Error",
-        description: "Nama belakang wajib diisi",
-        variant: "destructive",
-      })
-      return
+    // Smart name splitting: Last name is now optional
+    // If last_name empty but first_name has multiple words, split them
+    let firstName = newStaffForm.first_name.trim()
+    let lastName = newStaffForm.last_name.trim()
+
+    if (!lastName && firstName.includes(' ')) {
+      // Multiple words in first_name, split: first word = first_name, rest = last_name
+      const nameParts = firstName.split(' ').filter(part => part.length > 0)
+      if (nameParts.length > 1) {
+        firstName = nameParts[0] // First word
+        lastName = nameParts.slice(1).join(' ') // Rest of words
+      } else {
+        lastName = firstName // Single word, use as both
+      }
+    } else if (!lastName) {
+      // If still no last name and single word, duplicate it
+      lastName = firstName
     }
 
     if (!newStaffForm.email || !newStaffForm.email.trim()) {
@@ -999,9 +1011,9 @@ export default function StaffPage() {
     try {
       // Map form data to API structure
       const staffPayload = {
-        first_name: newStaffForm.first_name.trim(),
-        last_name: newStaffForm.last_name.trim(),
-        display_name: newStaffForm.display_name?.trim() || `${newStaffForm.first_name.trim()} ${newStaffForm.last_name.trim()}`,
+        first_name: firstName,
+        last_name: lastName,
+        display_name: newStaffForm.display_name?.trim() || `${firstName} ${lastName}`,
         email: newStaffForm.email.trim(),
         phone: newStaffForm.phone.trim(),
         position: newStaffForm.position,
@@ -1624,7 +1636,7 @@ export default function StaffPage() {
               </DialogTitle>
               {isEditMode && (
                 <p className="text-sm text-muted-foreground">
-                  Fields marked with * are required
+                  Fields marked with <span className="text-red-500">*</span> are required
                 </p>
               )}
             </DialogHeader>
@@ -1845,7 +1857,7 @@ export default function StaffPage() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="edit-name" className="text-sm font-medium">
-                            Name *
+                            Name <span className="text-red-500">*</span>
                           </Label>
                           <Input
                             id="edit-name"
@@ -1867,7 +1879,7 @@ export default function StaffPage() {
                         </div>
                         <div>
                           <Label htmlFor="edit-role" className="text-sm font-medium">
-                            Role / Posisi *
+                            Role / Posisi <span className="text-red-500">*</span>
                           </Label>
                           {loadingPositions ? (
                             <div className="h-11 flex items-center justify-center border rounded-md bg-gray-50 mt-1">
@@ -1916,7 +1928,7 @@ export default function StaffPage() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="edit-email" className="text-sm font-medium">
-                            Email *
+                            Email <span className="text-red-500">*</span>
                           </Label>
                           <Input
                             id="edit-email"
@@ -1929,7 +1941,7 @@ export default function StaffPage() {
                         </div>
                         <div>
                           <Label htmlFor="edit-phone" className="text-sm font-medium">
-                            Nomor Telepon *
+                            Nomor Telepon <span className="text-red-500">*</span>
                           </Label>
                           <div className="flex gap-2 mt-1">
                             <div className="flex items-center px-3 py-2 border border-[#EDE9FE] bg-gray-50 rounded-md text-gray-600 font-medium">
@@ -1960,7 +1972,7 @@ export default function StaffPage() {
                       {outlets.length > 0 && (
                         <div>
                           <Label htmlFor="edit-outlet" className="text-sm font-medium">
-                            Outlet
+                            Outlet <span className="text-red-500">*</span>
                           </Label>
                           <Select
                             value={editStaffForm.outlet_id || outlets[0]?.id}
@@ -2269,7 +2281,7 @@ export default function StaffPage() {
                     {/* SERVICE ASSIGNMENT SECTION - Always visible as mandatory */}
                     <div className="border-t-2 border-purple-100 pt-6">
                       <Label className="text-sm font-medium flex items-center gap-2">
-                        Assign Products / Services *
+                        Assign Products / Services <span className="text-red-500">*</span>
                         <Badge variant="destructive" className="text-xs">Wajib</Badge>
                       </Label>
                       <p className="text-xs text-muted-foreground mt-1 mb-2">
@@ -2721,6 +2733,58 @@ export default function StaffPage() {
                       )
                     })()}
 
+                    {/* Group Service / Class Settings */}
+                    {availabilityForm.availability_type === 'working_hours' && (
+                      <div className="space-y-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_group_service"
+                            checked={availabilityForm.is_group_service}
+                            onCheckedChange={(checked) =>
+                              setAvailabilityForm(prev => ({
+                                ...prev,
+                                is_group_service: checked as boolean,
+                                capacity: checked ? 5 : 1
+                              }))
+                            }
+                          />
+                          <Label htmlFor="is_group_service" className="font-medium flex items-center gap-2">
+                            <Users className="h-4 w-4 text-purple-600" />
+                            Ini adalah layanan grup/kelas
+                          </Label>
+                        </div>
+                        <p className="text-xs text-gray-600 ml-6">
+                          Aktifkan untuk layanan yang bisa melayani multiple klien sekaligus (contoh: kelas yoga, group facial, workshop)
+                        </p>
+
+                        {availabilityForm.is_group_service && (
+                          <div className="ml-6 mt-3">
+                            <Label htmlFor="capacity">Kapasitas Maksimal</Label>
+                            <div className="flex items-center gap-3 mt-1">
+                              <Input
+                                id="capacity"
+                                type="number"
+                                min="1"
+                                max="50"
+                                value={availabilityForm.capacity}
+                                onChange={(e) =>
+                                  setAvailabilityForm(prev => ({
+                                    ...prev,
+                                    capacity: parseInt(e.target.value) || 1
+                                  }))
+                                }
+                                className="w-24"
+                              />
+                              <span className="text-sm text-gray-600">klien per slot</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Berapa banyak klien yang bisa booking di waktu yang sama
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div>
                       <Label>Catatan</Label>
                       <Textarea
@@ -2805,7 +2869,7 @@ export default function StaffPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="first_name" className="text-sm font-medium">
-                    First Name *
+                    First Name <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="first_name"
@@ -2818,7 +2882,7 @@ export default function StaffPage() {
                 </div>
                 <div>
                   <Label htmlFor="last_name" className="text-sm font-medium">
-                    Last Name *
+                    Last Name (Optional)
                   </Label>
                   <Input
                     id="last_name"
@@ -2849,7 +2913,7 @@ export default function StaffPage() {
 
               <div>
                 <Label htmlFor="position" className="text-sm font-medium">
-                  Position *
+                  Position <span className="text-red-500">*</span>
                 </Label>
                 {loadingPositions ? (
                   <div className="h-11 flex items-center justify-center border rounded-md bg-gray-50 mt-1">
@@ -2889,7 +2953,7 @@ export default function StaffPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="email" className="text-sm font-medium">
-                    Email *
+                    Email <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="email"
@@ -2906,7 +2970,7 @@ export default function StaffPage() {
                 </div>
                 <div>
                   <Label htmlFor="phone" className="text-sm font-medium">
-                    Nomor Telepon *
+                    Nomor Telepon <span className="text-red-500">*</span>
                   </Label>
                   <div className="flex gap-2 mt-1">
                     <div className="flex items-center px-3 py-2 border border-[#EDE9FE] bg-gray-50 rounded-md text-gray-600 font-medium">
@@ -2937,7 +3001,7 @@ export default function StaffPage() {
               {outlets.length > 0 && (
                 <div>
                   <Label htmlFor="outlet_id" className="text-sm font-medium">
-                    Outlet *
+                    Outlet <span className="text-red-500">*</span>
                   </Label>
                   <Select
                     value={newStaffForm.outlet_id}
@@ -2962,7 +3026,7 @@ export default function StaffPage() {
 
               <div>
                 <Label htmlFor="employment_type" className="text-sm font-medium">
-                  Jenis Pekerjaan *
+                  Jenis Pekerjaan <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   value={newStaffForm.employment_type}

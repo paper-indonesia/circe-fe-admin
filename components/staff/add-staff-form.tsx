@@ -114,17 +114,19 @@ export function AddStaffForm({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="last_name" className="text-sm font-bold text-gray-700 flex items-center gap-1">
-                        Last Name <span className="text-red-500">*</span>
+                      <Label htmlFor="last_name" className="text-sm font-bold text-gray-700">
+                        Last Name (Optional)
                       </Label>
                       <Input
                         id="last_name"
                         value={newStaffForm.last_name}
                         onChange={(e) => setNewStaffForm((prev: any) => ({ ...prev, last_name: e.target.value }))}
-                        placeholder="Enter last name"
+                        placeholder="Enter last name (Optional)"
                         className="h-12 border-2 border-[#E9D5FF] focus:border-[#8B5CF6] focus:ring-4 focus:ring-[#8B5CF6]/20 rounded-lg transition-all"
-                        required
                       />
+                      <p className="text-xs text-muted-foreground">
+                        💡 Leave empty to auto-split from first name
+                      </p>
                     </div>
                   </div>
 

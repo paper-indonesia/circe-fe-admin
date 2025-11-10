@@ -28,7 +28,9 @@ export function middleware(request: NextRequest) {
     const possibleTenants = ['default', 'jakarta', 'bandung', 'surabaya', 'bali', 'medan']
 
     if (possibleTenants.includes(firstSegment) ||
-        (firstSegment.length < 20 && !['signin', 'signup', 'dashboard', 'calendar', 'clients', 'staff', 'products', 'walk-in', 'withdrawal', 'reports', 'settings', 'user-management', 'outlet-management', 'subscription', 'terms', 'privacy'].includes(firstSegment))) {
+        (firstSegment.length < 20 && !['signin', 'signup', 'dashboard', 'calendar', 'clients', 'staff', 'products',
+           'walk-in', 'withdrawal', 'reports', 'settings', 'user-management', 'outlet-management', 'subscription',
+            'terms', 'privacy', 'help-desk','availability'].includes(firstSegment))) {
 
       // Build new path without tenant
       const newPath = '/' + segments.slice(1).join('/')
@@ -66,7 +68,8 @@ export function middleware(request: NextRequest) {
   }
 
   // Check authentication for protected routes
-  const publicPaths = ['/signin', '/signup', '/forgot-password', '/terms', '/privacy']
+  const publicPaths = ['/signin', '/signup', '/forgot-password', '/terms',
+                       '/privacy']
   const isPublicPath = publicPaths.some(path => pathname.includes(path))
 
   // Skip auth check for public paths and root

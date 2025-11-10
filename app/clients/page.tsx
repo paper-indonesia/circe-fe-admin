@@ -48,11 +48,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircleIcon,
+  Upload,
+  FileSpreadsheet,
   CreditCard,
   FileText,
   MapPin,
 } from "lucide-react"
 import { AddButton } from "@/components/ui/add-button"
+import { ImportCustomerDialog } from "@/components/customers/import-customer-dialog"
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -79,11 +82,12 @@ export default function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<any>(null)
   const [showClientDialog, setShowClientDialog] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   const [editingClient, setEditingClient] = useState<any>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<any>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 20
+  const pageSize = 10
 
   // Appointment History State
   const [showAppointmentHistory, setShowAppointmentHistory] = useState(false)
@@ -140,6 +144,10 @@ export default function ClientsPage() {
       const params = new URLSearchParams()
       params.append('page', currentPage.toString())
       params.append('size', pageSize.toString())
+
+      // Sort by created_at descending (newest first)
+      params.append('sort_by', 'created_at')
+      params.append('order', 'desc')
 
       if (debouncedSearchQuery) {
         params.append('search', debouncedSearchQuery)
@@ -834,9 +842,19 @@ export default function ClientsPage() {
             <h1 className="text-3xl font-bold text-foreground">Customer Management</h1>
             <p className="text-muted-foreground">Manage your customer database and relationships</p>
           </div>
-          <AddButton onClick={openAddDialog}>
-            Add Customer
-          </AddButton>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowImportDialog(true)}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Import from Excel
+            </Button>
+            <AddButton onClick={openAddDialog}>
+              Add Customer
+            </AddButton>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -1010,6 +1028,7 @@ export default function ClientsPage() {
                         <TableHead>Appointments</TableHead>
                         <TableHead>Total Spent</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Created At</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1019,7 +1038,11 @@ export default function ClientsPage() {
                           <TableCell className="py-4 px-2">
                             <div>
                               <div className="font-medium">{client.name}</div>
-                              <div className="text-sm text-muted-foreground">{client.email || "No email"}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {client.email && !client.email.includes('@example.co')
+                                  ? client.email
+                                  : "No email"}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="py-4 px-2 text-sm text-muted-foreground">{client.phone}</TableCell>
@@ -1027,6 +1050,18 @@ export default function ClientsPage() {
                           <TableCell className="py-4 px-2 text-sm">{client.totalVisits}</TableCell>
                           <TableCell className="py-4 px-2 font-medium text-sm">Rp {(client.total_spent || 0).toLocaleString('id-ID')}</TableCell>
                           <TableCell className="py-4 px-2">{getStatusBadge(client.status)}</TableCell>
+                          <TableCell className="py-4 px-2 text-sm text-muted-foreground">
+                            {client.createdAt && typeof client.createdAt === "string"
+                              ? (() => {
+                                  try {
+                                    const date = parseISO(client.createdAt)
+                                    return isValid(date) ? format(date, 'dd MMM yyyy') : "-"
+                                  } catch {
+                                    return "-"
+                                  }
+                                })()
+                              : "-"}
+                          </TableCell>
                           <TableCell className="py-4 px-2">
                             <div className="flex gap-1">
                               <Button variant="outline" size="sm" onClick={() => openClientDetails(client)}>
@@ -1700,8 +1735,8 @@ export default function ClientsPage() {
                             <Mail className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-500 mb-0.5">Email Address</p>
-                              <p className="text-sm font-medium text-gray-900 break-all" title={selectedClient.email || "No email provided"}>
-                                {selectedClient.email || "No email provided"}
+                              <p className="text-sm font-medium text-gray-900 break-all" title={selectedClient.email && !selectedClient.email.includes('@example.co') ? selectedClient.email : "No email provided"}>
+                                {selectedClient.email && !selectedClient.email.includes('@example.co') ? selectedClient.email : "No email provided"}
                               </p>
                             </div>
                           </div>
@@ -1814,6 +1849,16 @@ export default function ClientsPage() {
             "Customer data can be restored within 10 seconds",
             "After 10 seconds, restoration requires admin intervention"
           ]}
+        />
+
+        {/* Import Customer Dialog */}
+        <ImportCustomerDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onImportSuccess={() => {
+            fetchCustomers()
+            setShowImportDialog(false)
+          }}
         />
 
         {/* Appointment History Dialog */}

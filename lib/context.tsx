@@ -52,8 +52,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Skip loading data on signin/signup pages
-    const publicPaths = ['/signin', '/signup', '/']
+    // Skip loading data on signin/signup pages and help-desk
+    const publicPaths = ['/signin', '/signup', '/', '/help-desk', '/terms', '/privacy']
     if (publicPaths.includes(pathname)) {
       console.log('[Context] Skipping data load on public page:', pathname)
       setLoading(false)

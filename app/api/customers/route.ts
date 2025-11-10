@@ -33,6 +33,8 @@ export async function GET(req: NextRequest) {
     if (searchParams.get('email_verified')) params.append('email_verified', searchParams.get('email_verified')!)
     if (searchParams.get('created_from')) params.append('created_from', searchParams.get('created_from')!)
     if (searchParams.get('created_to')) params.append('created_to', searchParams.get('created_to')!)
+    if (searchParams.get('sort_by')) params.append('sort_by', searchParams.get('sort_by')!)
+    if (searchParams.get('order')) params.append('order', searchParams.get('order')!)
 
     const queryString = params.toString()
     const url = `${FASTAPI_URL}/api/v1/customers${queryString ? '?' + queryString : ''}`
