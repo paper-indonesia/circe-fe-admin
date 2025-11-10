@@ -19,11 +19,13 @@ import { formatCurrency } from "@/lib/utils"
 import { apiClient, ApiError } from "@/lib/api-client"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
 import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown, CheckCircle, AlertCircle, ArrowLeft, Loader2, ChevronDown, ChevronUp } from "lucide-react"
-import { format, isToday, parseISO } from "date-fns"
+import { format, isToday, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameDay, isSameMonth } from "date-fns"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 import { useRouter } from "next/navigation"
 import { AddButton } from "@/components/ui/add-button"
+import { AddAvailabilityDialog } from "@/components/availability/add-availability-dialog"
+import { EditAvailabilityDialog } from "@/components/availability/edit-availability-dialog"
 
 export default function StaffPage() {
   const { staff, loading, addStaff, updateStaff, deleteStaff } = useStaff()
@@ -131,7 +133,10 @@ export default function StaffPage() {
   const [savingAvailability, setSavingAvailability] = useState(false)
   const [availabilityTab, setAvailabilityTab] = useState<'working_hours' | 'break' | 'blocked' | 'vacation'>('working_hours')
   const [showAddAvailability, setShowAddAvailability] = useState(false)
+  const [showViewAvailability, setShowViewAvailability] = useState(false)
+  const [showEditAvailability, setShowEditAvailability] = useState(false)
   const [editingAvailability, setEditingAvailability] = useState<any>(null)
+  const [calendarViewDate, setCalendarViewDate] = useState(() => new Date())
   const [availabilityForm, setAvailabilityForm] = useState(() => ({
     date: new Date().toISOString().split('T')[0],
     start_time: "09:00",
@@ -285,9 +290,8 @@ export default function StaffPage() {
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
   }
 
-  const handleViewSchedule = async (staffMember: any) => {
+  const handleAddAvailability = async (staffMember: any) => {
     setSelectedStaff(staffMember)
-    setShowScheduleDialog(true)
 
     // Auto-assign all staff's services to availability form
     // Handle both nested (skills.service_ids) and flat (service_ids) structure
@@ -297,20 +301,97 @@ export default function StaffPage() {
       service_ids: staffServiceIds // Auto-select all assigned services
     }))
 
-    // Fetch availability entries for this staff
-    await fetchAvailabilityEntries(staffMember.id)
+    // Directly open the Add Availability Dialog with new design
+    setShowAddAvailability(true)
   }
 
-  // Fetch availability entries for selected staff
-  const fetchAvailabilityEntries = async (staffId: string) => {
+  const handleViewExistingAvailability = async (staffMember: any) => {
+    // IMPORTANT: Set selected staff first and wait for state update
+    setSelectedStaff(staffMember)
+
+    // Reset calendar to current week when opening
+    const today = new Date()
+    setCalendarViewDate(today)
+
+    // Set date range for calendar view (7 days from today to avoid API error)
+    const startDate = today
+    const endDate = addDays(today, 6) // 7 days total
+
+    setDateRange({
+      start: startDate.toISOString().split('T')[0],
+      end: endDate.toISOString().split('T')[0]
+    })
+
+    // Show dialog and fetch availability for THIS specific staff
+    setShowViewAvailability(true)
+
+    // Use the staffMember parameter directly, not selectedStaff state
+    await fetchAvailabilityEntries(staffMember.id, false)
+  }
+
+  // Handle click on empty date to add availability
+  const handleClickEmptyDate = (date: Date) => {
+    if (!selectedStaff) return
+
+    // Close view dialog and open add dialog with prefilled date
+    setShowViewAvailability(false)
+
+    // Set the form date
+    setAvailabilityForm(prev => ({
+      ...prev,
+      date: format(date, 'yyyy-MM-dd'),
+    }))
+
+    // Open add availability dialog
+    setShowAddAvailability(true)
+  }
+
+  // Update calendar week and fetch data (changed from month to week - 7 days)
+  const handleCalendarMonthChange = async (direction: 'prev' | 'next') => {
+    const newDate = direction === 'prev'
+      ? addDays(calendarViewDate, -7)
+      : addDays(calendarViewDate, 7)
+
+    setCalendarViewDate(newDate)
+
+    // Update date range to 7 days from newDate
+    const startDate = newDate
+    const endDate = addDays(newDate, 6)
+
+    const newDateRange = {
+      start: startDate.toISOString().split('T')[0],
+      end: endDate.toISOString().split('T')[0]
+    }
+
+    setDateRange(newDateRange)
+
+    if (selectedStaff) {
+      await fetchAvailabilityEntries(selectedStaff.id, false, newDateRange)
+    }
+  }
+
+  // Fetch availability entries for selected staff (all types)
+  const fetchAvailabilityEntries = async (
+    staffId: string,
+    filterByType = false,
+    customDateRange?: { start: string; end: string }
+  ) => {
     setAvailabilityLoading(true)
     try {
-      const response = await apiClient.getAvailability({
+      const rangeToUse = customDateRange || dateRange
+
+      const params: any = {
         staff_id: staffId,
-        start_date: dateRange.start,
-        end_date: dateRange.end,
-        availability_type: availabilityTab,
-      })
+        start_date: rangeToUse.start,
+        end_date: rangeToUse.end,
+      }
+
+      // Only add availability_type filter if explicitly requested
+      if (filterByType) {
+        params.availability_type = availabilityTab
+      }
+
+      const response = await apiClient.getAvailability(params)
 
       // Handle both paginated and array response
       const entries = Array.isArray(response) ? response : response.items || []
@@ -474,8 +555,7 @@ export default function StaffPage() {
 
   // Delete availability entry
   const handleDeleteAvailability = async (id: string) => {
-    if (!confirm("Hapus ketersediaan ini?")) return
-
+    // Note: confirm dialog is handled by EditAvailabilityDialog
     try {
       await apiClient.deleteAvailability(id)
       toast({
@@ -491,6 +571,69 @@ export default function StaffPage() {
         description: error.message || "Gagal menghapus ketersediaan",
         variant: "destructive",
       })
+    }
+  }
+
+  // Handle edit availability from view dialog
+  const handleEditAvailabilityFromView = (entry: any) => {
+    setEditingAvailability(entry)
+    // Don't close view dialog - keep it open in background
+    setShowEditAvailability(true)
+  }
+
+  // Handle close edit dialog - reopen view dialog
+  const handleCloseEditDialog = (open: boolean) => {
+    setShowEditAvailability(open)
+    if (!open) {
+      // When closing edit dialog, reopen view dialog
+      setEditingAvailability(null)
+    }
+  }
+
+  // Handle update from edit dialog - wrapper for handleUpdateAvailability
+  const handleSaveEditedAvailability = async (data: any) => {
+    try {
+      // Get tenant_id from selectedStaff
+      let tenantId = selectedStaff?.tenant_id
+
+      if (!tenantId) {
+        const tenantResponse = await fetch('/api/tenant/me')
+        if (tenantResponse.ok) {
+          const tenantData = await tenantResponse.json()
+          tenantId = tenantData.tenant_id
+        }
+      }
+
+      const payload = {
+        ...data,
+        tenant_id: tenantId,
+        is_available: data.availability_type === 'working_hours',
+        allow_overlap: data.availability_type !== 'working_hours',
+      }
+
+      if (selectedStaff?.outlet_id || selectedStaff?.outletId) {
+        payload.outlet_id = selectedStaff.outlet_id || selectedStaff.outletId
+      }
+
+      await apiClient.updateAvailability(editingAvailability.id, payload)
+      toast({
+        title: "Berhasil",
+        description: "Ketersediaan berhasil diperbarui",
+      })
+
+      setShowEditAvailability(false)
+      setEditingAvailability(null)
+      if (selectedStaff) {
+        await fetchAvailabilityEntries(selectedStaff.id)
+        setShowViewAvailability(true) // Reopen view dialog
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Gagal memperbarui ketersediaan",
+        variant: "destructive",
+      })
+      throw error
     }
   }
 
@@ -1254,9 +1397,19 @@ export default function StaffPage() {
             <h1 className="text-3xl font-bold text-foreground">Staff Management</h1>
             <p className="text-muted-foreground">Manage your team, schedules, and performance</p>
           </div>
-          <AddButton onClick={() => setShowAddStaffDialog(true)}>
-            Add Staff Member
-          </AddButton>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => router.push('/availability')}
+              className="border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6]/10"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Lihat Ketersediaan
+            </Button>
+            <AddButton onClick={() => setShowAddStaffDialog(true)}>
+              Add Staff Member
+            </AddButton>
+          </div>
         </div>
 
         <Card className="border-[#EDE9FE]/30">
@@ -1459,7 +1612,8 @@ export default function StaffPage() {
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 hover:bg-[#FCD6F5]/30"
-                          onClick={() => handleViewSchedule(staffMember)}
+                          onClick={() => handleViewExistingAvailability(staffMember)}
+                          title="Lihat Jadwal"
                         >
                           <Calendar className="h-4 w-4 text-[#8B5CF6]" />
                         </Button>
@@ -1767,6 +1921,23 @@ export default function StaffPage() {
                       })()}
                     </div>
 
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" className="bg-white text-[#6D28D9] hover:bg-[#FCD6F5]/30" onClick={() => {
+                        setShowStaffDialog(false)
+                        handleAddAvailability(selectedStaff)
+                      }}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Tambah Jadwal
+                      </Button>
+                      <Button variant="outline" className="bg-white text-[#6D28D9] hover:bg-[#FCD6F5]/30" onClick={() => {
+                        setShowStaffDialog(false)
+                        handleViewExistingAvailability(selectedStaff)
+                      }}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Lihat Jadwal
+                      </Button>
+                    </div>
+
                     <div className="flex gap-2">
                       <Button variant="outline" className="flex-1 bg-white text-[#6D28D9] hover:bg-[#FCD6F5]/30" onClick={() => {
                         // Convert skills to array format for form
@@ -1836,17 +2007,6 @@ export default function StaffPage() {
                       }}>
                         <Edit className="h-4 w-4 mr-2" />
                         Edit Profile
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="flex-1 bg-white text-[#6D28D9] hover:bg-[#FCD6F5]/30"
-                        onClick={() => {
-                          setShowStaffDialog(false)
-                          setShowScheduleDialog(true)
-                        }}
-                      >
-                        <Calendar className="h-4 w-4 mr-2" />
-                        View Schedule
                       </Button>
                     </div>
                   </>
@@ -2349,502 +2509,6 @@ export default function StaffPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Staff Schedule Dialog - Availability Management */}
-        <Dialog open={showScheduleDialog} onOpenChange={(open) => {
-          setShowScheduleDialog(open)
-          if (!open) {
-            setShowAddAvailability(false)
-            setEditingAvailability(null)
-          }
-        }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Kelola Ketersediaan - {selectedStaff?.display_name || selectedStaff?.name}
-              </DialogTitle>
-            </DialogHeader>
-            {selectedStaff && (
-              <div className="space-y-4">
-                {/* Show list view when NOT in add/edit mode */}
-                {!showAddAvailability && (
-                  <>
-                {/* Date Range Selector */}
-                <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-                  <div className="flex-1">
-                    <Label className="text-xs text-muted-foreground">Dari Tanggal</Label>
-                    <Input
-                      type="date"
-                      value={dateRange.start}
-                      onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Label className="text-xs text-muted-foreground">Sampai Tanggal</Label>
-                    <Input
-                      type="date"
-                      value={dateRange.end}
-                      onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button
-                    onClick={() => {
-                      const today = new Date()
-                      const thirtyDaysLater = new Date(today)
-                      thirtyDaysLater.setDate(today.getDate() + 30)
-                      setDateRange({
-                        start: today.toISOString().split('T')[0],
-                        end: thirtyDaysLater.toISOString().split('T')[0],
-                      })
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="mt-5"
-                  >
-                    30 Hari Ke Depan
-                  </Button>
-                </div>
-
-                {/* Availability Type Tabs */}
-                <Tabs value={availabilityTab} onValueChange={(value: any) => setAvailabilityTab(value)}>
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="working_hours">Jam Kerja</TabsTrigger>
-                    <TabsTrigger value="break">Istirahat</TabsTrigger>
-                    <TabsTrigger value="blocked">Blokir</TabsTrigger>
-                    <TabsTrigger value="vacation">Cuti</TabsTrigger>
-                  </TabsList>
-
-                  {/* Tab Content - All tabs show the same structure */}
-                  <TabsContent value={availabilityTab} className="space-y-4 mt-4">
-                    {/* Add Button */}
-                    {!showAddAvailability && (
-                      <Button
-                        onClick={() => {
-                          setShowAddAvailability(true)
-                          setEditingAvailability(null)
-                          // Auto-assign all staff's services when opening add form
-                          // Handle both nested (skills.service_ids) and flat (service_ids) structure
-                          const staffServiceIds = selectedStaff?.skills?.service_ids || selectedStaff?.service_ids || []
-                          setAvailabilityForm({
-                            date: new Date().toISOString().split('T')[0],
-                            start_time: availabilityTab === 'break' ? "12:00" : "09:00",
-                            end_time: availabilityTab === 'break' ? "13:00" : "17:00",
-                            availability_type: availabilityTab,
-                            recurrence_type: "none",
-                            recurrence_end_date: "",
-                            recurrence_days: [],
-                            is_available: availabilityTab === 'working_hours',
-                            notes: "",
-                            service_ids: staffServiceIds, // Auto-select all assigned services
-                          })
-                        }}
-                        className="w-full bg-purple-600 hover:bg-purple-700"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Tambah {availabilityTab === 'working_hours' ? 'Jam Kerja' :
-                                availabilityTab === 'break' ? 'Waktu Istirahat' :
-                                availabilityTab === 'blocked' ? 'Waktu Blokir' : 'Cuti'}
-                      </Button>
-                    )}
-
-                    {/* List of Availability Entries */}
-                    {!showAddAvailability && (
-                    <div className="space-y-2">
-                      {availabilityLoading ? (
-                        <div className="text-center py-8">
-                          <GradientLoading text="Loading Staff" />
-                        </div>
-                      ) : availabilityEntries.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                          <p>Belum ada {
-                            availabilityTab === 'working_hours' ? 'jam kerja' :
-                            availabilityTab === 'break' ? 'waktu istirahat' :
-                            availabilityTab === 'blocked' ? 'waktu blokir' : 'cuti'
-                          } yang diatur</p>
-                        </div>
-                      ) : (
-                        <div className="max-h-[400px] overflow-y-auto space-y-2">
-                          {availabilityEntries.map((entry) => (
-                            <div key={entry.id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/30">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{format(new Date(entry.date), 'dd MMM yyyy')}</span>
-                                  {entry.recurrence_type !== 'none' && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      {entry.recurrence_type === 'daily' ? 'Harian' :
-                                       entry.recurrence_type === 'weekly' ? 'Mingguan' :
-                                       entry.recurrence_type === 'monthly' ? 'Bulanan' : ''}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {entry.start_time.substring(0, 5)} - {entry.end_time.substring(0, 5)}
-                                </div>
-                                {entry.notes && (
-                                  <div className="text-xs text-muted-foreground mt-1">{entry.notes}</div>
-                                )}
-                                {entry.service_ids && entry.service_ids.length > 0 && (
-                                  <div className="text-xs text-[#8B5CF6] mt-1">
-                                    Layanan: {treatments.filter(t => t.status === "active" && entry.service_ids.includes(t.id)).map(t => t.name).join(', ')}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEditAvailability(entry)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteAvailability(entry.id)}
-                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
-                  </>
-                )}
-
-                {/* Add/Edit Availability Form (Outside Tabs) */}
-                {showAddAvailability && (
-                  <div className="border-2 border-[#C4B5FD] rounded-xl p-6 space-y-5 bg-gradient-to-br from-purple-50/50 to-pink-50/50 shadow-lg">
-                    <div className="flex items-center gap-4 pb-4 border-b border-[#C4B5FD]">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setShowAddAvailability(false)
-                          setEditingAvailability(null)
-                        }}
-                        className="hover:bg-[#EDE9FE] border-[#C4B5FD]"
-                      >
-                        <ArrowLeft className="h-4 w-4 mr-1" />
-                        Kembali
-                      </Button>
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-                          <Calendar className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-lg">
-                            {editingAvailability ? 'Edit' : 'Tambah'} {
-                              availabilityTab === 'working_hours' ? 'Jam Kerja' :
-                              availabilityTab === 'break' ? 'Waktu Istirahat' :
-                              availabilityTab === 'blocked' ? 'Waktu Blokir' : 'Cuti'
-                            }
-                          </h3>
-                          <p className="text-xs text-muted-foreground">
-                            {editingAvailability ? 'Perbarui jadwal ketersediaan' : 'Buat jadwal ketersediaan baru'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Tanggal *</Label>
-                        <Input
-                          type="date"
-                          value={availabilityForm.date}
-                          onChange={(e) => setAvailabilityForm(prev => ({ ...prev, date: e.target.value }))}
-                          disabled={!!editingAvailability}
-                        />
-                      </div>
-                      <div>
-                        <Label>Pola Pengulangan</Label>
-                        <Select
-                          value={availabilityForm.recurrence_type}
-                          onValueChange={(value: any) => setAvailabilityForm(prev => ({ ...prev, recurrence_type: value }))}
-                          disabled={!!editingAvailability}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Tidak Berulang</SelectItem>
-                            <SelectItem value="daily">Harian</SelectItem>
-                            <SelectItem value="weekly">Mingguan</SelectItem>
-                            <SelectItem value="monthly">Bulanan</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Waktu Mulai *</Label>
-                        <Input
-                          type="time"
-                          step="300"
-                          value={availabilityForm.start_time}
-                          onChange={(e) => setAvailabilityForm(prev => ({ ...prev, start_time: e.target.value }))}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Kelipatan 5 menit</p>
-                      </div>
-                      <div>
-                        <Label>Waktu Selesai *</Label>
-                        <Input
-                          type="time"
-                          step="300"
-                          value={availabilityForm.end_time}
-                          onChange={(e) => setAvailabilityForm(prev => ({ ...prev, end_time: e.target.value }))}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Kelipatan 5 menit</p>
-                      </div>
-                    </div>
-
-                    {/* Recurrence End Date */}
-                    {availabilityForm.recurrence_type !== 'none' && (
-                      <div>
-                        <Label>Tanggal Akhir Pengulangan *</Label>
-                        <Input
-                          type="date"
-                          value={availabilityForm.recurrence_end_date}
-                          onChange={(e) => setAvailabilityForm(prev => ({ ...prev, recurrence_end_date: e.target.value }))}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Wajib diisi untuk pola berulang
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Weekly Days Selection */}
-                    {availabilityForm.recurrence_type === 'weekly' && (
-                      <div>
-                        <Label>Hari dalam Minggu (opsional)</Label>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day, index) => (
-                            <Button
-                              key={index}
-                              type="button"
-                              variant={availabilityForm.recurrence_days.includes(index) ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleRecurrenceDayToggle(index)}
-                              className={availabilityForm.recurrence_days.includes(index) ? "bg-purple-600" : ""}
-                            >
-                              {day}
-                            </Button>
-                          ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Kosong = semua hari dalam minggu
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Service-Specific Availability */}
-                    {availabilityTab === 'working_hours' && (() => {
-                      // Filter treatments to only show services assigned to this staff (only active)
-                      // Handle both nested (skills.service_ids) and flat (service_ids) structure
-                      const staffServiceIds = selectedStaff?.skills?.service_ids || selectedStaff?.service_ids || []
-                      const assignedTreatments = treatments.filter(t => t.status === "active" && staffServiceIds.includes(t.id))
-
-                      return (
-                        <div>
-                          <Label>Layanan Staff (opsional)</Label>
-                          <p className="text-xs text-muted-foreground mt-1 mb-2">
-                            Hanya layanan yang sudah di-assign ke staff ini. Default: Semua layanan ter-assign.
-                          </p>
-
-                          {assignedTreatments.length === 0 ? (
-                            <div className="mt-2 border-2 border-yellow-300 rounded-lg p-4 bg-yellow-50">
-                              <p className="text-sm text-yellow-800">
-                                ⚠️ Staff ini belum memiliki layanan yang di-assign.
-                                Silakan assign layanan terlebih dahulu di tab "Layanan" saat edit staff.
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="mt-2 border-2 border-[#C4B5FD] rounded-lg p-4 max-h-60 overflow-y-auto bg-gray-50">
-                              {/* Select All Option */}
-                              <div className="flex items-center space-x-3 pb-3 border-b-2 border-[#C4B5FD] mb-3 bg-white p-3 rounded-md shadow-sm">
-                                <Checkbox
-                                  id="service-all"
-                                  checked={availabilityForm.service_ids.length === assignedTreatments.length && assignedTreatments.length > 0}
-                                  onCheckedChange={(checked) => {
-                                    setAvailabilityForm(prev => ({
-                                      ...prev,
-                                      service_ids: checked ? assignedTreatments.map(t => t.id) : []
-                                    }))
-                                  }}
-                                  className="border-2 border-[#8B5CF6] data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                />
-                                <label
-                                  htmlFor="service-all"
-                                  className="text-sm font-bold cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-[#6D28D9]"
-                                >
-                                  Semua Layanan Staff ({assignedTreatments.length})
-                                </label>
-                              </div>
-
-                              {/* Individual Services */}
-                              <div className="space-y-2">
-                                {assignedTreatments.map(treatment => (
-                                  <div key={treatment.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-white transition-colors">
-                                    <Checkbox
-                                      id={`service-${treatment.id}`}
-                                      checked={availabilityForm.service_ids.includes(treatment.id)}
-                                      onCheckedChange={(checked) => {
-                                        setAvailabilityForm(prev => ({
-                                          ...prev,
-                                          service_ids: checked
-                                            ? [...prev.service_ids, treatment.id]
-                                            : prev.service_ids.filter(id => id !== treatment.id)
-                                        }))
-                                      }}
-                                      className="border-2 border-gray-400 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
-                                    />
-                                    <label
-                                      htmlFor={`service-${treatment.id}`}
-                                      className="text-sm cursor-pointer leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-gray-900"
-                                    >
-                                      {treatment.name}
-                                    </label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {assignedTreatments.length === 0
-                              ? 'Staff belum memiliki layanan yang di-assign'
-                              : availabilityForm.service_ids.length === 0
-                              ? 'Tidak ada layanan yang dipilih (tersedia untuk semua layanan)'
-                              : availabilityForm.service_ids.length === assignedTreatments.length
-                              ? `Semua layanan staff dipilih (${assignedTreatments.length})`
-                              : `${availabilityForm.service_ids.length} dari ${assignedTreatments.length} layanan dipilih`}
-                          </p>
-                        </div>
-                      )
-                    })()}
-
-                    {/* Group Service / Class Settings */}
-                    {availabilityForm.availability_type === 'working_hours' && (
-                      <div className="space-y-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="is_group_service"
-                            checked={availabilityForm.is_group_service}
-                            onCheckedChange={(checked) =>
-                              setAvailabilityForm(prev => ({
-                                ...prev,
-                                is_group_service: checked as boolean,
-                                capacity: checked ? 5 : 1
-                              }))
-                            }
-                          />
-                          <Label htmlFor="is_group_service" className="font-medium flex items-center gap-2">
-                            <Users className="h-4 w-4 text-purple-600" />
-                            Ini adalah layanan grup/kelas
-                          </Label>
-                        </div>
-                        <p className="text-xs text-gray-600 ml-6">
-                          Aktifkan untuk layanan yang bisa melayani multiple klien sekaligus (contoh: kelas yoga, group facial, workshop)
-                        </p>
-
-                        {availabilityForm.is_group_service && (
-                          <div className="ml-6 mt-3">
-                            <Label htmlFor="capacity">Kapasitas Maksimal</Label>
-                            <div className="flex items-center gap-3 mt-1">
-                              <Input
-                                id="capacity"
-                                type="number"
-                                min="1"
-                                max="50"
-                                value={availabilityForm.capacity}
-                                onChange={(e) =>
-                                  setAvailabilityForm(prev => ({
-                                    ...prev,
-                                    capacity: parseInt(e.target.value) || 1
-                                  }))
-                                }
-                                className="w-24"
-                              />
-                              <span className="text-sm text-gray-600">klien per slot</span>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Berapa banyak klien yang bisa booking di waktu yang sama
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div>
-                      <Label>Catatan</Label>
-                      <Textarea
-                        value={availabilityForm.notes}
-                        onChange={(e) => setAvailabilityForm(prev => ({ ...prev, notes: e.target.value }))}
-                        placeholder="Catatan tambahan..."
-                        rows={2}
-                      />
-                    </div>
-
-                    <div className="flex gap-3 pt-2 border-t border-[#C4B5FD]">
-                      <Button
-                        onClick={editingAvailability ? handleUpdateAvailability : handleCreateAvailability}
-                        disabled={savingAvailability}
-                        className="flex-1 h-12 bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#6D28D9] hover:to-[#EC4899] text-white shadow-lg hover:shadow-xl transition-all font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {savingAvailability ? (
-                          <>
-                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                            Menyimpan...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="h-5 w-5 mr-2" />
-                            {editingAvailability ? 'Perbarui Ketersediaan' : 'Simpan Ketersediaan'}
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setShowAddAvailability(false)
-                          setEditingAvailability(null)
-                        }}
-                        disabled={savingAvailability}
-                        className="h-12 px-6 border-2 hover:bg-red-50 hover:border-red-300 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <X className="h-5 w-5 mr-2" />
-                        Batal
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Footer Actions */}
-                {!showAddAvailability && (
-                <div className="flex gap-2 pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setShowScheduleDialog(false)}
-                  >
-                    Tutup
-                  </Button>
-                </div>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
 
         {/* Add Staff Member Dialog */}
         <Dialog open={showAddStaffDialog} onOpenChange={(open) => {
@@ -3554,6 +3218,204 @@ export default function StaffPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Add Availability Dialog - using component from Availability page */}
+        {showAddAvailability && selectedStaff && (
+          <AddAvailabilityDialog
+            open={showAddAvailability}
+            onOpenChange={setShowAddAvailability}
+            staff={staff}
+            services={treatments}
+            onSave={handleCreateAvailability}
+            preselectedStaffId={selectedStaff.id}
+            preselectedDate={availabilityForm.date}
+            preselectedTime={availabilityForm.start_time}
+          />
+        )}
+
+        {/* View Availability Dialog - Unified Calendar View */}
+        <Dialog open={showViewAvailability} onOpenChange={setShowViewAvailability}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Jadwal Ketersediaan - {selectedStaff?.first_name} {selectedStaff?.last_name}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+                  {/* Calendar Header with Week Navigation */}
+                  <div className="flex items-center justify-between mb-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCalendarMonthChange('prev')}
+                      disabled={availabilityLoading}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <h3 className="text-lg font-semibold">
+                      {format(calendarViewDate, 'd MMM')} - {format(addDays(calendarViewDate, 6), 'd MMM yyyy')}
+                    </h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCalendarMonthChange('next')}
+                      disabled={availabilityLoading}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {availabilityLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-[#8B5CF6]" />
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg overflow-hidden">
+                      {/* Calendar Grid */}
+                      <div className="grid grid-cols-7 gap-0">
+                        {/* Day Headers */}
+                        {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((day) => (
+                          <div
+                            key={day}
+                            className="bg-gray-100 p-3 text-center text-sm font-semibold border-b"
+                          >
+                            {day}
+                          </div>
+                        ))}
+
+                        {/* Calendar Days - Show 7 days only */}
+                        {(() => {
+                          // Show 7 days starting from calendarViewDate
+                          const days = []
+                          for (let i = 0; i < 7; i++) {
+                            days.push(addDays(calendarViewDate, i))
+                          }
+
+                          return days.map((day, index) => {
+                            const dayEntries = availabilityEntries.filter((entry) =>
+                              isSameDay(new Date(entry.date), day)
+                            )
+                            const isCurrentDay = isToday(day)
+
+                            return (
+                              <div
+                                key={index}
+                                className={`min-h-[120px] p-2 border-b border-r cursor-pointer hover:bg-gray-50 bg-white ${
+                                  isCurrentDay ? 'ring-2 ring-[#8B5CF6] ring-inset' : ''
+                                }`}
+                                onClick={(e) => {
+                                  // Only trigger if clicking on empty space (not on an entry)
+                                  if ((e.target as HTMLElement).closest('.availability-entry')) {
+                                    return
+                                  }
+                                  handleClickEmptyDate(day)
+                                }}
+                                title="Klik untuk tambah jadwal"
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {format(day, 'd')}
+                                  </span>
+                                  <Plus className="h-3 w-3 text-gray-400 hover:text-[#8B5CF6]" />
+                                </div>
+                                <div className="space-y-1">
+                                  {dayEntries.map((entry) => {
+                                    // Determine color based on availability_type
+                                    const colorClasses =
+                                      entry.availability_type === 'working_hours'
+                                        ? 'bg-green-100 text-green-800 border-green-300'
+                                        : entry.availability_type === 'break'
+                                        ? 'bg-orange-100 text-orange-800 border-orange-300'
+                                        : entry.availability_type === 'blocked'
+                                        ? 'bg-red-100 text-red-800 border-red-300'
+                                        : 'bg-purple-100 text-purple-800 border-purple-300'
+
+                                    const typeLabel =
+                                      entry.availability_type === 'working_hours'
+                                        ? 'Jam Kerja'
+                                        : entry.availability_type === 'break'
+                                        ? 'Istirahat'
+                                        : entry.availability_type === 'blocked'
+                                        ? 'Blocked'
+                                        : 'Cuti'
+
+                                    return (
+                                      <div
+                                        key={entry.id}
+                                        className={`availability-entry text-xs p-1 rounded cursor-pointer hover:opacity-80 border ${colorClasses}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleEditAvailabilityFromView(entry)
+                                        }}
+                                        title={`${typeLabel}\n${entry.start_time} - ${entry.end_time}${entry.notes ? '\n' + entry.notes : ''}`}
+                                      >
+                                        <div className="font-semibold text-[10px] opacity-60 mb-0.5">
+                                          {typeLabel}
+                                        </div>
+                                        <div className="font-semibold">
+                                          {entry.start_time} - {entry.end_time}
+                                        </div>
+                                        {entry.notes && (
+                                          <div className="truncate text-[10px] opacity-75">
+                                            {entry.notes}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })
+                        })()}
+                      </div>
+
+                      {/* Legend */}
+                      <div className="bg-gray-50 p-3 flex items-center gap-4 text-xs border-t">
+                        <span className="font-semibold">Keterangan:</span>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
+                          <span>Jam Kerja</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-orange-100 border border-orange-300 rounded"></div>
+                          <span>Istirahat</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
+                          <span>Blocked</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 bg-purple-100 border border-purple-300 rounded"></div>
+                          <span>Cuti</span>
+                        </div>
+                        <span className="ml-auto text-gray-600">Klik pada jadwal untuk edit/hapus</span>
+                      </div>
+                    </div>
+                  )}
+
+              {!availabilityLoading && availabilityEntries.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Tidak ada jadwal ketersediaan pada bulan ini
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Availability Dialog */}
+        {showEditAvailability && editingAvailability && (
+          <EditAvailabilityDialog
+            open={showEditAvailability}
+            onOpenChange={handleCloseEditDialog}
+            entry={editingAvailability}
+            staff={staff}
+            services={treatments}
+            onSave={handleSaveEditedAvailability}
+            onDelete={handleDeleteAvailability}
+          />
+        )}
     </>
   )
 }

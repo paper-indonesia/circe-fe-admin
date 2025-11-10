@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar, Clock, Users, Sparkles, CalendarDays } from "lucide-react"
+import { Calendar, Clock, Users, Sparkles, CalendarDays, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
@@ -21,6 +21,7 @@ interface EditAvailabilityDialogProps {
   staff: any[]
   services: any[]
   onSave: (data: any) => Promise<void>
+  onDelete?: (id: string) => Promise<void>
 }
 
 const AVAILABILITY_TYPE_CONFIG = {
@@ -60,9 +61,11 @@ export function EditAvailabilityDialog({
   entry,
   staff,
   services,
-  onSave
+  onSave,
+  onDelete
 }: EditAvailabilityDialogProps) {
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -127,6 +130,23 @@ export function EditAvailabilityDialog({
       alert(error.message || "Gagal memperbarui availability")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!onDelete) return
+
+    if (!confirm("Hapus ketersediaan ini?")) return
+
+    try {
+      setDeleting(true)
+      await onDelete(entry.id)
+      onOpenChange(false)
+    } catch (error: any) {
+      console.error("Error deleting availability:", error)
+      alert(error.message || "Gagal menghapus availability")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -352,13 +372,27 @@ export function EditAvailabilityDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Batal
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Menyimpan..." : "Simpan Perubahan"}
-          </Button>
+        <DialogFooter className="flex justify-between">
+          <div className="flex-1">
+            {onDelete && (
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={saving || deleting}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleting ? "Menghapus..." : "Hapus"}
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || deleting}>
+              Batal
+            </Button>
+            <Button onClick={handleSave} disabled={saving || deleting}>
+              {saving ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
