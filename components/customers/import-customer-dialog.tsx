@@ -383,124 +383,110 @@ export function ImportCustomerDialog({ open, onOpenChange, onImportSuccess }: Im
         </DialogHeader>
 
         {step === 'upload' && (
-          <div className="space-y-6">
-            {/* Step 1: Download Template */}
-            <Card className="border-2 border-blue-200 bg-blue-50/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold">
-                    1
-                  </span>
-                  Download Template
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  Start with our Excel template to ensure correct formatting
-                </p>
-                <Button onClick={handleDownloadTemplate} className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Download Excel Template
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Format Guide */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">📋 Required Format</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
-                    <div className="w-24 font-semibold text-sm">name</div>
-                    <div className="flex-1">
-                      <Badge variant="destructive" className="mb-1">Required</Badge>
-                      <p className="text-sm text-gray-600">Full name (min 2 characters)</p>
-                      <p className="text-xs text-gray-500 mt-1">Example: John Doe</p>
-                    </div>
+          <div className="space-y-4">
+            {/* Action Buttons - Side by Side */}
+            <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50/50 to-purple-50/50">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-base mb-1">Get Started</h3>
+                    <p className="text-sm text-gray-600">
+                      Download template, fill it with customer data, then upload
+                    </p>
                   </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
-                    <div className="w-24 font-semibold text-sm">phone</div>
-                    <div className="flex-1">
-                      <Badge variant="destructive" className="mb-1">Required</Badge>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary" className="text-xs">
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Auto-format enabled
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-600">Indonesian phone number (9-13 digits)</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
-                    <div className="w-24 font-semibold text-sm">email</div>
-                    <div className="flex-1">
-                      <Badge variant="secondary" className="mb-1">Optional</Badge>
-                      <p className="text-sm text-gray-600">Valid email format</p>
-                      <p className="text-xs text-gray-500 mt-1">Example: john@example.com</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
-                    <div className="w-24 font-semibold text-sm">gender</div>
-                    <div className="flex-1">
-                      <Badge variant="secondary" className="mb-1">Optional</Badge>
-                      <p className="text-sm text-gray-600">Options: male, female, other</p>
-                    </div>
+                  <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <Button onClick={handleDownloadTemplate} variant="outline" className="gap-2 bg-white">
+                      <Download className="h-4 w-4" />
+                      Download Template
+                    </Button>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="excel-upload"
+                      disabled={parsing}
+                    />
+                    <label htmlFor="excel-upload" className="w-full sm:w-auto">
+                      <Button asChild disabled={parsing} className="gap-2 w-full">
+                        <span>
+                          {parsing ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Parsing...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4" />
+                              Upload Excel File
+                            </>
+                          )}
+                        </span>
+                      </Button>
+                    </label>
                   </div>
                 </div>
+                {file && (
+                  <div className="flex items-center gap-2 text-sm mt-3 p-2 bg-white rounded border border-green-200">
+                    <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                    <span className="text-gray-700 font-medium">{file.name}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Step 2: Upload File */}
-            <Card className="border-2 border-purple-200 bg-purple-50/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-600 text-white text-sm font-bold">
-                    2
-                  </span>
-                  Upload File
+            {/* Format Guide - Compact */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  📋 Required Format
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
-                  Select your filled Excel file to preview and import
-                </p>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="excel-upload"
-                    disabled={parsing}
-                  />
-                  <label htmlFor="excel-upload">
-                    <Button asChild disabled={parsing} className="gap-2">
-                      <span>
-                        {parsing ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Parsing...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-4 w-4" />
-                            Choose Excel File
-                          </>
-                        )}
-                      </span>
-                    </Button>
-                  </label>
-                  {file && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <FileSpreadsheet className="h-4 w-4 text-green-600" />
-                      <span className="text-gray-700">{file.name}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-gray-50">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm">name</span>
+                        <Badge variant="destructive" className="text-xs">Required</Badge>
+                      </div>
+                      <p className="text-xs text-gray-600">Full name (min 2 characters)</p>
                     </div>
-                  )}
+                  </div>
+
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-gray-50">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm">phone</span>
+                        <Badge variant="destructive" className="text-xs">Required</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          Auto
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-gray-600">Indonesian number (9-13 digits)</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-gray-50">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm">email</span>
+                        <Badge variant="secondary" className="text-xs">Optional</Badge>
+                      </div>
+                      <p className="text-xs text-gray-600">Valid email format</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-gray-50">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm">gender</span>
+                        <Badge variant="secondary" className="text-xs">Optional</Badge>
+                      </div>
+                      <p className="text-xs text-gray-600">male, female, or other</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>

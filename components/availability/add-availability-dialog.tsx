@@ -224,14 +224,29 @@ export function AddAvailabilityDialog({
           {/* Mode Selection */}
           <Tabs value={mode} onValueChange={(v) => setMode(v as AvailabilityMode)}>
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="single" className="flex items-center gap-2">
-                <CalendarDays className="h-4 w-4" />
-                Single
-              </TabsTrigger>
-              <TabsTrigger value="recurring" className="flex items-center gap-2">
-                <Repeat className="h-4 w-4" />
-                Recurring
-              </TabsTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="single" className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4" />
+                    Single
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">Buat ketersediaan untuk satu tanggal tertentu saja. Cocok untuk jadwal yang tidak berulang atau jadwal khusus.</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger value="recurring" className="flex items-center gap-2">
+                    <Repeat className="h-4 w-4" />
+                    Recurring
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">Buat ketersediaan berulang (harian, mingguan, atau bulanan). Cocok untuk jadwal rutin seperti jam kerja regular.</p>
+                </TooltipContent>
+              </Tooltip>
             </TabsList>
 
             <TabsContent value="single" className="space-y-4 mt-4">
@@ -473,7 +488,7 @@ export function AddAvailabilityDialog({
                   <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="max-w-xs">Pilih layanan yang tersedia untuk staff pada waktu ini. Hanya layanan yang sudah di-assign ke staff yang akan muncul.</p>
+                  <p className="max-w-xs">Pilih layanan yang tersedia untuk staff pada waktu ini. Hanya layanan yang sudah di-assign ke staff yang akan muncul. Atur Layanan Staff dapat dilakukan di menu Staff</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -556,23 +571,33 @@ export function AddAvailabilityDialog({
           {/* Group Service Option */}
           {formData.availability_type === "working_hours" && (
             <div className="space-y-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-300">
-              <div className="flex items-center space-x-3 p-2 rounded hover:bg-green-100/50 transition-colors">
-                <Checkbox
-                  id="is_group_service"
-                  checked={formData.is_group_service}
-                  onCheckedChange={(checked) =>
-                    setFormData(prev => ({
-                      ...prev,
-                      is_group_service: checked as boolean,
-                      capacity: checked ? 5 : 1
-                    }))
-                  }
-                  className="h-5 w-5 border-2 border-green-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                />
-                <Label htmlFor="is_group_service" className="font-semibold text-base flex items-center gap-2 cursor-pointer text-green-800">
-                  <Users className="h-5 w-5 text-green-600" />
-                  Layanan Grup/Kelas
-                </Label>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3 p-2 rounded hover:bg-green-100/50 transition-colors flex-1">
+                  <Checkbox
+                    id="is_group_service"
+                    checked={formData.is_group_service}
+                    onCheckedChange={(checked) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        is_group_service: checked as boolean,
+                        capacity: checked ? 5 : 1
+                      }))
+                    }
+                    className="h-5 w-5 border-2 border-green-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                  />
+                  <Label htmlFor="is_group_service" className="font-semibold text-base flex items-center gap-2 cursor-pointer text-green-800">
+                    <Users className="h-5 w-5 text-green-600" />
+                    Layanan Grup/Kelas
+                  </Label>
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-500 cursor-help flex-shrink-0" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">Aktifkan opsi ini untuk layanan yang dapat melayani beberapa klien secara bersamaan, seperti kelas yoga, senam, atau treatment grup lainnya. Anda dapat mengatur kapasitas maksimal peserta.</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <p className="text-xs text-gray-600 ml-6">
                 Aktifkan untuk layanan yang bisa melayani multiple klien sekaligus
