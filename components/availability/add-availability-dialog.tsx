@@ -223,10 +223,13 @@ export function AddAvailabilityDialog({
         <div className="space-y-6">
           {/* Mode Selection */}
           <Tabs value={mode} onValueChange={(v) => setMode(v as AvailabilityMode)}>
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-100 p-1">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="single" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="single"
+                    className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                  >
                     <CalendarDays className="h-4 w-4" />
                     Single
                   </TabsTrigger>
@@ -238,7 +241,10 @@ export function AddAvailabilityDialog({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TabsTrigger value="recurring" className="flex items-center gap-2">
+                  <TabsTrigger
+                    value="recurring"
+                    className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                  >
                     <Repeat className="h-4 w-4" />
                     Recurring
                   </TabsTrigger>
