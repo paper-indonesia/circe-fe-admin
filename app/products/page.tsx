@@ -402,27 +402,37 @@ export default function TreatmentsPage() {
   }
 
   const openEditDialog = (treatment: any) => {
-    setTreatmentForm({
+    console.log('[DEBUG] openEditDialog - Raw treatment data:', treatment)
+    console.log('[DEBUG] allow_parallel_bookings:', treatment.allow_parallel_bookings)
+    console.log('[DEBUG] max_parallel_bookings:', treatment.max_parallel_bookings)
+
+    const formData = {
       name: treatment.name,
       slug: treatment.slug || "",
       category: treatment.category,
-      durationMin: treatment.durationMin || treatment.duration_minutes || 60,
-      price: treatment.price || treatment.pricing?.base_price || 0,
+      durationMin: treatment.durationMin ?? treatment.duration_minutes ?? 60,
+      price: treatment.price ?? treatment.pricing?.base_price ?? 0,
       currency: treatment.currency || treatment.pricing?.currency || "IDR",
       photo: treatment.photo || treatment.image_url || "",
       description: treatment.description || "",
-      preparationMinutes: treatment.preparation_minutes || treatment.preparationMinutes || 0,
-      cleanupMinutes: treatment.cleanup_minutes || treatment.cleanupMinutes || 0,
-      maxAdvanceBookingDays: treatment.max_advance_booking_days || treatment.maxAdvanceBookingDays || 30,
-      minAdvanceBookingHours: treatment.min_advance_booking_hours || treatment.minAdvanceBookingHours || 1,
+      preparationMinutes: treatment.preparation_minutes ?? treatment.preparationMinutes ?? 0,
+      cleanupMinutes: treatment.cleanup_minutes ?? treatment.cleanupMinutes ?? 0,
+      maxAdvanceBookingDays: treatment.max_advance_booking_days ?? treatment.maxAdvanceBookingDays ?? 30,
+      minAdvanceBookingHours: treatment.min_advance_booking_hours ?? treatment.minAdvanceBookingHours ?? 1,
       requiresStaff: treatment.requires_staff !== undefined ? treatment.requires_staff : treatment.requiresStaff !== false,
-      requiredStaffCount: treatment.required_staff_count || treatment.requiredStaffCount || 1,
-      allowParallelBookings: treatment.allow_parallel_bookings || treatment.allowParallelBookings || false,
-      maxParallelBookings: treatment.max_parallel_bookings || treatment.maxParallelBookings || 1,
+      requiredStaffCount: treatment.required_staff_count ?? treatment.requiredStaffCount ?? 1,
+      allowParallelBookings: treatment.allow_parallel_bookings ?? treatment.allowParallelBookings ?? false,
+      maxParallelBookings: treatment.max_parallel_bookings ?? treatment.maxParallelBookings ?? 1,
       tags: treatment.tags || [],
       isActive: treatment.is_active !== false && treatment.isActive !== false,
       status: treatment.status || "active",
-    })
+    }
+
+    console.log('[DEBUG] Mapped form data:', formData)
+    console.log('[DEBUG] allowParallelBookings:', formData.allowParallelBookings)
+    console.log('[DEBUG] maxParallelBookings:', formData.maxParallelBookings)
+
+    setTreatmentForm(formData)
     setEditingTreatment(treatment)
   }
 
