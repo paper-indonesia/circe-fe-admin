@@ -80,15 +80,18 @@ export function Sidebar() {
       {
         label: 'System',
         items: [
-          { name: 'Settings', href: '/settings', icon: Settings },
           { name: 'Help Desk', href: '/help-desk', icon: HelpCircle },
+          { name: 'Settings', href: '/settings', icon: Settings },
         ]
       }
     ]
 
-    // Add admin-only menus for tenant admins
+    // Add admin-only menus for tenant admins (after Help Desk)
     if (isAdmin()) {
-      groups[2].items.unshift(
+      // Insert admin menus after Help Desk (at index 1)
+      groups[2].items.splice(
+        1,
+        0,
         {
           name: 'User Management',
           href: '/user-management',

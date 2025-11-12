@@ -9,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar, Clock, Repeat, CalendarDays, Users, Sparkles } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Calendar, Clock, Repeat, CalendarDays, Users, Sparkles, HelpCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
@@ -154,8 +155,13 @@ export function AddAvailabilityDialog({
         throw new Error("Pilih minimal satu layanan")
       }
 
-      if (mode === "recurring" && formData.recurrence_days.length === 0 && formData.recurrence_type === "weekly") {
-        throw new Error("Pilih minimal satu hari untuk recurring weekly")
+      if (mode === "recurring") {
+        if (!formData.recurrence_end_date) {
+          throw new Error("Tanggal berakhir wajib diisi untuk recurring")
+        }
+        if (formData.recurrence_days.length === 0 && formData.recurrence_type === "weekly") {
+          throw new Error("Pilih minimal satu hari untuk recurring weekly")
+        }
       }
 
       // Prepare data based on mode
@@ -177,7 +183,7 @@ export function AddAvailabilityDialog({
               date: formData.date, // Start date for recurring
               recurrence_type: formData.recurrence_type,
               recurrence_days: formData.recurrence_type === "weekly" ? formData.recurrence_days : undefined,
-              recurrence_end_date: formData.recurrence_end_date || undefined,
+              recurrence_end_date: formData.recurrence_end_date, // Now mandatory
             }
         )
       }
@@ -213,6 +219,7 @@ export function AddAvailabilityDialog({
           </DialogTitle>
         </DialogHeader>
 
+        <TooltipProvider>
         <div className="space-y-6">
           {/* Mode Selection */}
           <Tabs value={mode} onValueChange={(v) => setMode(v as AvailabilityMode)}>
@@ -242,7 +249,17 @@ export function AddAvailabilityDialog({
 
           {/* Staff Selection */}
           <div className="space-y-2">
-            <Label htmlFor="staff">Staff <span className="text-red-500">*</span></Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="staff">Staff <span className="text-red-500">*</span></Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">Pilih staff yang akan diatur ketersediaannya. Layanan yang tersedia akan disesuaikan dengan staff yang dipilih.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Select value={formData.staff_id} onValueChange={(v) => setFormData(prev => ({ ...prev, staff_id: v }))}>
               <SelectTrigger>
                 <SelectValue placeholder="Pilih staff..." />
@@ -259,7 +276,22 @@ export function AddAvailabilityDialog({
 
           {/* Availability Type */}
           <div className="space-y-2">
-            <Label>Tipe Ketersediaan <span className="text-red-500">*</span></Label>
+            <div className="flex items-center gap-2">
+              <Label>Tipe Ketersediaan <span className="text-red-500">*</span></Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="max-w-xs space-y-1">
+                    <p><strong>Jam Kerja:</strong> Waktu staff tersedia untuk melayani klien</p>
+                    <p><strong>Istirahat:</strong> Waktu istirahat staff (tidak tersedia untuk booking)</p>
+                    <p><strong>Blokir:</strong> Blokir waktu tertentu (tidak tersedia)</p>
+                    <p><strong>Cuti:</strong> Staff sedang cuti atau tidak masuk</p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {Object.entries(AVAILABILITY_TYPE_CONFIG).map(([key, config]) => {
                 const Icon = config.icon
@@ -289,9 +321,23 @@ export function AddAvailabilityDialog({
           {/* Date Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">
-                {mode === "single" ? "Tanggal" : "Tanggal Mulai"} <span className="text-red-500">*</span>
-              </Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="date">
+                  {mode === "single" ? "Tanggal" : "Tanggal Mulai"} <span className="text-red-500">*</span>
+                </Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">
+                      {mode === "single"
+                        ? "Pilih tanggal untuk ketersediaan ini"
+                        : "Pilih tanggal mulai untuk ketersediaan berulang"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 id="date"
                 type="date"
@@ -302,7 +348,17 @@ export function AddAvailabilityDialog({
 
             {mode === "recurring" && (
               <div className="space-y-2">
-                <Label htmlFor="end_date">Tanggal Berakhir</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="end_date">Tanggal Berakhir <span className="text-red-500">*</span></Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Pilih tanggal berakhir untuk ketersediaan berulang. Setelah tanggal ini, ketersediaan tidak akan lagi berlaku.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Input
                   id="end_date"
                   type="date"
@@ -310,7 +366,6 @@ export function AddAvailabilityDialog({
                   onChange={(e) => setFormData(prev => ({ ...prev, recurrence_end_date: e.target.value }))}
                   min={formData.date}
                 />
-                <p className="text-xs text-gray-500">Kosongkan untuk tanpa batas</p>
               </div>
             )}
           </div>
@@ -318,7 +373,17 @@ export function AddAvailabilityDialog({
           {/* Time Range */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="start_time">Waktu Mulai <span className="text-red-500">*</span></Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="start_time">Waktu Mulai <span className="text-red-500">*</span></Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">Jam mulai ketersediaan (misalnya: 09:00)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 id="start_time"
                 type="time"
@@ -327,7 +392,17 @@ export function AddAvailabilityDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end_time">Waktu Selesai <span className="text-red-500">*</span></Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="end_time">Waktu Selesai <span className="text-red-500">*</span></Label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">Jam selesai ketersediaan (misalnya: 17:00)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Input
                 id="end_time"
                 type="time"
@@ -389,9 +464,19 @@ export function AddAvailabilityDialog({
 
           {/* Service Selection */}
           <div className="space-y-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
-            <Label className="text-base font-semibold">
-              Layanan <span className="text-red-500">*</span>
-            </Label>
+            <div className="flex items-center gap-2">
+              <Label className="text-base font-semibold">
+                Layanan <span className="text-red-500">*</span>
+              </Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">Pilih layanan yang tersedia untuk staff pada waktu ini. Hanya layanan yang sudah di-assign ke staff yang akan muncul.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <p className="text-sm text-gray-600">
               {selectedStaff
                 ? `Pilih layanan untuk ${selectedStaff.display_name || selectedStaff.name}`
@@ -530,6 +615,7 @@ export function AddAvailabilityDialog({
             />
           </div>
         </div>
+        </TooltipProvider>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
