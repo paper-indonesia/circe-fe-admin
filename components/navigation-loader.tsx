@@ -38,6 +38,8 @@ export function NavigationLoader() {
       setLoadingText('Loading Outlets')
     } else if (pathname.includes('/availability')) {
       setLoadingText('Loading Availability')
+    } else if (pathname.includes('/help-desk')) {
+      setLoadingText('Loading Help Desk')
     } else {
       setLoadingText('Loading')
     }

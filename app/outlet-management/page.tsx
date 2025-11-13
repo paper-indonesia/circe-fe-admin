@@ -92,16 +92,16 @@ interface OutletData {
   updated_at?: string
 }
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
 
 const DEFAULT_BUSINESS_HOURS: BusinessHour[] = [
-  { day: 0, is_open: true, open_time: "09:00", close_time: "18:00" }, // Monday
-  { day: 1, is_open: true, open_time: "09:00", close_time: "18:00" }, // Tuesday
-  { day: 2, is_open: true, open_time: "09:00", close_time: "18:00" }, // Wednesday
-  { day: 3, is_open: true, open_time: "09:00", close_time: "18:00" }, // Thursday
-  { day: 4, is_open: true, open_time: "09:00", close_time: "18:00" }, // Friday
-  { day: 5, is_open: false }, // Saturday
-  { day: 6, is_open: false }, // Sunday
+  { day: 0, is_open: true, open_time: "09:00", close_time: "18:00" }, // Senin
+  { day: 1, is_open: true, open_time: "09:00", close_time: "18:00" }, // Selasa
+  { day: 2, is_open: true, open_time: "09:00", close_time: "18:00" }, // Rabu
+  { day: 3, is_open: true, open_time: "09:00", close_time: "18:00" }, // Kamis
+  { day: 4, is_open: true, open_time: "09:00", close_time: "18:00" }, // Jumat
+  { day: 5, is_open: false }, // Sabtu
+  { day: 6, is_open: false }, // Minggu
 ]
 
 const DEFAULT_SETTINGS: OutletSettings = {
@@ -223,6 +223,19 @@ export default function OutletManagementPage() {
     }
   }
 
+  // Generate unique slug from name + timestamp
+  const generateSlug = (name: string) => {
+    const timestamp = Date.now()
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      + `-${timestamp}`
+  }
+
   const handleAddOutlet = async () => {
     try {
       setError("")
@@ -246,9 +259,13 @@ export default function OutletManagementPage() {
         return { day: bh.day, is_open: false }
       })
 
-      // Add tenant_id to formData
+      // Generate unique slug from name + timestamp
+      const generatedSlug = generateSlug(formData.name)
+
+      // Add tenant_id and generated slug to formData
       const outletData = {
         ...formData,
+        slug: generatedSlug,
         business_hours: validatedBusinessHours,
         tenant_id: tenant.id
       }
@@ -319,8 +336,14 @@ export default function OutletManagementPage() {
         return { day: bh.day, is_open: false }
       })
 
+      // Regenerate slug if name changed
+      const slugToUse = formData.name !== selectedOutlet.name
+        ? generateSlug(formData.name)
+        : formData.slug
+
       const outletData = {
         ...formData,
+        slug: slugToUse,
         business_hours: validatedBusinessHours
       }
 
@@ -875,7 +898,7 @@ export default function OutletManagementPage() {
               {/* Basic Information */}
               <TabsContent value="basic" className="flex-1 overflow-y-auto mt-6">
                 <div className="grid grid-cols-2 gap-6 pb-4 px-2">
-                  <div className="space-y-3 p-5 border-2 rounded-xl bg-white hover:border-blue-200 transition-all">
+                  <div className="space-y-3 col-span-2 p-5 border-2 rounded-xl bg-white hover:border-blue-200 transition-all">
                     <Label htmlFor="name" className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <Building className="h-4 w-4 text-blue-600" />
                       Outlet Name *
@@ -888,20 +911,7 @@ export default function OutletManagementPage() {
                       className="h-12 text-base"
                     />
                   </div>
-                  <div className="space-y-3 p-5 border-2 rounded-xl bg-white hover:border-blue-200 transition-all">
-                    <Label htmlFor="slug" className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                      <Link2 className="h-4 w-4 text-blue-600" />
-                      Slug *
-                    </Label>
-                    <Input
-                      id="slug"
-                      value={formData.slug}
-                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                      placeholder="downtown-spa"
-                      className="h-12 text-base font-mono"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Unique identifier for URL</p>
-                  </div>
+                  {/* Slug field hidden - auto-generated from name + timestamp */}
                   <div className="space-y-3 col-span-2 p-5 border-2 rounded-xl bg-white hover:border-blue-200 transition-all">
                     <Label htmlFor="description" className="text-sm font-bold text-gray-700 flex items-center gap-2">
                       <MessageSquare className="h-4 w-4 text-blue-600" />

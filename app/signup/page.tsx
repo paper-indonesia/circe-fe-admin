@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { TermsModal } from "@/components/modals/TermsModal"
 import { PrivacyModal } from "@/components/modals/PrivacyModal"
 import { getBusinessTypeTemplates } from "@/lib/business-type-templates"
+import { useGA4Tracking } from "@/hooks/use-ga4-tracking"
 
 const BUSINESS_TYPES = [
   {
@@ -143,6 +144,12 @@ export default function SignUpPage() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // GA4 Tracking Hook
+  const ga4 = useGA4Tracking({
+    registrationStep: currentStep,
+    formName: currentStep === 1 ? 'business_info' : currentStep === 2 ? 'admin_account' : 'legal_agreements'
+  })
 
   // Validation functions
   const validateEmail = (email: string): string => {
@@ -274,6 +281,11 @@ export default function SignUpPage() {
         break
     }
 
+    // Track validation error if exists
+    if (error) {
+      ga4.handleValidationError(fieldId, error)
+    }
+
     setFieldErrors(prev => ({
       ...prev,
       [fieldId]: error
@@ -300,9 +312,17 @@ export default function SignUpPage() {
     }
   }
 
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id } = e.target
+    // Track field focus (for form_start event)
+    ga4.handleFieldFocus(id)
+  }
+
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
     validateField(id, value)
+    // Track field interaction
+    ga4.handleFieldBlur(id)
   }
 
   const handleSelectChange = (field: string, value: string) => {
@@ -311,6 +331,11 @@ export default function SignUpPage() {
       [field]: value,
     })
     setError("")
+
+    // Track business type selection
+    if (field === 'business_type') {
+      ga4.handleBusinessTypeSelect(value)
+    }
   }
 
   const handleCheckboxChange = (field: string, checked: boolean) => {
@@ -325,6 +350,13 @@ export default function SignUpPage() {
     }
     if (field === 'privacy_accepted' && checked) {
       setPrivacyError(false)
+    }
+
+    // Track checkbox toggle
+    if (field === 'terms_accepted') {
+      ga4.handleCheckboxToggle('terms_of_service', checked)
+    } else if (field === 'privacy_accepted') {
+      ga4.handleCheckboxToggle('privacy_policy', checked)
     }
   }
 
@@ -435,13 +467,22 @@ export default function SignUpPage() {
   }
 
   const handleNext = () => {
+    // Track form submit attempt
+    ga4.handleFormSubmit()
+
     if (validateStep(currentStep)) {
+      // Track continue click
+      ga4.handleContinueClick()
+
       setCurrentStep(currentStep + 1)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
   const handleBack = () => {
+    // Track back click
+    ga4.handleBackClick()
+
     setCurrentStep(currentStep - 1)
     setError("")
     setTermsError(false)
@@ -453,6 +494,9 @@ export default function SignUpPage() {
     if (!validateStep(3)) {
       return
     }
+
+    // Track form submit attempt
+    ga4.handleFormSubmit()
 
     setIsLoading(true)
     setError("")
@@ -486,6 +530,13 @@ export default function SignUpPage() {
       const data = await response.json()
 
       if (response.ok) {
+        // Track successful signup conversion
+        ga4.handleSignupComplete(
+          formData.business_type,
+          formData.admin_email,
+          data.user_id || data.tenant_id
+        )
+
         // Store business type and tenant info for first login setup
         if (typeof window !== 'undefined') {
           localStorage.setItem('pending_template_setup', JSON.stringify({
@@ -494,6 +545,9 @@ export default function SignUpPage() {
             email: formData.business_email,
             timestamp: new Date().toISOString()
           }))
+
+          // Set flag for dashboard tracking
+          sessionStorage.setItem('just_signed_up', 'true')
         }
 
         setSuccess(data.message || "Registration successful! Redirecting to sign in...")
@@ -582,10 +636,10 @@ export default function SignUpPage() {
 
           {/* Progress Steps */}
           <div className="mb-10">
-            <div className="flex items-center justify-between max-w-3xl mx-auto px-4">
+            <div className="flex items-center justify-center max-w-4xl mx-auto px-4">
               {STEPS.map((step, index) => (
-                <div key={step.id} className="flex-1 flex items-center">
-                  <div className="flex flex-col items-center flex-1 relative">
+                <div key={step.id} className="flex items-center">
+                  <div className="flex flex-col items-center relative">
                     {/* Step Circle */}
                     <motion.div
                       initial={false}
@@ -641,7 +695,7 @@ export default function SignUpPage() {
 
                   {/* Connector Line */}
                   {index < STEPS.length - 1 && (
-                    <div className="flex-1 h-1 bg-gray-200 mx-3 rounded-full relative overflow-hidden">
+                    <div className="w-32 md:w-48 h-1 bg-gray-200 mx-4 md:mx-6 rounded-full relative overflow-hidden">
                       <motion.div
                         initial={{ width: '0%' }}
                         animate={{
@@ -656,6 +710,46 @@ export default function SignUpPage() {
               ))}
             </div>
           </div>
+
+          {/* 14 Days Free Trial Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="mb-8 mx-auto max-w-4xl"
+          >
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#8B5CF6] via-[#EC4899] to-[#F59E0B] p-[2px]">
+              <div className="relative bg-white rounded-2xl p-6">
+                <div className="flex items-center justify-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] flex items-center justify-center animate-pulse">
+                      <Sparkles className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white border-0 shadow-lg">
+                          14 Days Free Trial
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Start now by creating your account below
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-50 border border-green-200">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-green-700 font-medium">No credit card required</span>
+                    </div>
+                    <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200">
+                      <Rocket className="h-4 w-4 text-blue-600" />
+                      <span className="text-blue-700 font-medium">Quick setup</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
 
           {/* Sign Up Card */}
           <Card className="border-0 shadow-2xl backdrop-blur-sm bg-white/95">

@@ -25,13 +25,13 @@ const TIMEZONES = [
 ]
 
 const DEFAULT_BUSINESS_HOURS = [
-  { day: 0, is_open: false },
-  { day: 1, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 2, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 3, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 4, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 5, is_open: true, open_time: "09:00", close_time: "18:00" },
-  { day: 6, is_open: false },
+  { day: 0, is_open: true, open_time: "09:00", close_time: "18:00" }, // Senin
+  { day: 1, is_open: true, open_time: "09:00", close_time: "18:00" }, // Selasa
+  { day: 2, is_open: true, open_time: "09:00", close_time: "18:00" }, // Rabu
+  { day: 3, is_open: true, open_time: "09:00", close_time: "18:00" }, // Kamis
+  { day: 4, is_open: true, open_time: "09:00", close_time: "18:00" }, // Jumat
+  { day: 5, is_open: false }, // Sabtu
+  { day: 6, is_open: false }, // Minggu
 ]
 
 const DEFAULT_SETTINGS = {
@@ -165,8 +165,9 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
     setLoading(true)
 
     try {
-      // Generate slug from name
+      // Generate unique slug from name + timestamp
       const generateSlug = (name: string) => {
+        const timestamp = Date.now()
         return name
           .toLowerCase()
           .trim()
@@ -174,6 +175,7 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
           .replace(/\s+/g, '-')
           .replace(/-+/g, '-')
           .replace(/^-+|-+$/g, '')
+          + `-${timestamp}`
       }
 
       // Ensure all open days have open_time and close_time
@@ -479,7 +481,7 @@ export function OutletSetupStep({ onValidChange }: OutletSetupStepProps) {
                       {formData.business_hours.map((bh, index) => (
                         <div key={bh.day} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
                           <div className="w-20 font-medium text-sm text-gray-700">
-                            {['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][bh.day]}
+                            {['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'][bh.day]}
                           </div>
                           <div className="flex items-center gap-2 flex-1 flex-wrap">
                             <div className="flex items-center gap-2">

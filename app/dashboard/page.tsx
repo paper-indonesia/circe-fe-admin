@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { useAuth } from "@/lib/auth-context"
 import { useSubscription } from "@/lib/subscription-context"
+import { useSignupSuccessTracking } from "@/hooks/use-ga4-tracking"
 import { format, isToday, subDays, startOfDay, endOfDay, isWithinInterval, isSameDay, startOfWeek } from "date-fns"
 import { useRouter } from "next/navigation"
 import { formatCurrency, cn } from "@/lib/utils"
@@ -94,6 +95,9 @@ function DashboardContent() {
   const router = useRouter()
   const { toast } = useToast()
   const { user: authUser, isAdmin } = useAuth()
+
+  // GA4 Tracking - Track signup success if user just signed up
+  useSignupSuccessTracking()
 
   const { bookings = [], loading: bookingsLoading } = useBookings()
   const { patients = [], loading: patientsLoading } = usePatients()

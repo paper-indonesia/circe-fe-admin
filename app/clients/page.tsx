@@ -48,11 +48,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircleIcon,
+  Upload,
+  FileSpreadsheet,
   CreditCard,
   FileText,
   MapPin,
 } from "lucide-react"
 import { AddButton } from "@/components/ui/add-button"
+import { ImportCustomerDialog } from "@/components/customers/import-customer-dialog"
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -79,11 +82,12 @@ export default function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<any>(null)
   const [showClientDialog, setShowClientDialog] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
   const [editingClient, setEditingClient] = useState<any>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<any>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 20
+  const pageSize = 10
 
   // Appointment History State
   const [showAppointmentHistory, setShowAppointmentHistory] = useState(false)
@@ -140,6 +144,10 @@ export default function ClientsPage() {
       const params = new URLSearchParams()
       params.append('page', currentPage.toString())
       params.append('size', pageSize.toString())
+
+      // Sort by created_at descending (newest first)
+      params.append('sort_by', 'created_at')
+      params.append('order', 'desc')
 
       if (debouncedSearchQuery) {
         params.append('search', debouncedSearchQuery)
@@ -834,9 +842,19 @@ export default function ClientsPage() {
             <h1 className="text-3xl font-bold text-foreground">Customer Management</h1>
             <p className="text-muted-foreground">Manage your customer database and relationships</p>
           </div>
-          <AddButton onClick={openAddDialog}>
-            Add Customer
-          </AddButton>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowImportDialog(true)}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Import from Excel
+            </Button>
+            <AddButton onClick={openAddDialog}>
+              Add Customer
+            </AddButton>
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -1010,6 +1028,7 @@ export default function ClientsPage() {
                         <TableHead>Appointments</TableHead>
                         <TableHead>Total Spent</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Created At</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1019,7 +1038,11 @@ export default function ClientsPage() {
                           <TableCell className="py-4 px-2">
                             <div>
                               <div className="font-medium">{client.name}</div>
-                              <div className="text-sm text-muted-foreground">{client.email || "No email"}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {client.email && !client.email.includes('@example.co')
+                                  ? client.email
+                                  : "No email"}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="py-4 px-2 text-sm text-muted-foreground">{client.phone}</TableCell>
@@ -1027,6 +1050,18 @@ export default function ClientsPage() {
                           <TableCell className="py-4 px-2 text-sm">{client.totalVisits}</TableCell>
                           <TableCell className="py-4 px-2 font-medium text-sm">Rp {(client.total_spent || 0).toLocaleString('id-ID')}</TableCell>
                           <TableCell className="py-4 px-2">{getStatusBadge(client.status)}</TableCell>
+                          <TableCell className="py-4 px-2 text-sm text-muted-foreground">
+                            {client.createdAt && typeof client.createdAt === "string"
+                              ? (() => {
+                                  try {
+                                    const date = parseISO(client.createdAt)
+                                    return isValid(date) ? format(date, 'dd MMM yyyy') : "-"
+                                  } catch {
+                                    return "-"
+                                  }
+                                })()
+                              : "-"}
+                          </TableCell>
                           <TableCell className="py-4 px-2">
                             <div className="flex gap-1">
                               <Button variant="outline" size="sm" onClick={() => openClientDetails(client)}>
@@ -1138,216 +1173,7 @@ export default function ClientsPage() {
           </CardContent>
         </Card>
 
-        {/* Customer Analytics Summary */}
-        {!loadingStatistics && statistics && (
-          <div className="mt-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Customer Analytics</h2>
-              <Badge variant="outline" className="text-xs">
-                Last updated: {statistics.generated_at ? new Date(statistics.generated_at).toLocaleString() : 'N/A'}
-              </Badge>
-            </div>
 
-            {/* Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-blue-600 uppercase">Total Customers</p>
-                      <p className="text-2xl font-bold text-blue-900 mt-1">{statistics.total_customers?.toLocaleString() || 0}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Badge className="bg-emerald-100 text-emerald-700 text-xs">
-                          <UserCheck className="h-3 w-3 mr-1" />
-                          {statistics.active_customers || 0} Active
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                      <Users className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-emerald-600 uppercase">Total Revenue</p>
-                      <p className="text-2xl font-bold text-emerald-900 mt-1">
-                        Rp {(statistics.total_revenue || 0).toLocaleString('id-ID')}
-                      </p>
-                      <p className="text-xs text-emerald-600 mt-2">
-                        Avg: Rp {(statistics.avg_spent_per_customer || 0).toLocaleString('id-ID')}/customer
-                      </p>
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <Banknote className="h-6 w-6 text-emerald-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-[#C4B5FD]">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-[#8B5CF6] uppercase">Total Appointments</p>
-                      <p className="text-2xl font-bold text-[#6D28D9] mt-1">{(statistics.total_appointments || 0).toLocaleString()}</p>
-                      <p className="text-xs text-[#8B5CF6] mt-2">
-                        Avg: {(statistics.avg_appointments_per_customer || 0).toFixed(1)}/customer
-                      </p>
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-[#EDE9FE] flex items-center justify-center">
-                      <CalendarIcon className="h-6 w-6 text-[#8B5CF6]" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-amber-600 uppercase">Retention Rate</p>
-                      <p className="text-2xl font-bold text-amber-900 mt-1">{(statistics.retention_rate || 0).toFixed(1)}%</p>
-                      <p className="text-xs text-amber-600 mt-2">
-                        Last 90 days activity
-                      </p>
-                    </div>
-                    <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center">
-                      <TrendingUp className="h-6 w-6 text-amber-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Customer Segments & Additional Stats */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Customer Segments */}
-              {statistics.customer_segments && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Activity className="h-5 w-5" />
-                      Customer Segments
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-[#EDE9FE] rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-[#8B5CF6]" />
-                          <span className="font-medium text-sm">VIP Customers</span>
-                        </div>
-                        <Badge className="bg-purple-600">{statistics.customer_segments.vip || 0}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <UserCheck className="h-4 w-4 text-blue-600" />
-                          <span className="font-medium text-sm">Regular Customers</span>
-                        </div>
-                        <Badge className="bg-blue-600">{statistics.customer_segments.regular || 0}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Plus className="h-4 w-4 text-green-600" />
-                          <span className="font-medium text-sm">New Customers</span>
-                        </div>
-                        <Badge className="bg-green-600">{statistics.customer_segments.new || 0}</Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-red-600" />
-                          <span className="font-medium text-sm">At Risk</span>
-                        </div>
-                        <Badge className="bg-red-600">{statistics.customer_segments.at_risk || 0}</Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-            </div>
-
-            {/* Top Customers */}
-            {(statistics.top_customers_by_revenue?.length > 0 || statistics.top_customers_by_appointments?.length > 0) && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Top by Revenue */}
-                {statistics.top_customers_by_revenue?.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-emerald-600" />
-                        Top Customers by Revenue
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {statistics.top_customers_by_revenue.slice(0, 5).map((customer: any, index: number) => (
-                          <div key={customer.customer_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
-                                #{index + 1}
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm">{customer.full_name}</p>
-                                <p className="text-xs text-muted-foreground">{customer.email}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-sm text-emerald-700">
-                                Rp {(customer.total_spent || 0).toLocaleString('id-ID')}
-                              </p>
-                              <p className="text-xs text-muted-foreground">{customer.total_appointments} visits</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Top by Appointments */}
-                {statistics.top_customers_by_appointments?.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Star className="h-5 w-5 text-amber-600" />
-                        Top Customers by Visits
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {statistics.top_customers_by_appointments.slice(0, 5).map((customer: any, index: number) => (
-                          <div key={customer.customer_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm">
-                                #{index + 1}
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm">{customer.full_name}</p>
-                                <p className="text-xs text-muted-foreground">{customer.email}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-bold text-sm text-amber-700">{customer.total_appointments} visits</p>
-                              <p className="text-xs text-muted-foreground">
-                                Rp {(customer.total_spent || 0).toLocaleString('id-ID')}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
       )}
 
@@ -1700,8 +1526,8 @@ export default function ClientsPage() {
                             <Mail className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-gray-500 mb-0.5">Email Address</p>
-                              <p className="text-sm font-medium text-gray-900 break-all" title={selectedClient.email || "No email provided"}>
-                                {selectedClient.email || "No email provided"}
+                              <p className="text-sm font-medium text-gray-900 break-all" title={selectedClient.email && !selectedClient.email.includes('@example.co') ? selectedClient.email : "No email provided"}>
+                                {selectedClient.email && !selectedClient.email.includes('@example.co') ? selectedClient.email : "No email provided"}
                               </p>
                             </div>
                           </div>
@@ -1814,6 +1640,16 @@ export default function ClientsPage() {
             "Customer data can be restored within 10 seconds",
             "After 10 seconds, restoration requires admin intervention"
           ]}
+        />
+
+        {/* Import Customer Dialog */}
+        <ImportCustomerDialog
+          open={showImportDialog}
+          onOpenChange={setShowImportDialog}
+          onImportSuccess={() => {
+            fetchCustomers()
+            setShowImportDialog(false)
+          }}
         />
 
         {/* Appointment History Dialog */}

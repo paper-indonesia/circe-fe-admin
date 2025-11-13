@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Calendar, Users, Star, Settings, UserPlus, Menu, X, Sparkles, LogOut, BarChart3, Clock, Power, Shield, Building, Crown } from "lucide-react"
+import { Home, Calendar, Users, Star, Settings, UserPlus, Menu, X, Sparkles, LogOut, BarChart3, Clock, Power, Shield, Building, Crown, HelpCircle, CalendarClock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useLayout } from "./main-layout"
@@ -66,6 +66,7 @@ export function Sidebar() {
           { name: 'Calendar', href: '/calendar', icon: Calendar },
           { name: 'Customers', href: '/clients', icon: Users },
           { name: 'Staff', href: '/staff', icon: Users },
+          { name: 'Availability', href: '/availability', icon: CalendarClock },
           { name: 'Walk-in', href: '/calendar?action=create&source=walk-in', icon: UserPlus },
         ]
       },
@@ -79,14 +80,18 @@ export function Sidebar() {
       {
         label: 'System',
         items: [
+          { name: 'Help Desk', href: '/help-desk', icon: HelpCircle },
           { name: 'Settings', href: '/settings', icon: Settings },
         ]
       }
     ]
 
-    // Add admin-only menus for tenant admins
+    // Add admin-only menus for tenant admins (after Help Desk)
     if (isAdmin()) {
-      groups[2].items.unshift(
+      // Insert admin menus after Help Desk (at index 1)
+      groups[2].items.splice(
+        1,
+        0,
         {
           name: 'User Management',
           href: '/user-management',

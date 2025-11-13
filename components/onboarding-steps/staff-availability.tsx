@@ -199,9 +199,7 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     if (!staffForm.first_name.trim()) {
       newErrors.first_name = "Nama depan wajib diisi"
     }
-    if (!staffForm.last_name.trim()) {
-      newErrors.last_name = "Nama belakang wajib diisi"
-    }
+    // Last name is now optional - will be auto-split from first name if needed
     if (!staffForm.email.trim()) {
       newErrors.email = "Email wajib diisi"
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(staffForm.email)) {
@@ -257,13 +255,31 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
     setLoading(true)
 
     try {
+      // Smart name splitting: If last_name empty but first_name has multiple words, split them
+      let firstName = staffForm.first_name.trim()
+      let lastName = staffForm.last_name.trim()
+
+      if (!lastName && firstName.includes(' ')) {
+        // Multiple words in first_name, split: first word = first_name, rest = last_name
+        const nameParts = firstName.split(' ').filter(part => part.length > 0)
+        if (nameParts.length > 1) {
+          firstName = nameParts[0] // First word
+          lastName = nameParts.slice(1).join(' ') // Rest of words
+        } else {
+          lastName = firstName // Single word, use as both
+        }
+      } else if (!lastName) {
+        // If still no last name and single word, duplicate it
+        lastName = firstName
+      }
+
       const response = await fetch("/api/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          first_name: staffForm.first_name.trim(),
-          last_name: staffForm.last_name.trim(),
-          display_name: staffForm.display_name.trim() || staffForm.first_name.trim(),
+          first_name: firstName,
+          last_name: lastName,
+          display_name: staffForm.display_name.trim() || firstName,
           email: staffForm.email.trim(),
           phone: staffForm.phone.trim() || undefined,
           position: staffForm.position.trim(),
@@ -597,18 +613,17 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
 
               <div className="space-y-2">
                 <Label htmlFor="staff_last_name">
-                  Nama Belakang <span className="text-red-500">*</span>
+                  Nama Belakang (Opsional)
                 </Label>
                 <Input
                   id="staff_last_name"
-                  placeholder="Contoh: Rahayu"
+                  placeholder="Contoh: Rahayu (kosongkan jika satu kata)"
                   value={staffForm.last_name}
                   onChange={(e) => setStaffForm({ ...staffForm, last_name: e.target.value })}
-                  className={errors.last_name ? "border-red-500" : ""}
                 />
-                {errors.last_name && (
-                  <p className="text-xs text-red-500">{errors.last_name}</p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  💡 Kosongkan jika nama hanya satu kata, atau tulis nama lengkap di Nama Depan
+                </p>
               </div>
 
               <div className="space-y-2">
