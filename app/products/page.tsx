@@ -171,6 +171,17 @@ export default function TreatmentsPage() {
       return
     }
 
+    // Validate character limits
+    if (treatmentForm.name.length > 100) {
+      toast({ title: "Error", description: "Product name must not exceed 100 characters", variant: "destructive" })
+      return
+    }
+
+    if (treatmentForm.description.length > 1000) {
+      toast({ title: "Error", description: "Description must not exceed 1000 characters", variant: "destructive" })
+      return
+    }
+
     console.log("[v0] Validation passed, calling API...")
 
     setIsSubmitting(true)
@@ -237,6 +248,17 @@ export default function TreatmentsPage() {
 
     if (!editingTreatment || !treatmentForm.name || !treatmentForm.category || treatmentForm.price <= 0) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" })
+      return
+    }
+
+    // Validate character limits
+    if (treatmentForm.name.length > 100) {
+      toast({ title: "Error", description: "Product name must not exceed 100 characters", variant: "destructive" })
+      return
+    }
+
+    if (treatmentForm.description.length > 1000) {
+      toast({ title: "Error", description: "Description must not exceed 1000 characters", variant: "destructive" })
       return
     }
 
@@ -402,27 +424,37 @@ export default function TreatmentsPage() {
   }
 
   const openEditDialog = (treatment: any) => {
-    setTreatmentForm({
+    console.log('[DEBUG] openEditDialog - Raw treatment data:', treatment)
+    console.log('[DEBUG] allow_parallel_bookings:', treatment.allow_parallel_bookings)
+    console.log('[DEBUG] max_parallel_bookings:', treatment.max_parallel_bookings)
+
+    const formData = {
       name: treatment.name,
       slug: treatment.slug || "",
       category: treatment.category,
-      durationMin: treatment.durationMin || treatment.duration_minutes || 60,
-      price: treatment.price || treatment.pricing?.base_price || 0,
+      durationMin: treatment.durationMin ?? treatment.duration_minutes ?? 60,
+      price: treatment.price ?? treatment.pricing?.base_price ?? 0,
       currency: treatment.currency || treatment.pricing?.currency || "IDR",
       photo: treatment.photo || treatment.image_url || "",
       description: treatment.description || "",
-      preparationMinutes: treatment.preparation_minutes || treatment.preparationMinutes || 0,
-      cleanupMinutes: treatment.cleanup_minutes || treatment.cleanupMinutes || 0,
-      maxAdvanceBookingDays: treatment.max_advance_booking_days || treatment.maxAdvanceBookingDays || 30,
-      minAdvanceBookingHours: treatment.min_advance_booking_hours || treatment.minAdvanceBookingHours || 1,
+      preparationMinutes: treatment.preparation_minutes ?? treatment.preparationMinutes ?? 0,
+      cleanupMinutes: treatment.cleanup_minutes ?? treatment.cleanupMinutes ?? 0,
+      maxAdvanceBookingDays: treatment.max_advance_booking_days ?? treatment.maxAdvanceBookingDays ?? 30,
+      minAdvanceBookingHours: treatment.min_advance_booking_hours ?? treatment.minAdvanceBookingHours ?? 1,
       requiresStaff: treatment.requires_staff !== undefined ? treatment.requires_staff : treatment.requiresStaff !== false,
-      requiredStaffCount: treatment.required_staff_count || treatment.requiredStaffCount || 1,
-      allowParallelBookings: treatment.allow_parallel_bookings || treatment.allowParallelBookings || false,
-      maxParallelBookings: treatment.max_parallel_bookings || treatment.maxParallelBookings || 1,
+      requiredStaffCount: treatment.required_staff_count ?? treatment.requiredStaffCount ?? 1,
+      allowParallelBookings: treatment.allow_parallel_bookings ?? treatment.allowParallelBookings ?? false,
+      maxParallelBookings: treatment.max_parallel_bookings ?? treatment.maxParallelBookings ?? 1,
       tags: treatment.tags || [],
       isActive: treatment.is_active !== false && treatment.isActive !== false,
       status: treatment.status || "active",
-    })
+    }
+
+    console.log('[DEBUG] Mapped form data:', formData)
+    console.log('[DEBUG] allowParallelBookings:', formData.allowParallelBookings)
+    console.log('[DEBUG] maxParallelBookings:', formData.maxParallelBookings)
+
+    setTreatmentForm(formData)
     setEditingTreatment(treatment)
   }
 
@@ -773,9 +805,18 @@ export default function TreatmentsPage() {
                     id="name"
                     placeholder="e.g., Facial Treatment, Hair Spa, Manicure"
                     value={treatmentForm.name}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value.length <= 100) {
+                        setTreatmentForm((prev) => ({ ...prev, name: value }))
+                      }
+                    }}
                     className="h-11"
+                    maxLength={100}
                   />
+                  <p className="text-xs text-gray-500">
+                    {treatmentForm.name.length}/100 characters
+                  </p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
@@ -876,10 +917,19 @@ export default function TreatmentsPage() {
                     id="description"
                     placeholder="Describe what this service includes, its benefits, and what customers can expect..."
                     value={treatmentForm.description}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value.length <= 1000) {
+                        setTreatmentForm((prev) => ({ ...prev, description: value }))
+                      }
+                    }}
                     rows={3}
                     className="resize-none"
+                    maxLength={1000}
                   />
+                  <p className="text-xs text-gray-500">
+                    {treatmentForm.description.length}/1000 characters
+                  </p>
                 </div>
 
                 <div className="space-y-2">

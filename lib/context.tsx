@@ -164,17 +164,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
           category: t.category || 'Beauty',
           duration: t.durationMin || t.duration_minutes || t.duration || 60,
           durationMin: t.durationMin || t.duration_minutes || 60,
+          duration_minutes: t.duration_minutes || t.durationMin || 60,
           price: parseFloat(t.price || t.pricing?.base_price || 0),
           currency: t.currency || t.pricing?.currency || 'USD',
           description: t.description || '',
           popularity: t.popularity || 0,
           assignedStaff: t.assignedStaff || t.assigned_staff || [],
-          staffIds: t.staffIds || t.staff_ids || [], // Staff IDs from include_staff=true
+          staffIds: t.staffIds || t.staff_ids || [],
           staffCount: t.staffCount || t.staff_count || 0,
           photo: t.photo || t.image_url || '',
+          image_url: t.image_url || t.photo || '',
           isActive: t.isActive !== false && t.is_active !== false,
+          is_active: t.is_active !== false && t.isActive !== false,
           status: t.status || 'active',
           tags: t.tags || [],
+          // Advanced settings fields
+          preparation_minutes: t.preparation_minutes ?? t.preparationMinutes ?? 0,
+          cleanup_minutes: t.cleanup_minutes ?? t.cleanupMinutes ?? 0,
+          max_advance_booking_days: t.max_advance_booking_days ?? t.maxAdvanceBookingDays ?? 30,
+          min_advance_booking_hours: t.min_advance_booking_hours ?? t.minAdvanceBookingHours ?? 1,
+          requires_staff: t.requires_staff ?? t.requiresStaff ?? true,
+          required_staff_count: t.required_staff_count ?? t.requiredStaffCount ?? 1,
+          allow_parallel_bookings: t.allow_parallel_bookings ?? t.allowParallelBookings ?? false,
+          max_parallel_bookings: t.max_parallel_bookings ?? t.maxParallelBookings ?? 1,
+          // Pricing object
+          pricing: t.pricing || {
+            base_price: t.price || 0,
+            currency: t.currency || 'USD',
+          },
         }))
 
         // Handle paginated response from API for customers

@@ -111,7 +111,12 @@ export function BookingDateTime({
   const gridData = useMemo(() => {
     if (!availabilityGrid) return {}
 
-    const grid: Record<string, Record<string, { available: boolean; isPast: boolean }>> = {}
+    const grid: Record<string, Record<string, {
+      available: boolean;
+      isPast: boolean;
+      available_capacity: number;
+      max_capacity: number;
+    }>> = {}
     const now = new Date()
     const currentTime = format(now, 'HH:mm')
     const today = format(now, 'yyyy-MM-dd')
@@ -127,7 +132,9 @@ export function BookingDateTime({
 
         grid[time][day.date] = {
           available: slot ? slot.is_available && !isPast : false,
-          isPast
+          isPast,
+          available_capacity: slot?.available_capacity ?? 1,
+          max_capacity: slot?.max_capacity ?? 1,
         }
       })
     })
@@ -294,6 +301,8 @@ export function BookingDateTime({
                     const isSelected = selectedDate === day.date && selectedTime === time
                     const isAvailable = cellData?.available || false
                     const isPast = cellData?.isPast || false
+                    const availableCapacity = cellData?.available_capacity ?? 1
+                    const maxCapacity = cellData?.max_capacity ?? 1
 
                     return (
                       <button
@@ -312,7 +321,22 @@ export function BookingDateTime({
                                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
                         )}
                       >
-                        {isAvailable ? (isSelected ? "Selected" : "Available") : (isPast ? "Past" : "-")}
+                        {isAvailable ? (
+                          isSelected ? (
+                            "Selected"
+                          ) : (
+                            <div className="flex flex-col items-center justify-center leading-tight">
+                              <span>Available</span>
+                              {maxCapacity > 1 && (
+                                <span className="text-[10px] opacity-75">
+                                  {availableCapacity}/{maxCapacity}
+                                </span>
+                              )}
+                            </div>
+                          )
+                        ) : (
+                          isPast ? "Past" : "-"
+                        )}
                       </button>
                     )
                   })}

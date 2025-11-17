@@ -98,9 +98,14 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
 
     if (!formData.name.trim()) {
       newErrors.name = "Nama layanan wajib diisi"
+    } else if (formData.name.length > 100) {
+      newErrors.name = "Nama layanan maksimal 100 karakter"
     }
     if (!formData.category.trim()) {
       newErrors.category = "Kategori wajib diisi"
+    }
+    if (formData.description.length > 1000) {
+      newErrors.description = "Deskripsi maksimal 1000 karakter"
     }
     if (formData.duration_minutes <= 0) {
       newErrors.duration_minutes = "Durasi harus lebih dari 0"
@@ -308,16 +313,23 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
                   value={formData.name}
                   onChange={(e) => {
                     const newName = e.target.value
-                    setFormData({
-                      ...formData,
-                      name: newName,
-                      slug: generateSlug(newName)
-                    })
+                    if (newName.length <= 100) {
+                      setFormData({
+                        ...formData,
+                        name: newName,
+                        slug: generateSlug(newName)
+                      })
+                    }
                   }}
                   className={errors.name ? "border-red-500" : ""}
+                  maxLength={100}
                 />
-                {errors.name && (
+                {errors.name ? (
                   <p className="text-xs text-red-500">{errors.name}</p>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    {formData.name.length}/100 karakter
+                  </p>
                 )}
               </div>
 
@@ -428,10 +440,23 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
                   id="description"
                   placeholder="Jelaskan layanan ini, manfaat, dan apa yang customer dapatkan..."
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    if (value.length <= 1000) {
+                      setFormData({ ...formData, description: value })
+                    }
+                  }}
                   rows={3}
-                  className="resize-none"
+                  className={`resize-none ${errors.description ? "border-red-500" : ""}`}
+                  maxLength={1000}
                 />
+                {errors.description ? (
+                  <p className="text-xs text-red-500">{errors.description}</p>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    {formData.description.length}/1000 karakter
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
