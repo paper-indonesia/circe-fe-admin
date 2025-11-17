@@ -309,55 +309,6 @@ export function EditAvailabilityDialog({
             </div>
           </div>
 
-          {/* Group Service Option */}
-          {formData.availability_type === "working_hours" && (
-            <div className="space-y-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-300">
-              <div className="flex items-center space-x-3 p-2 rounded hover:bg-green-100/50 transition-colors">
-                <Checkbox
-                  id="is_group_service"
-                  checked={formData.is_group_service}
-                  onCheckedChange={(checked) =>
-                    setFormData(prev => ({
-                      ...prev,
-                      is_group_service: checked as boolean,
-                      capacity: checked ? 5 : 1
-                    }))
-                  }
-                  className="h-5 w-5 border-2 border-green-600 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                />
-                <Label htmlFor="is_group_service" className="font-semibold text-base flex items-center gap-2 cursor-pointer text-green-800">
-                  <Users className="h-5 w-5 text-green-600" />
-                  Layanan Grup/Kelas
-                </Label>
-              </div>
-              <p className="text-xs text-gray-600 ml-6">
-                Aktifkan untuk layanan yang bisa melayani multiple klien sekaligus
-              </p>
-
-              {formData.is_group_service && (
-                <div className="ml-6 mt-3">
-                  <Label htmlFor="capacity">Kapasitas Maksimal</Label>
-                  <div className="flex items-center gap-3 mt-1">
-                    <Input
-                      id="capacity"
-                      type="number"
-                      min="1"
-                      max="50"
-                      value={formData.capacity}
-                      onChange={(e) =>
-                        setFormData(prev => ({
-                          ...prev,
-                          capacity: parseInt(e.target.value) || 1
-                        }))
-                      }
-                      className="w-24"
-                    />
-                    <span className="text-sm text-gray-600">klien per slot</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Notes */}
           <div className="space-y-2">

@@ -115,7 +115,7 @@ export function EditStaffForm({
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit_last_name" className="text-sm font-bold text-gray-700 flex items-center gap-1">
-                        Last Name <span className="text-red-500">*</span>
+                        Last Name (Optional)
                       </Label>
                       <Input
                         id="edit_last_name"

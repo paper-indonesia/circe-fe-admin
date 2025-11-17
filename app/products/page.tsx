@@ -171,6 +171,17 @@ export default function TreatmentsPage() {
       return
     }
 
+    // Validate character limits
+    if (treatmentForm.name.length > 100) {
+      toast({ title: "Error", description: "Product name must not exceed 100 characters", variant: "destructive" })
+      return
+    }
+
+    if (treatmentForm.description.length > 1000) {
+      toast({ title: "Error", description: "Description must not exceed 1000 characters", variant: "destructive" })
+      return
+    }
+
     console.log("[v0] Validation passed, calling API...")
 
     setIsSubmitting(true)
@@ -237,6 +248,17 @@ export default function TreatmentsPage() {
 
     if (!editingTreatment || !treatmentForm.name || !treatmentForm.category || treatmentForm.price <= 0) {
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" })
+      return
+    }
+
+    // Validate character limits
+    if (treatmentForm.name.length > 100) {
+      toast({ title: "Error", description: "Product name must not exceed 100 characters", variant: "destructive" })
+      return
+    }
+
+    if (treatmentForm.description.length > 1000) {
+      toast({ title: "Error", description: "Description must not exceed 1000 characters", variant: "destructive" })
       return
     }
 
@@ -783,9 +805,18 @@ export default function TreatmentsPage() {
                     id="name"
                     placeholder="e.g., Facial Treatment, Hair Spa, Manicure"
                     value={treatmentForm.name}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value.length <= 100) {
+                        setTreatmentForm((prev) => ({ ...prev, name: value }))
+                      }
+                    }}
                     className="h-11"
+                    maxLength={100}
                   />
+                  <p className="text-xs text-gray-500">
+                    {treatmentForm.name.length}/100 characters
+                  </p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
@@ -886,10 +917,19 @@ export default function TreatmentsPage() {
                     id="description"
                     placeholder="Describe what this service includes, its benefits, and what customers can expect..."
                     value={treatmentForm.description}
-                    onChange={(e) => setTreatmentForm((prev) => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      if (value.length <= 1000) {
+                        setTreatmentForm((prev) => ({ ...prev, description: value }))
+                      }
+                    }}
                     rows={3}
                     className="resize-none"
+                    maxLength={1000}
                   />
+                  <p className="text-xs text-gray-500">
+                    {treatmentForm.description.length}/1000 characters
+                  </p>
                 </div>
 
                 <div className="space-y-2">
