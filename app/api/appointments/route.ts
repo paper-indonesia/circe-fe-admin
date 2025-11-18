@@ -123,6 +123,9 @@ export async function GET(req: NextRequest) {
     if (searchParams.get('outlet_id')) params.append('outlet_id', searchParams.get('outlet_id')!)
     if (searchParams.get('service_id')) params.append('service_id', searchParams.get('service_id')!)
 
+    // Search filters
+    if (searchParams.get('completion_notes_search')) params.append('completion_notes_search', searchParams.get('completion_notes_search')!)
+
     // Sorting
     if (searchParams.get('sort_by')) params.append('sort_by', searchParams.get('sort_by')!)
     if (searchParams.get('sort_direction')) params.append('sort_direction', searchParams.get('sort_direction')!)

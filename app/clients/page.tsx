@@ -53,6 +53,7 @@ import {
   CreditCard,
   FileText,
   MapPin,
+  Loader2,
 } from "lucide-react"
 import { AddButton } from "@/components/ui/add-button"
 import { ImportCustomerDialog } from "@/components/customers/import-customer-dialog"
@@ -72,12 +73,18 @@ export default function ClientsPage() {
 
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [completionNotesSearch, setCompletionNotesSearch] = useState("")
+  const [customerIdsFromCompletionNotes, setCustomerIdsFromCompletionNotes] = useState<string[]>([])
+  const [isSearchingCompletionNotes, setIsSearchingCompletionNotes] = useState(false)
+  const [hasSearchedCompletionNotes, setHasSearchedCompletionNotes] = useState(false) // Track if search was executed
   const [statusFilter, setStatusFilter] = useState("all")
   const [spendingFilter, setSpendingFilter] = useState("all")
   const [visitCountFilter, setVisitCountFilter] = useState("all")
   const [joinDateFrom, setJoinDateFrom] = useState<Date | undefined>()
   const [joinDateTo, setJoinDateTo] = useState<Date | undefined>()
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [isFromDateOpen, setIsFromDateOpen] = useState(false)
+  const [isToDateOpen, setIsToDateOpen] = useState(false)
 
   const [selectedClient, setSelectedClient] = useState<any>(null)
   const [showClientDialog, setShowClientDialog] = useState(false)
@@ -126,10 +133,76 @@ export default function ClientsPage() {
     return () => clearTimeout(timer)
   }, [searchQuery])
 
+  // Search appointments by completion notes (triggered by button click)
+  const searchByCompletionNotes = async () => {
+    if (!completionNotesSearch || completionNotesSearch.length < 2) {
+      toast({
+        title: "Invalid search",
+        description: "Please enter at least 2 characters to search",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setIsSearchingCompletionNotes(true)
+      const params = new URLSearchParams()
+      params.append('status', 'completed')
+      params.append('completion_notes_search', completionNotesSearch)
+      params.append('size', '100') // Get more results to capture all matching customers
+
+      const response = await fetch(`/api/appointments?${params.toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Failed to search appointments by completion notes')
+      }
+
+      const data = await response.json()
+
+      // Extract unique customer IDs
+      const uniqueCustomerIds = [...new Set(
+        (data.items || [])
+          .map((appointment: any) => appointment.customer_id)
+          .filter((id: string) => id) // Remove null/undefined
+      )]
+
+      setCustomerIdsFromCompletionNotes(uniqueCustomerIds)
+      setHasSearchedCompletionNotes(true) // Mark that search has been executed
+
+      if (uniqueCustomerIds.length === 0) {
+        toast({
+          title: "No results",
+          description: "No customers found with matching completion notes",
+        })
+      } else {
+        toast({
+          title: "Search complete",
+          description: `Found ${uniqueCustomerIds.length} customer(s) with matching diagnosis`,
+        })
+      }
+    } catch (error: any) {
+      console.error('Error searching by completion notes:', error)
+      toast({
+        title: "Error",
+        description: "Failed to search by completion notes",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSearchingCompletionNotes(false)
+    }
+  }
+
+  // Clear completion notes search
+  const clearCompletionNotesSearch = () => {
+    setCompletionNotesSearch("")
+    setCustomerIdsFromCompletionNotes([])
+    setHasSearchedCompletionNotes(false) // Reset search flag
+  }
+
   // Fetch customers when page, search, or filters change
   useEffect(() => {
     fetchCustomers()
-  }, [currentPage, debouncedSearchQuery, joinDateFrom, joinDateTo])
+  }, [currentPage, debouncedSearchQuery, joinDateFrom, joinDateTo, hasSearchedCompletionNotes])
 
   // Fetch customer statistics on mount
   useEffect(() => {
@@ -142,8 +215,16 @@ export default function ClientsPage() {
 
       // Build query parameters
       const params = new URLSearchParams()
-      params.append('page', currentPage.toString())
-      params.append('size', pageSize.toString())
+
+      // When filtering by completion notes, we need to fetch ALL customers to find matches
+      // Otherwise use pagination
+      if (hasSearchedCompletionNotes) {
+        params.append('page', '1')
+        params.append('size', '100') // Get all customers
+      } else {
+        params.append('page', currentPage.toString())
+        params.append('size', pageSize.toString())
+      }
 
       // Sort by created_at descending (newest first)
       params.append('sort_by', 'created_at')
@@ -154,11 +235,13 @@ export default function ClientsPage() {
       }
 
       if (joinDateFrom) {
-        params.append('created_from', format(joinDateFrom, 'yyyy-MM-dd'))
+        const formattedFrom = format(joinDateFrom, 'yyyy-MM-dd')
+        params.append('created_from', formattedFrom)
       }
 
       if (joinDateTo) {
-        params.append('created_to', format(joinDateTo, 'yyyy-MM-dd'))
+        const formattedTo = format(joinDateTo, 'yyyy-MM-dd')
+        params.append('created_to', formattedTo)
       }
 
       const response = await fetch(`/api/customers?${params.toString()}`)
@@ -241,6 +324,13 @@ export default function ClientsPage() {
   // Client-side filtering for status and other filters not supported by API
   const filteredClients = useMemo(() => {
     return clientsWithStats.filter((client) => {
+      // Filter by completion notes search
+      // If search was executed but no results found, don't show any customers
+      // If search was not executed, show all customers (no filter)
+      // If search found results, only show matching customers
+      const matchesCompletionNotes = !hasSearchedCompletionNotes
+        || (hasSearchedCompletionNotes && customerIdsFromCompletionNotes.includes(client.id))
+
       const matchesStatus = statusFilter === "all" || client.status === statusFilter
 
       const matchesSpending = (() => {
@@ -269,16 +359,16 @@ export default function ClientsPage() {
         }
       })()
 
-      return matchesStatus && matchesSpending && matchesVisitCount
+      return matchesCompletionNotes && matchesStatus && matchesSpending && matchesVisitCount
     })
-  }, [clientsWithStats, statusFilter, spendingFilter, visitCountFilter])
+  }, [clientsWithStats, statusFilter, spendingFilter, visitCountFilter, customerIdsFromCompletionNotes, hasSearchedCompletionNotes])
 
   // Reset to page 1 when search or filters change
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1)
     }
-  }, [debouncedSearchQuery, joinDateFrom, joinDateTo])
+  }, [debouncedSearchQuery, joinDateFrom, joinDateTo, hasSearchedCompletionNotes])
 
   const validateEmail = (email: string): boolean => {
     if (!email) return true // Email is optional
@@ -756,6 +846,7 @@ export default function ClientsPage() {
 
   const clearAllFilters = () => {
     setSearchQuery("")
+    clearCompletionNotesSearch()
     setStatusFilter("all")
     setSpendingFilter("all")
     setVisitCountFilter("all")
@@ -766,6 +857,7 @@ export default function ClientsPage() {
   const getActiveFiltersCount = () => {
     let count = 0
     if (searchQuery) count++
+    if (completionNotesSearch) count++
     if (statusFilter !== "all") count++
     if (spendingFilter !== "all") count++
     if (visitCountFilter !== "all") count++
@@ -861,20 +953,68 @@ export default function ClientsPage() {
         <Card className="border-pink-100 shadow-sm">
           <CardContent className="pt-6">
             <div className="space-y-4">
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search customers by name, phone, or email..."
-                      className="pl-10 border-pink-200 focus:border-pink-400"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
+              {/* Main Search Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search customers by name, phone, or email..."
+                    className="pl-10 border-pink-200 focus:border-pink-400"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by diagnosis/completion notes..."
+                      className="pl-10 border-green-200 focus:border-green-400"
+                      value={completionNotesSearch}
+                      onChange={(e) => setCompletionNotesSearch(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          searchByCompletionNotes()
+                        }
+                      }}
+                    />
+                    {customerIdsFromCompletionNotes.length > 0 && (
+                      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-green-600 font-medium">
+                        {customerIdsFromCompletionNotes.length} found
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    onClick={searchByCompletionNotes}
+                    disabled={isSearchingCompletionNotes || !completionNotesSearch || completionNotesSearch.length < 2}
+                    className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+                  >
+                    {isSearchingCompletionNotes ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                  {customerIdsFromCompletionNotes.length > 0 && (
+                    <Button
+                      onClick={clearCompletionNotesSearch}
+                      variant="outline"
+                      className="border-red-200 hover:bg-red-50 shrink-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filter Row */}
+              <div className="flex items-center gap-3">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-32 border-pink-200">
+                  <SelectTrigger className="w-40 border-pink-200">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -900,12 +1040,30 @@ export default function ClientsPage() {
               </div>
 
               {showAdvancedFilters && (
-                <div className="p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-100">
+                <div className="p-5 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-semibold text-pink-800 flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      Advanced Filters
+                    </h3>
+                    {getActiveFiltersCount() > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearAllFilters}
+                        className="border-pink-300 text-pink-700 bg-white hover:bg-pink-100 h-8"
+                      >
+                        <X className="h-3.5 w-3.5 mr-1.5" />
+                        Clear All Filters
+                      </Button>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-pink-700">Spending Level</Label>
+                      <Label className="text-xs font-semibold text-pink-700 uppercase tracking-wide">Spending Level</Label>
                       <Select value={spendingFilter} onValueChange={setSpendingFilter}>
-                        <SelectTrigger className="border-pink-200">
+                        <SelectTrigger className="border-pink-200 bg-white hover:bg-pink-50">
                           <SelectValue placeholder="All spending" />
                         </SelectTrigger>
                         <SelectContent>
@@ -918,9 +1076,9 @@ export default function ClientsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-pink-700">Visit Frequency</Label>
+                      <Label className="text-xs font-semibold text-pink-700 uppercase tracking-wide">Visit Frequency</Label>
                       <Select value={visitCountFilter} onValueChange={setVisitCountFilter}>
-                        <SelectTrigger className="border-pink-200">
+                        <SelectTrigger className="border-pink-200 bg-white hover:bg-pink-50">
                           <SelectValue placeholder="All visits" />
                         </SelectTrigger>
                         <SelectContent>
@@ -933,63 +1091,59 @@ export default function ClientsPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-pink-700">Join Date Range</Label>
+                      <Label className="text-xs font-semibold text-pink-700 uppercase tracking-wide">Join Date Range</Label>
                       <div className="flex gap-2">
-                        <Popover>
+                        <Popover open={isFromDateOpen} onOpenChange={setIsFromDateOpen}>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="flex-1 justify-start text-left border-pink-200 bg-white text-pink-700 hover:bg-pink-50"
+                              size="sm"
+                              className={`flex-1 justify-start text-left text-xs ${joinDateFrom ? 'border-pink-400 bg-pink-50 text-pink-800 font-medium' : 'border-pink-200 bg-white text-pink-700'} hover:bg-pink-50`}
                             >
-                              <CalendarDays className="mr-2 h-4 w-4" />
-                              {joinDateFrom ? format(joinDateFrom, "MMM d") : "From"}
+                              <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                              {joinDateFrom ? format(joinDateFrom, "MMM d, yyyy") : "From"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
                               selected={joinDateFrom}
-                              onSelect={setJoinDateFrom}
+                              onSelect={(date) => {
+                                setJoinDateFrom(date)
+                                setIsFromDateOpen(false)
+                              }}
                               disabled={(date) => date > new Date()}
+                              initialFocus
                             />
                           </PopoverContent>
                         </Popover>
-                        <Popover>
+                        <Popover open={isToDateOpen} onOpenChange={setIsToDateOpen}>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="flex-1 justify-start text-left border-pink-200 bg-white text-pink-700 hover:bg-pink-50"
+                              size="sm"
+                              className={`flex-1 justify-start text-left text-xs ${joinDateTo ? 'border-pink-400 bg-pink-50 text-pink-800 font-medium' : 'border-pink-200 bg-white text-pink-700'} hover:bg-pink-50`}
                             >
-                              <CalendarDays className="mr-2 h-4 w-4" />
-                              {joinDateTo ? format(joinDateTo, "MMM d") : "To"}
+                              <CalendarDays className="mr-1.5 h-3.5 w-3.5" />
+                              {joinDateTo ? format(joinDateTo, "MMM d, yyyy") : "To"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
                             <Calendar
                               mode="single"
                               selected={joinDateTo}
-                              onSelect={setJoinDateTo}
+                              onSelect={(date) => {
+                                setJoinDateTo(date)
+                                setIsToDateOpen(false)
+                              }}
                               disabled={(date) => date > new Date() || (joinDateFrom && date < joinDateFrom)}
+                              initialFocus
                             />
                           </PopoverContent>
                         </Popover>
                       </div>
                     </div>
                   </div>
-
-                  {getActiveFiltersCount() > 0 && (
-                    <div className="flex justify-end mt-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={clearAllFilters}
-                        className="border-pink-300 text-pink-700 bg-white hover:bg-pink-100"
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Clear All Filters
-                      </Button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -1001,7 +1155,10 @@ export default function ClientsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              All Customers ({totalCustomers})
+              {hasSearchedCompletionNotes
+                ? `Search Results (${filteredClients.length})`
+                : `All Customers (${totalCustomers})`
+              }
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1089,7 +1246,8 @@ export default function ClientsPage() {
                   </Table>
                 </div>
 
-                {totalPages > 1 && (
+                {/* Hide pagination when filtering by completion notes */}
+                {totalPages > 1 && !hasSearchedCompletionNotes && (
                   <div className="flex items-center justify-between mt-6">
                     <div className="text-sm text-muted-foreground">
                       Page {currentPage} of {totalPages} • Total: {totalCustomers} customers
