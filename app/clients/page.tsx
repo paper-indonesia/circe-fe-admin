@@ -199,6 +199,15 @@ export default function ClientsPage() {
     setHasSearchedCompletionNotes(false) // Reset search flag
   }
 
+  // Auto-reset when completion notes search input is cleared
+  useEffect(() => {
+    if (hasSearchedCompletionNotes && completionNotesSearch === "") {
+      // User cleared the search input, reset the search state
+      setCustomerIdsFromCompletionNotes([])
+      setHasSearchedCompletionNotes(false)
+    }
+  }, [completionNotesSearch, hasSearchedCompletionNotes])
+
   // Fetch customers when page, search, or filters change
   useEffect(() => {
     fetchCustomers()
@@ -213,48 +222,87 @@ export default function ClientsPage() {
     try {
       setLoading(true)
 
-      // Build query parameters
-      const params = new URLSearchParams()
-
       // When filtering by completion notes, we need to fetch ALL customers to find matches
-      // Otherwise use pagination
       if (hasSearchedCompletionNotes) {
-        params.append('page', '1')
-        params.append('size', '100') // Get all customers
+        // Fetch all customers with pagination loop (max 100 per request)
+        let allCustomers: any[] = []
+        let page = 1
+        let totalPages = 1
+        const size = 100 // Max size allowed by API
+
+        // Build base params
+        const baseParams: Record<string, string> = {
+          sort_by: 'created_at',
+          order: 'desc',
+          size: size.toString()
+        }
+
+        if (debouncedSearchQuery) baseParams.search = debouncedSearchQuery
+        if (joinDateFrom) baseParams.created_from = format(joinDateFrom, 'yyyy-MM-dd')
+        if (joinDateTo) baseParams.created_to = format(joinDateTo, 'yyyy-MM-dd')
+
+        // Fetch all pages
+        do {
+          const params = new URLSearchParams({
+            ...baseParams,
+            page: page.toString()
+          })
+
+          const response = await fetch(`/api/customers?${params.toString()}`)
+
+          if (!response.ok) {
+            const error = await response.json()
+            throw new Error(error.error || 'Failed to fetch customers')
+          }
+
+          const data = await response.json()
+          allCustomers = [...allCustomers, ...(data.items || [])]
+          totalPages = data.pages || 1
+
+          // Set total customers from first request
+          if (page === 1) {
+            setTotalCustomers(data.total || 0)
+          }
+
+          page++
+        } while (page <= totalPages)
+
+        setCustomers(allCustomers)
+        setTotalPages(1) // No pagination when searching
       } else {
+        // Normal pagination
+        const params = new URLSearchParams()
         params.append('page', currentPage.toString())
         params.append('size', pageSize.toString())
+        params.append('sort_by', 'created_at')
+        params.append('order', 'desc')
+
+        if (debouncedSearchQuery) {
+          params.append('search', debouncedSearchQuery)
+        }
+
+        if (joinDateFrom) {
+          const formattedFrom = format(joinDateFrom, 'yyyy-MM-dd')
+          params.append('created_from', formattedFrom)
+        }
+
+        if (joinDateTo) {
+          const formattedTo = format(joinDateTo, 'yyyy-MM-dd')
+          params.append('created_to', formattedTo)
+        }
+
+        const response = await fetch(`/api/customers?${params.toString()}`)
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Failed to fetch customers')
+        }
+
+        const data = await response.json()
+        setCustomers(data.items || [])
+        setTotalCustomers(data.total || 0)
+        setTotalPages(data.pages || 0)
       }
-
-      // Sort by created_at descending (newest first)
-      params.append('sort_by', 'created_at')
-      params.append('order', 'desc')
-
-      if (debouncedSearchQuery) {
-        params.append('search', debouncedSearchQuery)
-      }
-
-      if (joinDateFrom) {
-        const formattedFrom = format(joinDateFrom, 'yyyy-MM-dd')
-        params.append('created_from', formattedFrom)
-      }
-
-      if (joinDateTo) {
-        const formattedTo = format(joinDateTo, 'yyyy-MM-dd')
-        params.append('created_to', formattedTo)
-      }
-
-      const response = await fetch(`/api/customers?${params.toString()}`)
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to fetch customers')
-      }
-
-      const data = await response.json()
-      setCustomers(data.items || [])
-      setTotalCustomers(data.total || 0)
-      setTotalPages(data.pages || 0)
     } catch (error: any) {
       console.error('Error fetching customers:', error)
       toast({
@@ -999,11 +1047,12 @@ export default function ClientsPage() {
                       </>
                     )}
                   </Button>
-                  {customerIdsFromCompletionNotes.length > 0 && (
+                  {hasSearchedCompletionNotes && (
                     <Button
                       onClick={clearCompletionNotesSearch}
                       variant="outline"
                       className="border-red-200 hover:bg-red-50 shrink-0"
+                      title="Clear search and show all customers"
                     >
                       <X className="h-4 w-4" />
                     </Button>
