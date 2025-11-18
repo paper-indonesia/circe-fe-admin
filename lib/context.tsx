@@ -270,6 +270,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             paymentStatus: b.paymentStatus || b.payment_status || 'unpaid',
             payment_status: b.payment_status || b.paymentStatus || 'unpaid', // Add snake_case alias for API consistency
             notes: b.notes || '',
+            completion_notes: b.completion_notes || '',
             queueNumber: b.queueNumber || b.queue_number,
             createdAt: new Date(b.createdAt || b.created_at || Date.now()),
             // New fields from appointments API

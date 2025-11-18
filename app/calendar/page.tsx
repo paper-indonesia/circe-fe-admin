@@ -1610,19 +1610,16 @@ export default function CalendarPage() {
                       Previous
                     </Button>
                     <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      {Array.from({ length: Math.min(10, totalPages) }, (_, i) => {
                         let pageNum = i
-                        if (totalPages > 5) {
-                          if (tablePage > 2) {
-                            pageNum = tablePage - 2 + i
-                          }
-                          if (pageNum >= totalPages) {
-                            pageNum = totalPages - 5 + i
-                          }
+                        if (totalPages > 10) {
+                          // Calculate start page to center current page
+                          let startPage = Math.max(0, Math.min(tablePage - 4, totalPages - 10))
+                          pageNum = startPage + i
                         }
                         return (
                           <Button
-                            key={pageNum}
+                            key={`page-${pageNum}`}
                             variant={tablePage === pageNum ? "default" : "outline"}
                             size="sm"
                             className={cn(
@@ -2161,6 +2158,19 @@ export default function CalendarPage() {
                             <p className="text-xs text-gray-700">{selectedBooking.notes}</p>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Completion Notes */}
+                    {selectedBooking.completion_notes && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-1 h-3 bg-[#8B5CF6] rounded-full"></div>
+                          <h3 className="text-xs font-bold text-gray-900">Completion Notes</h3>
+                        </div>
+                        <div className="bg-green-50 border-l-4 border-green-400 rounded-lg p-3">
+                          <p className="text-xs text-gray-700">{selectedBooking.completion_notes}</p>
+                        </div>
                       </div>
                     )}
                   </div>

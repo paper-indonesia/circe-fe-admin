@@ -647,7 +647,7 @@ export default function TreatmentsPage() {
                         <TableCell className="p-4">
                           <Badge
                             variant="secondary"
-                            className="bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] text-gray-800 border-0"
+                            className="bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] text-white border-0"
                           >
                             {treatment.category}
                           </Badge>

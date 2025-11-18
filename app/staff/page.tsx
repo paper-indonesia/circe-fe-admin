@@ -1601,7 +1601,7 @@ export default function StaffPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="inline-flex items-center justify-center w-12 h-8 bg-gradient-to-br from-[#EDE9FE] to-[#8B5CF6] rounded-full">
-                        <span className="text-sm font-semibold text-[#6D28D9]">
+                        <span className="text-sm font-semibold text-white">
                           {Math.round(performance.completionRate)}%
                         </span>
                       </div>
@@ -1909,11 +1909,11 @@ export default function StaffPage() {
                                 <div className="font-semibold text-primary">{performance.totalBookings}</div>
                                 <div className="text-xs text-muted-foreground">Total Bookings</div>
                               </div>
-                              <div className="text-center p-2 bg-muted/30 rounded">
-                                <div className="font-semibold text-green-600">
+                              <div className="text-center p-2 bg-green-100 rounded">
+                                <div className="font-semibold text-green-700">
                                   {Math.round(performance.completionRate)}%
                                 </div>
-                                <div className="text-xs text-muted-foreground">Success Rate</div>
+                                <div className="text-xs text-green-600">Success Rate</div>
                               </div>
                             </div>
                           </div>

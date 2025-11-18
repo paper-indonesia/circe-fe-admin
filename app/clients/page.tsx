@@ -1922,7 +1922,12 @@ export default function ClientsPage() {
         </Dialog>
 
         {/* Appointment Detail Dialog */}
-        <Dialog open={showAppointmentDetail} onOpenChange={setShowAppointmentDetail}>
+        <Dialog open={showAppointmentDetail} onOpenChange={(open) => {
+          setShowAppointmentDetail(open)
+          if (!open) {
+            setSelectedAppointment(null)
+          }
+        }}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -2108,6 +2113,17 @@ export default function ClientsPage() {
                       Notes
                     </h3>
                     <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedAppointment.notes}</p>
+                  </div>
+                )}
+
+                {/* Completion Notes */}
+                {selectedAppointment?.completion_notes && selectedAppointment.completion_notes.trim() !== '' && (
+                  <div className="border border-green-200 rounded-lg p-4 bg-green-50/50">
+                    <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-green-600" />
+                      Completion Notes
+                    </h3>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedAppointment.completion_notes}</p>
                   </div>
                 )}
 
