@@ -1424,7 +1424,7 @@ export default function CalendarPage() {
             <p className="text-gray-500 mt-1">Manage your bookings and schedule</p>
           </div>
           <div className="flex items-center gap-3">
-            {pendingInvoiceCount > 0 && (
+            {/* {pendingInvoiceCount > 0 && (
               <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
@@ -1434,7 +1434,7 @@ export default function CalendarPage() {
                 </div>
                 <span className="text-[10px] text-amber-600">Auto-updating...</span>
               </div>
-            )}
+            )} */}
             <Button
               onClick={handleRefresh}
               disabled={isRefreshing}
