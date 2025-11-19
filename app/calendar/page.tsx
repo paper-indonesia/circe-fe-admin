@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { formatCurrency, cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
+import { calculateEffectivePrice, getPricingDisplayInfo } from "@/lib/pricing-utils"
 import { BookingDateTime } from "@/components/booking-date-time"
 import PaymentStatusDisplay from "@/components/payment-status-display"
 import RecordPaymentDialog from "@/components/record-payment-dialog"
@@ -65,6 +66,7 @@ import {
   Loader2,
   UserPlus,
   RefreshCw,
+  Sparkles,
 } from "lucide-react"
 import { AddButton } from "@/components/ui/add-button"
 import GradientLoading from "@/components/gradient-loading"
@@ -131,6 +133,9 @@ export default function CalendarPage() {
   const [completionNotes, setCompletionNotes] = useState("")
   const [isCompleting, setIsCompleting] = useState(false)
   const [completePaymentStatus, setCompletePaymentStatus] = useState<PaymentStatusResponse | null>(null)
+
+  // Confirm appointment state
+  const [isConfirming, setIsConfirming] = useState(false)
 
   // Record payment state
   const [recordPaymentDialogOpen, setRecordPaymentDialogOpen] = useState(false)
@@ -256,6 +261,48 @@ export default function CalendarPage() {
     return days
   }, [startDate, endDate])
 
+  // Helper function to get effective price for a treatment
+  const getEffectiveTreatmentPrice = useCallback((treatment: any) => {
+    if (!treatment) return 0
+
+    const pricing = treatment.pricing || {
+      base_price: treatment.price || 0,
+      currency: treatment.currency || 'IDR',
+    }
+
+    const result = calculateEffectivePrice(pricing, outletId)
+    return result.price
+  }, [outletId])
+
+  // Helper function to get pricing display info (for strikethrough etc)
+  const getTreatmentPricingDisplay = useCallback((treatment: any) => {
+    if (!treatment) return {
+      effectivePrice: 0,
+      basePrice: 0,
+      hasPromo: false,
+      isPromoActive: false,
+      hasOutletPricing: false,
+      source: 'base' as 'promotional' | 'outlet' | 'base'
+    }
+
+    const pricing = treatment.pricing || {
+      base_price: treatment.price || 0,
+      currency: treatment.currency || 'IDR',
+    }
+
+    const displayInfo = getPricingDisplayInfo(pricing, outletId)
+    return {
+      effectivePrice: displayInfo.price,
+      basePrice: displayInfo.basePrice,
+      hasPromo: displayInfo.source === 'promotional',
+      isPromoActive: displayInfo.isPromoActive,
+      showStrikethrough: displayInfo.showStrikethrough,
+      discountPercent: displayInfo.discountPercent,
+      hasOutletPricing: displayInfo.source === 'outlet',
+      source: displayInfo.source,
+    }
+  }, [outletId])
+
   // Get bookings for a specific date
   const getBookingsForDate = (date: Date) => {
     return bookings.filter(booking =>
@@ -326,7 +373,7 @@ export default function CalendarPage() {
 
     const totalRevenue = rangeBookings.reduce((sum, b) => {
       const treatment = treatments.find(t => t.id === b.treatmentId)
-      return sum + (treatment?.price || 0)
+      return sum + getEffectiveTreatmentPrice(treatment)
     }, 0)
 
     const confirmedCount = rangeBookings.filter(b => b.status === 'confirmed').length
@@ -340,7 +387,7 @@ export default function CalendarPage() {
       cancelled: cancelledCount,
       revenue: totalRevenue,
     }
-  }, [bookings, treatments, startDate, endDate])
+  }, [bookings, treatments, startDate, endDate, getEffectiveTreatmentPrice])
 
   // Fetch availability grid from API (real-time, no caching)
   const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string) => {
@@ -1053,6 +1100,52 @@ export default function CalendarPage() {
     setCompleteDialogOpen(true)
   }
 
+  const handleConfirmAppointment = async () => {
+    if (!selectedBooking) return
+
+    setIsConfirming(true)
+    try {
+      const response = await fetch(`/api/appointments/${selectedBooking.id}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to confirm appointment')
+      }
+
+      toast({
+        title: "Appointment confirmed",
+        description: "The appointment has been confirmed successfully",
+      })
+
+      // Reload bookings to refresh the list
+      await reloadBookings()
+
+      // Update selectedBooking with confirmed status
+      if (selectedBooking) {
+        setSelectedBooking({
+          ...selectedBooking,
+          status: 'confirmed',
+          confirmed_at: data.confirmed_at || new Date().toISOString()
+        })
+      }
+    } catch (error: any) {
+      console.error('Failed to confirm appointment:', error)
+      toast({
+        title: "Failed to confirm appointment",
+        description: error?.message || "An error occurred while confirming the appointment",
+        variant: "destructive"
+      })
+    } finally {
+      setIsConfirming(false)
+    }
+  }
+
   const handleConfirmComplete = async () => {
     if (!selectedBooking) return
 
@@ -1359,7 +1452,7 @@ export default function CalendarPage() {
                   // Calculate day revenue
                   const dayRevenue = dayBookings.reduce((sum, b) => {
                     const treatment = treatments.find(t => t.id === b.treatmentId)
-                    return sum + (treatment?.price || 0)
+                    return sum + getEffectiveTreatmentPrice(treatment)
                   }, 0)
 
                   return (
@@ -1398,14 +1491,24 @@ export default function CalendarPage() {
                           <div className="space-y-1.5">
                             {dayBookings.slice(0, 2).map((booking, i) => {
                               const treatment = treatments.find(t => t.id === booking.treatmentId)
+                              const pricingDisplay = getTreatmentPricingDisplay(treatment)
                               return (
                                 <div
                                   key={i}
                                   className={cn(
-                                    "text-xs px-2 py-1.5 rounded-md truncate shadow-sm",
+                                    "text-xs px-2 py-1.5 rounded-md shadow-sm relative",
                                     getStatusColor(booking.status)
                                   )}
                                 >
+                                  {pricingDisplay.showStrikethrough ? (
+                                    <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-sm">
+                                      %
+                                    </div>
+                                  ) : pricingDisplay.hasOutletPricing ? (
+                                    <div className="absolute -top-1 -right-1 bg-purple-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-sm">
+                                      O
+                                    </div>
+                                  ) : null}
                                   <div className="flex items-center justify-between gap-1">
                                     <div className="font-semibold truncate">
                                       {format(new Date(booking.startAt), "HH:mm")}
@@ -1576,7 +1679,36 @@ export default function CalendarPage() {
                           <TableCell className="py-3 px-4">
                             {getPaymentStatusBadge((booking as any).payment_status)}
                           </TableCell>
-                          <TableCell className="py-3 px-4 text-sm font-medium">{formatCurrency(treatment?.price || 0)}</TableCell>
+                          <TableCell className="py-3 px-4">
+                            {(() => {
+                              const pricingDisplay = getTreatmentPricingDisplay(treatment)
+                              return (
+                                <div className="flex items-center gap-2">
+                                  {pricingDisplay.showStrikethrough ? (
+                                    <>
+                                      <span className="text-xs line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                      <span className="text-sm font-semibold text-orange-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                      <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-[10px] px-1.5 py-0">
+                                        <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                                        PROMO
+                                      </Badge>
+                                    </>
+                                  ) : pricingDisplay.hasOutletPricing ? (
+                                    <>
+                                      <span className="text-xs line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                      <span className="text-sm font-semibold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                      <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 text-[10px] px-1.5 py-0">
+                                        <Building2 className="h-2.5 w-2.5 mr-0.5" />
+                                        OUTLET
+                                      </Badge>
+                                    </>
+                                  ) : (
+                                    <span className="text-sm font-medium text-gray-900">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                  )}
+                                </div>
+                              )
+                            })()}
+                          </TableCell>
                           <TableCell className="py-3 px-4 text-right">
                             <Button
                               variant="ghost"
@@ -1651,7 +1783,7 @@ export default function CalendarPage() {
 
         {/* Sliding Panel for Date Details */}
         <Sheet open={slideOpen} onOpenChange={setSlideOpen}>
-          <SheetContent className="w-[1000px] sm:w-[1100px] max-w-[95vw] overflow-y-auto bg-gray-50">
+          <SheetContent className="w-[1400px] sm:w-[1500px] max-w-[95vw] overflow-y-auto bg-gray-50">
             <SheetHeader className="border-b border-gray-200 pb-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -1833,7 +1965,7 @@ export default function CalendarPage() {
                                       </div>
 
                                       {/* Details Grid */}
-                                      <div className="grid grid-cols-2 gap-3 text-xs">
+                                      <div className="grid grid-cols-4 gap-4 text-xs">
                                         <div className="flex items-center gap-2">
                                           <Star className="h-3.5 w-3.5 text-[#8B5CF6] flex-shrink-0" />
                                           <div className="min-w-0">
@@ -1860,9 +1992,30 @@ export default function CalendarPage() {
 
                                         <div className="flex items-center gap-2">
                                           <Banknote className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-                                          <div className="min-w-0">
+                                          <div className="min-w-0 flex-1">
                                             <p className="text-gray-400 text-[10px]">Price</p>
-                                            <p className="font-semibold text-gray-900">{formatCurrency(treatment?.price || 0)}</p>
+                                            {(() => {
+                                              const pricingDisplay = getTreatmentPricingDisplay(treatment)
+                                              return pricingDisplay.showStrikethrough ? (
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                  <span className="text-xs line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                                  <span className="font-bold text-orange-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-[9px] px-1 py-0">
+                                                    PROMO
+                                                  </Badge>
+                                                </div>
+                                              ) : pricingDisplay.hasOutletPricing ? (
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                  <span className="text-xs line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                                  <span className="font-bold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                  <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 text-[9px] px-1 py-0">
+                                                    OUTLET
+                                                  </Badge>
+                                                </div>
+                                              ) : (
+                                                <p className="font-semibold text-gray-900">{formatCurrency(pricingDisplay.effectivePrice)}</p>
+                                              )
+                                            })()}
                                           </div>
                                         </div>
                                       </div>
@@ -2134,7 +2287,34 @@ export default function CalendarPage() {
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-[10px] text-gray-400 font-semibold mb-1">TOTAL PRICE</p>
-                          <p className="text-gray-900 font-bold text-base">{formatCurrency((selectedBooking as any).total_price || treatment?.price || 0)}</p>
+                          {(() => {
+                            const pricingDisplay = getTreatmentPricingDisplay(treatment)
+                            return (
+                              <div className="flex items-center gap-2">
+                                {pricingDisplay.showStrikethrough ? (
+                                  <>
+                                    <span className="text-sm line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                    <span className="text-lg font-bold text-orange-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                    <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[10px] px-1.5 py-0.5">
+                                      <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                                      -{pricingDisplay.discountPercent}%
+                                    </Badge>
+                                  </>
+                                ) : pricingDisplay.hasOutletPricing ? (
+                                  <>
+                                    <span className="text-sm line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                    <span className="text-lg font-bold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                    <Badge className="bg-purple-500 hover:bg-purple-600 text-white text-[10px] px-1.5 py-0.5">
+                                      <Building2 className="h-2.5 w-2.5 mr-0.5" />
+                                      OUTLET
+                                    </Badge>
+                                  </>
+                                ) : (
+                                  <span className="text-gray-900 font-bold text-base">{formatCurrency((selectedBooking as any).total_price || pricingDisplay.effectivePrice)}</span>
+                                )}
+                              </div>
+                            )
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -2201,6 +2381,44 @@ export default function CalendarPage() {
                           This appointment has been {(selectedBooking.status === 'no-show' || selectedBooking.status === 'no_show') ? 'marked as no-show' : selectedBooking.status}
                         </p>
                       </div>
+                    ) : selectedBooking.status === 'pending' ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          className="flex-1 h-10 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-sm"
+                          onClick={() => handleDeleteBooking(selectedBooking.id)}
+                          disabled={isConfirming}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Cancel
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 h-10 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 text-sm"
+                          onClick={handleOpenReschedule}
+                          disabled={isConfirming}
+                        >
+                          <Clock className="h-3.5 w-3.5 mr-2" />
+                          Reschedule
+                        </Button>
+                        <Button
+                          className="flex-1 h-10 bg-green-600 hover:bg-green-700 text-white text-sm font-medium"
+                          onClick={handleConfirmAppointment}
+                          disabled={isConfirming}
+                        >
+                          {isConfirming ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                              Confirming...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
+                              Confirm
+                            </>
+                          )}
+                        </Button>
+                      </>
                     ) : (
                       <>
                         <Button
@@ -2602,15 +2820,32 @@ export default function CalendarPage() {
                                 t.category?.toLowerCase().includes(treatmentSearch.toLowerCase())
                               )
                             return filtered.length > 0 ? (
-                              filtered.map((treatment) => (
+                              filtered.map((treatment) => {
+                                const pricingDisplay = getTreatmentPricingDisplay(treatment)
+                                return (
                                 <SelectItem key={treatment.id} value={treatment.id} className="group relative text-sm py-2.5">
                                   <div className="flex items-center gap-2.5">
                                     <Star className="h-4 w-4 text-[#8B5CF6] flex-shrink-0" />
                                     <div className="flex-1 min-w-0">
                                       <p className="font-medium truncate text-sm">{treatment.name}</p>
-                                      <p className="text-xs text-gray-500">
-                                        {formatCurrency(treatment.price)} · {treatment.duration || treatment.durationMin} min
-                                      </p>
+                                      <div className="flex items-center gap-2 text-xs">
+                                        {pricingDisplay.showStrikethrough ? (
+                                          <>
+                                            <span className="line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                            <span className="font-semibold text-orange-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                            <span className="text-[10px] bg-orange-100 text-orange-700 px-1 py-0.5 rounded">PROMO</span>
+                                          </>
+                                        ) : pricingDisplay.hasOutletPricing ? (
+                                          <>
+                                            <span className="line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                            <span className="font-semibold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                            <span className="text-[10px] bg-purple-100 text-purple-700 px-1 py-0.5 rounded">OUTLET</span>
+                                          </>
+                                        ) : (
+                                          <span className="text-gray-500">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                        )}
+                                        <span className="text-gray-500">· {treatment.duration || treatment.durationMin} min</span>
+                                      </div>
                                     </div>
                                   </div>
 
@@ -2625,7 +2860,29 @@ export default function CalendarPage() {
                                           )}
                                         </div>
                                         <div className="space-y-0.5 text-gray-300">
-                                          <p>💰 {formatCurrency(treatment.price)}</p>
+                                          {pricingDisplay.showStrikethrough ? (
+                                            <div className="flex items-center gap-2">
+                                              <p>💰</p>
+                                              <div>
+                                                <span className="line-through text-gray-500">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                                {' → '}
+                                                <span className="font-bold text-orange-400">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                <span className="ml-1 text-[10px] bg-orange-600 px-1.5 py-0.5 rounded">-{pricingDisplay.discountPercent}%</span>
+                                              </div>
+                                            </div>
+                                          ) : pricingDisplay.hasOutletPricing ? (
+                                            <div className="flex items-center gap-2">
+                                              <p>💰</p>
+                                              <div>
+                                                <span className="line-through text-gray-500">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                                {' → '}
+                                                <span className="font-bold text-purple-400">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                <span className="ml-1 text-[10px] bg-purple-600 px-1.5 py-0.5 rounded">OUTLET</span>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <p>💰 {formatCurrency(pricingDisplay.effectivePrice)}</p>
+                                          )}
                                           <p>⏱️ {treatment.duration || treatment.durationMin} minutes</p>
                                           {treatment.description && (
                                             <p className="text-xs text-gray-400 mt-1 pt-1 border-t border-gray-700">{treatment.description}</p>
@@ -2637,7 +2894,7 @@ export default function CalendarPage() {
                                     </div>
                                   </div>
                                 </SelectItem>
-                              ))
+                              )})
                             ) : (
                               <div className="py-6 text-center text-sm text-gray-500">
                                 No services found
@@ -3431,7 +3688,7 @@ export default function CalendarPage() {
                     if (pendingAppointment) {
                       // Get treatment to calculate total amount
                       const treatment = treatments.find(t => t.id === pendingAppointment.treatmentId)
-                      const totalAmount = treatment?.price || 0
+                      const totalAmount = getEffectiveTreatmentPrice(treatment)
 
                       // Set selected booking
                       setSelectedBooking(pendingAppointment)

@@ -166,7 +166,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           durationMin: t.durationMin || t.duration_minutes || 60,
           duration_minutes: t.duration_minutes || t.durationMin || 60,
           price: parseFloat(t.price || t.pricing?.base_price || 0),
-          currency: t.currency || t.pricing?.currency || 'USD',
+          currency: t.currency || t.pricing?.currency || 'IDR',
           description: t.description || '',
           popularity: t.popularity || 0,
           assignedStaff: t.assignedStaff || t.assigned_staff || [],
@@ -190,7 +190,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Pricing object
           pricing: t.pricing || {
             base_price: t.price || 0,
-            currency: t.currency || 'USD',
+            currency: t.currency || 'IDR',
           },
         }))
 
@@ -646,7 +646,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         duration: newTreatment.durationMin || newTreatment.duration_minutes || 60,
         durationMin: newTreatment.durationMin || newTreatment.duration_minutes || 60,
         price: parseFloat(newTreatment.price || newTreatment.pricing?.base_price || 0),
-        currency: newTreatment.currency || newTreatment.pricing?.currency || 'USD',
+        currency: newTreatment.currency || newTreatment.pricing?.currency || 'IDR',
         description: newTreatment.description || '',
         popularity: 0,
         assignedStaff: newTreatment.assignedStaff || newTreatment.assigned_staff || [],
@@ -677,7 +677,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         duration: updatedTreatment.durationMin || updatedTreatment.duration_minutes || 60,
         durationMin: updatedTreatment.durationMin || updatedTreatment.duration_minutes || 60,
         price: parseFloat(updatedTreatment.price || updatedTreatment.pricing?.base_price || 0),
-        currency: updatedTreatment.currency || updatedTreatment.pricing?.currency || 'USD',
+        currency: updatedTreatment.currency || updatedTreatment.pricing?.currency || 'IDR',
         description: updatedTreatment.description || '',
         popularity: updatedTreatment.popularity || 0,
         assignedStaff: updatedTreatment.assignedStaff || updatedTreatment.assigned_staff || [],
