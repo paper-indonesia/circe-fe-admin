@@ -280,6 +280,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             services: b.services || [],
             total_price: b.total_price,
             fee_breakdown: b.fee_breakdown,
+            // Payment fields
+            payment_id: b.payment_id,
+            paper_payment_url: b.paper_payment_url,
             // Customer details
             customer: customer || null,
             customer_name: b.customer_name, // Keep original customer_name from API
@@ -606,6 +609,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           paymentStatus: b.paymentStatus || b.payment_status || 'unpaid',
           payment_status: b.payment_status || b.paymentStatus || 'unpaid',
           notes: b.notes || '',
+          completion_notes: b.completion_notes || '',
           queueNumber: b.queueNumber || b.queue_number,
           createdAt: new Date(b.createdAt || b.created_at || Date.now()),
           appointment_date: b.appointment_date,
@@ -614,6 +618,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           services: b.services || [],
           total_price: b.total_price,
           fee_breakdown: b.fee_breakdown,
+          // Payment fields
+          payment_id: b.payment_id,
+          paper_payment_url: b.paper_payment_url,
           customer: customer || null,
           customer_name: b.customer_name, // Keep original customer_name from API
         }

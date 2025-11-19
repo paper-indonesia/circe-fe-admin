@@ -303,6 +303,51 @@ export default function CalendarPage() {
     }
   }, [outletId])
 
+  // Helper to format payment URL with protocol
+  const formatPaymentUrl = useCallback((url: string | null | undefined): string => {
+    if (!url) return ''
+    // If URL already has protocol, return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url
+    }
+    // Add https:// protocol
+    return `https://${url}`
+  }, [])
+
+  // Helper to identify payment type for online appointments
+  const getPaymentType = useCallback((booking: any) => {
+    // Check appointment type - could be in 'source' or 'appointment_type' field
+    const appointmentType = booking.source || (booking as any).appointment_type
+
+    // Only for online appointments
+    if (appointmentType !== 'online') {
+      return null
+    }
+
+    // Check for paper_payment_url field (both direct and nested)
+    const paperUrl = (booking as any).paper_payment_url || (booking as any).paperPaymentUrl
+
+    // "Pay on Arrival" - payment not required, no paper URL
+    if (booking.payment_status === 'not_required' && !paperUrl) {
+      return 'pay_on_arrival'
+    }
+
+    // "Pay with Invoice" - pending payment with paper URL
+    if (booking.payment_status === 'pending' && paperUrl) {
+      return 'pay_with_invoice'
+    }
+
+    return null
+  }, [])
+
+  // Count pending invoice payments
+  const pendingInvoiceCount = useMemo(() => {
+    return bookings.filter(booking => {
+      const paymentType = getPaymentType(booking)
+      return paymentType === 'pay_with_invoice' && booking.payment_status === 'pending'
+    }).length
+  }, [bookings, getPaymentType])
+
   // Get bookings for a specific date
   const getBookingsForDate = (date: Date) => {
     return bookings.filter(booking =>
@@ -388,6 +433,95 @@ export default function CalendarPage() {
       revenue: totalRevenue,
     }
   }, [bookings, treatments, startDate, endDate, getEffectiveTreatmentPrice])
+
+  // Auto-refresh when window gains focus (user returns from payment tab)
+  useEffect(() => {
+    const handleFocus = async () => {
+      console.log('[Calendar] Window gained focus - refreshing bookings...')
+      try {
+        await reloadBookings()
+        toast({
+          title: "Bookings refreshed",
+          description: "Latest payment status loaded",
+          duration: 2000,
+        })
+      } catch (error) {
+        console.error('[Calendar] Failed to refresh on focus:', error)
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [reloadBookings, toast])
+
+  // Auto-polling for appointments with pending invoices
+  useEffect(() => {
+    // Get current pending invoices with their IDs
+    const pendingInvoiceIds = bookings
+      .filter(booking => {
+        const paymentType = getPaymentType(booking)
+        return paymentType === 'pay_with_invoice' && booking.payment_status === 'pending'
+      })
+      .map(b => b.id)
+
+    if (pendingInvoiceIds.length === 0) return
+
+    console.log('[Calendar] Detected', pendingInvoiceIds.length, 'pending invoices - starting polling...')
+
+    // Poll every 10 seconds
+    const interval = setInterval(async () => {
+      console.log('[Calendar] Polling for payment status updates...')
+      try {
+        await reloadBookings()
+
+        // Check if any payments were completed
+        const stillPending = bookings
+          .filter(booking => {
+            const paymentType = getPaymentType(booking)
+            return paymentType === 'pay_with_invoice' && booking.payment_status === 'pending'
+          })
+          .map(b => b.id)
+
+        // Find which invoices got paid
+        const completedInvoices = pendingInvoiceIds.filter(id => !stillPending.includes(id))
+
+        if (completedInvoices.length > 0) {
+          toast({
+            title: "Payment received! 🎉",
+            description: `${completedInvoices.length} invoice${completedInvoices.length > 1 ? 's have' : ' has'} been paid. Appointment${completedInvoices.length > 1 ? 's are' : ' is'} now confirmed.`,
+            duration: 5000,
+          })
+        }
+      } catch (error) {
+        console.error('[Calendar] Polling failed:', error)
+      }
+    }, 10000) // 10 seconds
+
+    return () => {
+      console.log('[Calendar] Stopping payment polling')
+      clearInterval(interval)
+    }
+  }, [bookings, getPaymentType, reloadBookings, toast])
+
+  // Auto-update selectedBooking when bookings data changes
+  useEffect(() => {
+    if (selectedBooking && selectedBooking.id) {
+      // Find the updated booking from bookings array
+      const updatedBooking = bookings.find(b => b.id === selectedBooking.id)
+
+      if (updatedBooking) {
+        // Check if there are any changes (payment_status or status)
+        const hasChanges =
+          updatedBooking.payment_status !== selectedBooking.payment_status ||
+          updatedBooking.status !== selectedBooking.status
+
+        if (hasChanges) {
+          console.log('[Calendar] Updating selectedBooking with fresh data')
+          setSelectedBooking(updatedBooking)
+        }
+      }
+    }
+  }, [bookings, selectedBooking])
 
   // Fetch availability grid from API (real-time, no caching)
   const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string) => {
@@ -1290,6 +1424,17 @@ export default function CalendarPage() {
             <p className="text-gray-500 mt-1">Manage your bookings and schedule</p>
           </div>
           <div className="flex items-center gap-3">
+            {pendingInvoiceCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-medium text-amber-700">
+                    {pendingInvoiceCount} invoice{pendingInvoiceCount > 1 ? 's' : ''} pending
+                  </span>
+                </div>
+                <span className="text-[10px] text-amber-600">Auto-updating...</span>
+              </div>
+            )}
             <Button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -1783,7 +1928,7 @@ export default function CalendarPage() {
 
         {/* Sliding Panel for Date Details */}
         <Sheet open={slideOpen} onOpenChange={setSlideOpen}>
-          <SheetContent className="w-[1400px] sm:w-[1500px] max-w-[95vw] overflow-y-auto bg-gray-50">
+          <SheetContent className="w-[600px] m:w-[1200px] max-w-[95vw] overflow-y-auto bg-gray-50">
             <SheetHeader className="border-b border-gray-200 pb-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -2019,6 +2164,46 @@ export default function CalendarPage() {
                                           </div>
                                         </div>
                                       </div>
+
+                                      {/* Payment Type Indicator for Online Bookings */}
+                                      {(() => {
+                                        const paymentType = getPaymentType(booking)
+                                        if (!paymentType) return null
+
+                                        return (
+                                          <div className="mt-3 pt-3 border-t border-gray-100">
+                                            <div className="flex items-center gap-2">
+                                              <CreditCard className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                              <div className="flex-1">
+                                                <p className="text-gray-400 text-[10px]">Payment Method</p>
+                                                {paymentType === 'pay_on_arrival' ? (
+                                                  <div className="flex items-center gap-2 mt-0.5">
+                                                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[9px] px-2 py-0.5">
+                                                      Pay on Arrival
+                                                    </Badge>
+                                                    <span className="text-xs text-gray-500">Can be manually paid</span>
+                                                  </div>
+                                                ) : (
+                                                  <div className="flex items-center gap-2 mt-0.5">
+                                                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[9px] px-2 py-0.5">
+                                                      Pay with Invoice
+                                                    </Badge>
+                                                    <a
+                                                      href={formatPaymentUrl(booking.paper_payment_url)}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                                                      onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                      View Invoice →
+                                                    </a>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
 
                                       {/* Notes */}
                                       {booking.notes && (
@@ -2319,6 +2504,57 @@ export default function CalendarPage() {
                       </div>
                     </div>
 
+                    {/* Payment Method Info for Online Bookings */}
+                    {(() => {
+                      const paymentType = getPaymentType(selectedBooking)
+                      if (!paymentType) return null
+
+                      return (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1 h-3 bg-[#8B5CF6] rounded-full"></div>
+                            <h3 className="text-xs font-bold text-gray-900">Payment Method</h3>
+                          </div>
+                          <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-lg p-4 border border-gray-200">
+                            {paymentType === 'pay_on_arrival' ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1">
+                                    Pay on Arrival
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600">
+                                  Customer will pay at the venue. You can manually record the payment when they arrive.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1">
+                                    Pay with Invoice
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 mb-2">
+                                  Customer should complete payment via invoice before appointment.
+                                </p>
+                                {selectedBooking.paper_payment_url && (
+                                  <a
+                                    href={formatPaymentUrl(selectedBooking.paper_payment_url)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                                  >
+                                    <CreditCard className="h-3.5 w-3.5" />
+                                    View Payment Invoice →
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })()}
+
                     {/* Notes */}
                     {(selectedBooking.notes || isEditMode) && (
                       <div>
@@ -2382,43 +2618,57 @@ export default function CalendarPage() {
                         </p>
                       </div>
                     ) : selectedBooking.status === 'pending' ? (
-                      <>
-                        <Button
-                          variant="outline"
-                          className="flex-1 h-10 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-sm"
-                          onClick={() => handleDeleteBooking(selectedBooking.id)}
-                          disabled={isConfirming}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" />
-                          Cancel
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="flex-1 h-10 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 text-sm"
-                          onClick={handleOpenReschedule}
-                          disabled={isConfirming}
-                        >
-                          <Clock className="h-3.5 w-3.5 mr-2" />
-                          Reschedule
-                        </Button>
-                        <Button
-                          className="flex-1 h-10 bg-green-600 hover:bg-green-700 text-white text-sm font-medium"
-                          onClick={handleConfirmAppointment}
-                          disabled={isConfirming}
-                        >
-                          {isConfirming ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                              Confirming...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
-                              Confirm
-                            </>
-                          )}
-                        </Button>
-                      </>
+                      (() => {
+                        const paymentType = getPaymentType(selectedBooking)
+                        const isPayWithInvoice = paymentType === 'pay_with_invoice'
+                        const canConfirm = !isPayWithInvoice || selectedBooking.payment_status === 'paid'
+
+                        return (
+                          <>
+                            <Button
+                              variant="outline"
+                              className="flex-1 h-10 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-sm"
+                              onClick={() => handleDeleteBooking(selectedBooking.id)}
+                              disabled={isConfirming}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Cancel
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="flex-1 h-10 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 text-sm"
+                              onClick={handleOpenReschedule}
+                              disabled={isConfirming}
+                            >
+                              <Clock className="h-3.5 w-3.5 mr-2" />
+                              Reschedule
+                            </Button>
+                            <Button
+                              className="flex-1 h-10 bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={handleConfirmAppointment}
+                              disabled={isConfirming || !canConfirm}
+                              title={!canConfirm ? "Waiting for invoice payment" : ""}
+                            >
+                              {isConfirming ? (
+                                <>
+                                  <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                                  Confirming...
+                                </>
+                              ) : !canConfirm ? (
+                                <>
+                                  <CreditCard className="h-3.5 w-3.5 mr-2" />
+                                  Bayar Invoice Dulu
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
+                                  Confirm
+                                </>
+                              )}
+                            </Button>
+                          </>
+                        )
+                      })()
                     ) : (
                       <>
                         <Button
