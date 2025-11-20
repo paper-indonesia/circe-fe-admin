@@ -2799,8 +2799,8 @@ export default function CalendarPage() {
               {/* Customer, Service, Staff - 3 Column Grid */}
               <div className="grid grid-cols-12 gap-6 mb-8">
                 {/* Customer Selection - 4 cols */}
-                <div className="col-span-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                <div className="col-span-4 space-y-2">
+                  <div className="flex items-center justify-between h-[28px]">
                     <Label className="text-sm font-semibold text-gray-800">Customer</Label>
                     <div className="flex gap-1.5 bg-gray-100 p-1 rounded-lg">
                       <button
@@ -2942,7 +2942,7 @@ export default function CalendarPage() {
                         // Selected Customer Chip
                         const selectedCustomer = customers.find(c => (c._id || c.id) === newBookingData.patientId)
                         return selectedCustomer && (
-                          <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50/60 border border-indigo-200 rounded-lg">
+                          <div className="flex items-center gap-2 px-3 h-11 bg-indigo-50/60 border border-indigo-200 rounded-lg">
                             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                               {selectedCustomer.first_name?.charAt(0)}{selectedCustomer.last_name?.charAt(0)}
                             </div>
@@ -3105,7 +3105,9 @@ export default function CalendarPage() {
 
                 {/* Service Selection - 4 cols */}
                 <div className="col-span-4 space-y-2">
-                  <Label className="text-sm font-semibold text-gray-800">Service</Label>
+                  <div className="h-[28px] flex items-center">
+                    <Label className="text-sm font-semibold text-gray-800">Service</Label>
+                  </div>
                   {!newBookingData.outletId ? (
                     <div className="h-11 flex items-center px-3 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-500">
                       Please select an outlet first
@@ -3228,11 +3230,12 @@ export default function CalendarPage() {
                     </div>
                   ) : (() => {
                     const selected = treatments.find(t => t.id === newBookingData.treatmentId)
+                    const pricingDisplay = selected ? getTreatmentPricingDisplay(selected, newBookingData.outletId) : null
                     return selected && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-[#EDE9FE]/60 border border-[#C4B5FD] rounded-lg">
+                      <div className="flex items-center gap-2 px-3 h-11 bg-[#EDE9FE]/60 border border-[#C4B5FD] rounded-lg">
                         <Star className="h-4 w-4 text-[#8B5CF6] flex-shrink-0" />
                         <span className="text-sm text-gray-900 flex-1 truncate">
-                          {selected.name} · <span className="text-[#8B5CF6]">{formatCurrency(selected.price)}</span> · {selected.duration || selected.durationMin} min
+                          {selected.name} · <span className="text-[#8B5CF6]">{formatCurrency(pricingDisplay?.effectivePrice || selected.price)}</span> · {selected.duration || selected.durationMin} min
                         </span>
                         <button
                           type="button"
@@ -3248,7 +3251,9 @@ export default function CalendarPage() {
 
                 {/* Staff Selection - 4 cols */}
                 <div className="col-span-4 space-y-2">
-                  <Label className="text-sm font-semibold text-gray-800">Staff</Label>
+                  <div className="h-[28px] flex items-center">
+                    <Label className="text-sm font-semibold text-gray-800">Staff</Label>
+                  </div>
                   {!newBookingData.outletId ? (
                     <div className="h-11 flex items-center px-3 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-500">
                       Please select an outlet first
@@ -3347,7 +3352,7 @@ export default function CalendarPage() {
                   ) : (() => {
                     const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
                     return selectedStaff && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50/60 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 px-3 h-11 bg-blue-50/60 border border-blue-200 rounded-lg">
                         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                           {selectedStaff.name.charAt(0)}
                         </div>
