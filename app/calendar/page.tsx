@@ -286,6 +286,7 @@ export default function CalendarPage() {
       hasPromo: false,
       isPromoActive: false,
       hasOutletPricing: false,
+      isOutletPromo: false,
       source: 'base' as 'promotional' | 'outlet' | 'base'
     }
 
@@ -305,6 +306,7 @@ export default function CalendarPage() {
       showStrikethrough: displayInfo.showStrikethrough,
       discountPercent: displayInfo.discountPercent,
       hasOutletPricing: displayInfo.source === 'outlet',
+      isOutletPromo: displayInfo.isOutletPromo || false,
       source: displayInfo.source,
     }
   }, [outletId])
@@ -530,8 +532,9 @@ export default function CalendarPage() {
   }, [bookings, selectedBooking])
 
   // Fetch availability grid from API (real-time, no caching)
-  const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string) => {
-    if (!serviceId || !staffId || !outletId) return
+  const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string, selectedOutletId?: string) => {
+    const effectiveOutletId = selectedOutletId || outletId
+    if (!serviceId || !staffId || !effectiveOutletId) return
 
     // Get selected treatment to use its duration
     const selectedTreatment = treatments.find(t => t.id === serviceId)
@@ -542,6 +545,7 @@ export default function CalendarPage() {
       console.log('[Calendar] Fetching availability grid from API (real-time):', {
         serviceId,
         staffId,
+        outletId: effectiveOutletId,
         startDate,
         slotInterval
       })
@@ -550,7 +554,7 @@ export default function CalendarPage() {
         `/api/availability/grid?` +
         `service_id=${serviceId}&` +
         `staff_id=${staffId}&` +
-        `outlet_id=${outletId}&` +
+        `outlet_id=${effectiveOutletId}&` +
         `start_date=${startDate}&` +
         `num_days=7&` +
         `slot_interval_minutes=${slotInterval}`
@@ -615,7 +619,7 @@ export default function CalendarPage() {
 
   // Trigger availability grid fetch when treatment and staff are selected
   useEffect(() => {
-    if (newBookingData.treatmentId && newBookingData.staffId && outletId) {
+    if (newBookingData.treatmentId && newBookingData.staffId && newBookingData.outletId) {
       // Use today's date or week start, whichever is later
       const today = startOfDay(new Date())
       const weekStartDay = startOfDay(weekStart)
@@ -625,20 +629,21 @@ export default function CalendarPage() {
       console.log('[Calendar] useEffect triggered - Fetching availability grid:', {
         treatmentId: newBookingData.treatmentId,
         staffId: newBookingData.staffId,
+        outletId: newBookingData.outletId,
         weekStart: format(weekStart, 'yyyy-MM-dd'),
         startDate: startDateStr,
         today: format(today, 'yyyy-MM-dd')
       })
 
-      fetchAvailabilityGrid(newBookingData.treatmentId, newBookingData.staffId, startDateStr)
+      fetchAvailabilityGrid(newBookingData.treatmentId, newBookingData.staffId, startDateStr, newBookingData.outletId)
     } else {
       console.log('[Calendar] useEffect skipped - Missing data:', {
         hasTreatment: !!newBookingData.treatmentId,
         hasStaff: !!newBookingData.staffId,
-        hasOutlet: !!outletId
+        hasOutlet: !!newBookingData.outletId
       })
     }
-  }, [newBookingData.treatmentId, newBookingData.staffId, weekStart, outletId])
+  }, [newBookingData.treatmentId, newBookingData.staffId, newBookingData.outletId, weekStart])
 
   // Load initial customers
   const loadInitialCustomers = async () => {
@@ -3153,15 +3158,20 @@ export default function CalendarPage() {
                                     <div className="flex-1 min-w-0">
                                       <p className="font-medium truncate text-sm">{treatment.name}</p>
                                       <div className="flex items-center gap-2 text-xs">
-                                        {pricingDisplay.showStrikethrough ? (
+                                        {pricingDisplay.source === 'promotional' ? (
                                           <>
                                             <span className="line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
                                             <span className="font-semibold text-orange-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
                                             <span className="text-[10px] bg-orange-100 text-orange-700 px-1 py-0.5 rounded">PROMO</span>
                                           </>
-                                        ) : pricingDisplay.hasOutletPricing ? (
+                                        ) : pricingDisplay.source === 'outlet' && pricingDisplay.isOutletPromo ? (
                                           <>
                                             <span className="line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                            <span className="font-semibold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                            <span className="text-[10px] bg-purple-100 text-purple-700 px-1 py-0.5 rounded">OUTLET PROMO</span>
+                                          </>
+                                        ) : pricingDisplay.source === 'outlet' ? (
+                                          <>
                                             <span className="font-semibold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
                                             <span className="text-[10px] bg-purple-100 text-purple-700 px-1 py-0.5 rounded">OUTLET</span>
                                           </>
@@ -3184,7 +3194,7 @@ export default function CalendarPage() {
                                           )}
                                         </div>
                                         <div className="space-y-0.5 text-gray-300">
-                                          {pricingDisplay.showStrikethrough ? (
+                                          {pricingDisplay.source === 'promotional' ? (
                                             <div className="flex items-center gap-2">
                                               <p>💰</p>
                                               <div>
@@ -3194,12 +3204,20 @@ export default function CalendarPage() {
                                                 <span className="ml-1 text-[10px] bg-orange-600 px-1.5 py-0.5 rounded">-{pricingDisplay.discountPercent}%</span>
                                               </div>
                                             </div>
-                                          ) : pricingDisplay.hasOutletPricing ? (
+                                          ) : pricingDisplay.source === 'outlet' && pricingDisplay.isOutletPromo ? (
                                             <div className="flex items-center gap-2">
                                               <p>💰</p>
                                               <div>
                                                 <span className="line-through text-gray-500">{formatCurrency(pricingDisplay.basePrice)}</span>
                                                 {' → '}
+                                                <span className="font-bold text-purple-400">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                <span className="ml-1 text-[10px] bg-purple-600 px-1.5 py-0.5 rounded">OUTLET -{pricingDisplay.discountPercent}%</span>
+                                              </div>
+                                            </div>
+                                          ) : pricingDisplay.source === 'outlet' ? (
+                                            <div className="flex items-center gap-2">
+                                              <p>💰</p>
+                                              <div>
                                                 <span className="font-bold text-purple-400">{formatCurrency(pricingDisplay.effectivePrice)}</span>
                                                 <span className="ml-1 text-[10px] bg-purple-600 px-1.5 py-0.5 rounded">OUTLET</span>
                                               </div>
