@@ -97,6 +97,9 @@ export default function AvailabilityCalendarPage() {
     date?: string
     time?: string
   }>({})
+  const [selectedAvailabilityIds, setSelectedAvailabilityIds] = useState<Set<string>>(new Set())
+  const [isBulkMode, setIsBulkMode] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Calculate date range for week view (always week now)
   const dateRange = useMemo(() => {
@@ -311,6 +314,71 @@ export default function AvailabilityCalendarPage() {
     }
   }
 
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedAvailabilityIds.size === 0) {
+      toast({
+        title: "Peringatan",
+        description: "Pilih minimal satu jadwal untuk dihapus",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Apakah Anda yakin ingin menghapus ${selectedAvailabilityIds.size} jadwal ketersediaan?`
+    )
+
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    try {
+      const idsArray = Array.from(selectedAvailabilityIds)
+      const result = await apiClient.bulkDeleteAvailability(idsArray)
+
+      toast({
+        title: "Berhasil",
+        description: result.message || `${result.succeeded} jadwal berhasil dihapus`,
+      })
+
+      // Clear selection and refresh
+      setSelectedAvailabilityIds(new Set())
+      setIsBulkMode(false)
+      fetchAvailability()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Gagal menghapus jadwal",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Toggle bulk mode
+  const toggleBulkMode = () => {
+    setIsBulkMode(!isBulkMode)
+    setSelectedAvailabilityIds(new Set())
+  }
+
+  // Toggle selection
+  const toggleSelection = (id: string) => {
+    const newSelection = new Set(selectedAvailabilityIds)
+    if (newSelection.has(id)) {
+      newSelection.delete(id)
+    } else {
+      newSelection.add(id)
+    }
+    setSelectedAvailabilityIds(newSelection)
+  }
+
+  // Select all visible
+  const selectAllVisible = () => {
+    const allIds = new Set(filteredAvailability.map(entry => entry.id))
+    setSelectedAvailabilityIds(allIds)
+  }
+
   // Update existing availability
   const handleUpdateAvailability = async (data: any) => {
     try {
@@ -441,6 +509,14 @@ export default function AvailabilityCalendarPage() {
               Tambah
             </Button>
 
+            {/* Bulk Mode Toggle */}
+            <Button
+              variant={isBulkMode ? "default" : "outline"}
+              onClick={toggleBulkMode}
+              className="gap-2"
+            >
+              {isBulkMode ? "Batal Pilih" : "Pilih Banyak"}
+            </Button>
 
             {/* Display Mode Toggle */}
             <Tabs value={displayMode} onValueChange={(v) => setDisplayMode(v as DisplayMode)} className="w-auto">
@@ -457,6 +533,39 @@ export default function AvailabilityCalendarPage() {
             </Tabs>
           </div>
         </div>
+
+        {/* Bulk Actions Bar */}
+        {isBulkMode && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={selectAllVisible}
+                    disabled={filteredAvailability.length === 0}
+                  >
+                    Pilih Semua ({filteredAvailability.length})
+                  </Button>
+                  <span className="text-sm text-gray-700 font-medium">
+                    {selectedAvailabilityIds.size} jadwal dipilih
+                  </span>
+                </div>
+                {selectedAvailabilityIds.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? "Menghapus..." : `Hapus ${selectedAvailabilityIds.size} Jadwal`}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Week/Month Toggle removed - always use week view */}
 
@@ -617,21 +726,40 @@ export default function AvailabilityCalendarPage() {
                                   {/* Entries are already sorted and split by splitTimeRanges */}
                                   {entries.map((entry) => {
                                       const colors = AVAILABILITY_COLORS[entry.availability_type as keyof typeof AVAILABILITY_COLORS]
+                                      const isSelected = selectedAvailabilityIds.has(entry.id)
 
                                       return (
                                         <div
                                           key={entry.id}
-                                          onClick={() => handleEntryClick(entry)}
+                                          onClick={() => {
+                                            if (isBulkMode) {
+                                              toggleSelection(entry.id)
+                                            } else {
+                                              handleEntryClick(entry)
+                                            }
+                                          }}
                                           className={cn(
                                             "p-1.5 rounded border-l-3 cursor-pointer hover:opacity-80 transition-opacity",
                                             colors.bg,
                                             colors.border,
-                                            colors.text
+                                            colors.text,
+                                            isSelected && isBulkMode && "ring-2 ring-blue-500"
                                           )}
                                         >
                                           <div className="flex items-center justify-between gap-2">
-                                            <div className="text-xs font-semibold">
-                                              {entry.start_time.substring(0, 5)} - {entry.end_time.substring(0, 5)}
+                                            <div className="flex items-center gap-2">
+                                              {isBulkMode && (
+                                                <input
+                                                  type="checkbox"
+                                                  checked={isSelected}
+                                                  onChange={() => toggleSelection(entry.id)}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  className="h-3 w-3"
+                                                />
+                                              )}
+                                              <div className="text-xs font-semibold">
+                                                {entry.start_time.substring(0, 5)} - {entry.end_time.substring(0, 5)}
+                                              </div>
                                             </div>
                                             <Badge variant="outline" className={cn("text-[10px] px-1 py-0 whitespace-nowrap", colors.text, colors.border)}>
                                               {colors.label}

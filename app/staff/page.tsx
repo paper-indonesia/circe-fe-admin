@@ -138,6 +138,9 @@ export default function StaffPage() {
   const [showEditAvailability, setShowEditAvailability] = useState(false)
   const [editingAvailability, setEditingAvailability] = useState<any>(null)
   const [calendarViewDate, setCalendarViewDate] = useState(() => new Date())
+  const [selectedAvailabilityIds, setSelectedAvailabilityIds] = useState<Set<string>>(new Set())
+  const [isBulkMode, setIsBulkMode] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [availabilityForm, setAvailabilityForm] = useState(() => ({
     date: new Date().toISOString().split('T')[0],
     start_time: "09:00",
@@ -315,19 +318,23 @@ export default function StaffPage() {
     setCalendarViewDate(today)
 
     // Set date range for calendar view (7 days from today to avoid API error)
+    // Use format() to avoid timezone issues with toISOString()
     const startDate = today
     const endDate = addDays(today, 6) // 7 days total
 
-    setDateRange({
-      start: startDate.toISOString().split('T')[0],
-      end: endDate.toISOString().split('T')[0]
-    })
+    const newDateRange = {
+      start: format(startDate, 'yyyy-MM-dd'),
+      end: format(endDate, 'yyyy-MM-dd')
+    }
+
+    setDateRange(newDateRange)
 
     // Show dialog and fetch availability for THIS specific staff
     setShowViewAvailability(true)
 
     // Use the staffMember parameter directly, not selectedStaff state
-    await fetchAvailabilityEntries(staffMember.id, false)
+    // IMPORTANT: Pass newDateRange directly to avoid stale state
+    await fetchAvailabilityEntries(staffMember.id, false, newDateRange)
   }
 
   // Handle click on empty date to add availability
@@ -356,12 +363,13 @@ export default function StaffPage() {
     setCalendarViewDate(newDate)
 
     // Update date range to 7 days from newDate
+    // Use format() to avoid timezone issues with toISOString()
     const startDate = newDate
     const endDate = addDays(newDate, 6)
 
     const newDateRange = {
-      start: startDate.toISOString().split('T')[0],
-      end: endDate.toISOString().split('T')[0]
+      start: format(startDate, 'yyyy-MM-dd'),
+      end: format(endDate, 'yyyy-MM-dd')
     }
 
     setDateRange(newDateRange)
@@ -538,6 +546,74 @@ export default function StaffPage() {
         variant: "destructive",
       })
     }
+  }
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedAvailabilityIds.size === 0) {
+      toast({
+        title: "Peringatan",
+        description: "Pilih minimal satu jadwal untuk dihapus",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Apakah Anda yakin ingin menghapus ${selectedAvailabilityIds.size} jadwal ketersediaan?`
+    )
+
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    try {
+      const idsArray = Array.from(selectedAvailabilityIds)
+      const result = await apiClient.bulkDeleteAvailability(idsArray)
+
+      toast({
+        title: "Berhasil",
+        description: result.message || `${result.succeeded} jadwal berhasil dihapus`,
+      })
+
+      // Clear selection and refresh
+      setSelectedAvailabilityIds(new Set())
+      setIsBulkMode(false)
+
+      if (selectedStaff) {
+        await fetchAvailabilityEntries(selectedStaff.id)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Gagal menghapus jadwal",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Toggle bulk selection mode
+  const toggleBulkMode = () => {
+    setIsBulkMode(!isBulkMode)
+    setSelectedAvailabilityIds(new Set()) // Clear selection when toggling
+  }
+
+  // Toggle individual selection
+  const toggleSelection = (id: string) => {
+    const newSelection = new Set(selectedAvailabilityIds)
+    if (newSelection.has(id)) {
+      newSelection.delete(id)
+    } else {
+      newSelection.add(id)
+    }
+    setSelectedAvailabilityIds(newSelection)
+  }
+
+  // Select all visible entries
+  const selectAllVisible = () => {
+    const allIds = new Set(availabilityEntries.map(entry => entry.id))
+    setSelectedAvailabilityIds(allIds)
   }
 
   // Handle edit availability from view dialog
@@ -3231,6 +3307,44 @@ export default function StaffPage() {
             </DialogHeader>
 
             <div className="space-y-4">
+                  {/* Bulk Actions Bar */}
+                  <div className="flex items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={isBulkMode ? "default" : "outline"}
+                        size="sm"
+                        onClick={toggleBulkMode}
+                      >
+                        {isBulkMode ? "Batal" : "Pilih Banyak"}
+                      </Button>
+                      {isBulkMode && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={selectAllVisible}
+                            disabled={availabilityEntries.length === 0}
+                          >
+                            Pilih Semua ({availabilityEntries.length})
+                          </Button>
+                          <span className="text-sm text-gray-600">
+                            {selectedAvailabilityIds.size} dipilih
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {isBulkMode && selectedAvailabilityIds.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        disabled={isDeleting}
+                      >
+                        {isDeleting ? "Menghapus..." : `Hapus ${selectedAvailabilityIds.size} Jadwal`}
+                      </Button>
+                    )}
+                  </div>
+
                   {/* Calendar Header with Week Navigation */}
                   <div className="flex items-center justify-between mb-4">
                     <Button
@@ -3337,16 +3451,35 @@ export default function StaffPage() {
                                         ? 'Blocked'
                                         : 'Cuti'
 
+                                    const isSelected = selectedAvailabilityIds.has(entry.id)
+
                                     return (
                                       <div
                                         key={entry.id}
-                                        className={`availability-entry text-xs p-1 rounded cursor-pointer hover:opacity-80 border ${colorClasses}`}
+                                        className={`availability-entry text-xs p-1 rounded cursor-pointer hover:opacity-80 border ${colorClasses} ${
+                                          isSelected && isBulkMode ? 'ring-2 ring-blue-500' : ''
+                                        }`}
                                         onClick={(e) => {
                                           e.stopPropagation()
-                                          handleEditAvailabilityFromView(entry)
+                                          if (isBulkMode) {
+                                            toggleSelection(entry.id)
+                                          } else {
+                                            handleEditAvailabilityFromView(entry)
+                                          }
                                         }}
                                         title={`${typeLabel}\n${entry.start_time} - ${entry.end_time}${entry.notes ? '\n' + entry.notes : ''}`}
                                       >
+                                        {isBulkMode && (
+                                          <div className="flex items-center gap-1 mb-0.5">
+                                            <input
+                                              type="checkbox"
+                                              checked={isSelected}
+                                              onChange={() => toggleSelection(entry.id)}
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="h-3 w-3"
+                                            />
+                                          </div>
+                                        )}
                                         <div className="font-semibold text-[10px] opacity-60 mb-0.5">
                                           {typeLabel}
                                         </div>
