@@ -3315,7 +3315,7 @@ export default function StaffPage() {
                         size="sm"
                         onClick={toggleBulkMode}
                       >
-                        {isBulkMode ? "Batal" : "Pilih Banyak"}
+                        {isBulkMode ? "Batal" : "Hapus Jadwal"}
                       </Button>
                       {isBulkMode && (
                         <>

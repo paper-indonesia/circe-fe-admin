@@ -375,7 +375,7 @@ export default function AvailabilityCalendarPage() {
 
   // Select all visible
   const selectAllVisible = () => {
-    const allIds = new Set(filteredAvailability.map(entry => entry.id))
+    const allIds = new Set(availabilityData.map(entry => entry.id))
     setSelectedAvailabilityIds(allIds)
   }
 
@@ -515,7 +515,7 @@ export default function AvailabilityCalendarPage() {
               onClick={toggleBulkMode}
               className="gap-2"
             >
-              {isBulkMode ? "Batal Pilih" : "Pilih Banyak"}
+              {isBulkMode ? "Batal" : "Hapus Jadwal"}
             </Button>
 
             {/* Display Mode Toggle */}
@@ -544,9 +544,9 @@ export default function AvailabilityCalendarPage() {
                     variant="outline"
                     size="sm"
                     onClick={selectAllVisible}
-                    disabled={filteredAvailability.length === 0}
+                    disabled={availabilityData.length === 0}
                   >
-                    Pilih Semua ({filteredAvailability.length})
+                    Pilih Semua ({availabilityData.length})
                   </Button>
                   <span className="text-sm text-gray-700 font-medium">
                     {selectedAvailabilityIds.size} jadwal dipilih
