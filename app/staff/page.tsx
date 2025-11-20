@@ -408,29 +408,9 @@ export default function StaffPage() {
     }
   }
 
-  // Create new availability entry
-  const handleCreateAvailability = async () => {
+  // Create new availability entry (callback from AddAvailabilityDialog)
+  const handleCreateAvailability = async (data: any) => {
     if (!selectedStaff) return
-
-    // Validation
-    if (!availabilityForm.date || !availabilityForm.start_time || !availabilityForm.end_time) {
-      toast({
-        title: "Error",
-        description: "Tanggal dan waktu wajib diisi",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Check recurrence validation
-    if (availabilityForm.recurrence_type !== 'none' && !availabilityForm.recurrence_end_date) {
-      toast({
-        title: "Error",
-        description: "Tanggal akhir pengulangan wajib diisi untuk pola berulang",
-        variant: "destructive",
-      })
-      return
-    }
 
     setSavingAvailability(true)
     try {
@@ -450,16 +430,11 @@ export default function StaffPage() {
         throw new Error("Tenant ID tidak ditemukan. Silakan login kembali.")
       }
 
+      // Use data from AddAvailabilityDialog
       const payload: any = {
+        ...data, // All fields from dialog
         tenant_id: tenantId,
-        staff_id: selectedStaff.id,
-        date: availabilityForm.date,
-        start_time: availabilityForm.start_time,
-        end_time: availabilityForm.end_time,
-        availability_type: availabilityTab,
-        recurrence_type: availabilityForm.recurrence_type,
-        is_available: availabilityTab === 'working_hours',
-        notes: availabilityForm.notes || undefined,
+        staff_id: data.staff_id || selectedStaff.id,
       }
 
       // Add outlet_id if available
@@ -467,24 +442,14 @@ export default function StaffPage() {
         payload.outlet_id = selectedStaff.outlet_id || selectedStaff.outletId
       }
 
-      // Add recurrence data if applicable
-      if (availabilityForm.recurrence_type !== 'none') {
-        payload.recurrence_end_date = availabilityForm.recurrence_end_date
-        if (availabilityForm.recurrence_type === 'weekly' && availabilityForm.recurrence_days.length > 0) {
-          payload.recurrence_days = availabilityForm.recurrence_days
-        }
-      }
-
-      // Add service_ids if specified (null = all services)
-      if (availabilityForm.service_ids.length > 0) {
-        payload.service_ids = availabilityForm.service_ids
-      }
+      // Debug log
+      console.log('[StaffPage] Creating availability:', JSON.stringify(payload, null, 2))
 
       await apiClient.createAvailability(payload)
 
       toast({
         title: "Berhasil",
-        description: availabilityForm.recurrence_type !== 'none'
+        description: data.recurrence_type !== 'none'
           ? "Ketersediaan berulang berhasil dibuat"
           : "Ketersediaan berhasil ditambahkan",
       })
@@ -3297,15 +3262,24 @@ export default function StaffPage() {
                     <div className="border rounded-lg overflow-hidden">
                       {/* Calendar Grid */}
                       <div className="grid grid-cols-7 gap-0">
-                        {/* Day Headers */}
-                        {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((day) => (
-                          <div
-                            key={day}
-                            className="bg-gray-100 p-3 text-center text-sm font-semibold border-b"
-                          >
-                            {day}
-                          </div>
-                        ))}
+                        {/* Day Headers - Dynamic based on actual dates */}
+                        {(() => {
+                          const dayLabels = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+                          const headers = []
+                          for (let i = 0; i < 7; i++) {
+                            const date = addDays(calendarViewDate, i)
+                            const dayOfWeek = date.getDay() // 0=Sunday, 1=Monday, etc.
+                            headers.push(
+                              <div
+                                key={i}
+                                className="bg-gray-100 p-3 text-center text-sm font-semibold border-b"
+                              >
+                                {dayLabels[dayOfWeek]}
+                              </div>
+                            )
+                          }
+                          return headers
+                        })()}
 
                         {/* Calendar Days - Show 7 days only */}
                         {(() => {

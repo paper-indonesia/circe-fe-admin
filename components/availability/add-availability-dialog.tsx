@@ -166,28 +166,42 @@ export function AddAvailabilityDialog({
       }
 
       // Prepare data based on mode
-      const dataToSave = {
+      // IMPORTANT: is_available must match availability_type per API requirements
+      const isAvailable = formData.availability_type === 'working_hours'
+
+      // Build base payload
+      const dataToSave: any = {
         staff_id: formData.staff_id,
-        availability_type: formData.availability_type,
+        date: formData.date, // Start date (required for both single and recurring)
         start_time: formData.start_time,
         end_time: formData.end_time,
-        notes: formData.notes,
-        service_ids: formData.service_ids,
+        availability_type: formData.availability_type,
+        recurrence_type: mode === "single" ? "none" : formData.recurrence_type,
+        is_available: isAvailable, // Required by API
         capacity: formData.is_group_service ? formData.capacity : 1,
         is_group_service: formData.is_group_service,
-        ...(mode === "single"
-          ? {
-              date: formData.date,
-              recurrence_type: "none"
-            }
-          : {
-              date: formData.date, // Start date for recurring
-              recurrence_type: formData.recurrence_type,
-              recurrence_days: formData.recurrence_type === "weekly" ? formData.recurrence_days : undefined,
-              recurrence_end_date: formData.recurrence_end_date, // Now mandatory
-            }
-        )
       }
+
+      // Add optional fields only if they have values
+      if (formData.notes) {
+        dataToSave.notes = formData.notes
+      }
+
+      if (formData.service_ids && formData.service_ids.length > 0) {
+        dataToSave.service_ids = formData.service_ids
+      }
+
+      // Add recurrence fields for recurring mode
+      if (mode === "recurring") {
+        dataToSave.recurrence_end_date = formData.recurrence_end_date
+
+        if (formData.recurrence_type === "weekly" && formData.recurrence_days.length > 0) {
+          dataToSave.recurrence_days = formData.recurrence_days
+        }
+      }
+
+      // Debug log
+      console.log('[AddAvailabilityDialog] Saving data:', JSON.stringify(dataToSave, null, 2))
 
       await onSave(dataToSave)
       onOpenChange(false)
