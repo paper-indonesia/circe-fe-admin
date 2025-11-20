@@ -60,14 +60,15 @@ const AVAILABILITY_TYPE_CONFIG = {
   }
 }
 
+// API Convention: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
 const DAYS_OF_WEEK = [
-  { value: 0, label: "Min" },
-  { value: 1, label: "Sen" },
-  { value: 2, label: "Sel" },
-  { value: 3, label: "Rab" },
-  { value: 4, label: "Kam" },
-  { value: 5, label: "Jum" },
-  { value: 6, label: "Sab" },
+  { value: 0, label: "Sen" },  // Senin (Monday)
+  { value: 1, label: "Sel" },  // Selasa (Tuesday)
+  { value: 2, label: "Rab" },  // Rabu (Wednesday)
+  { value: 3, label: "Kam" },  // Kamis (Thursday)
+  { value: 4, label: "Jum" },  // Jumat (Friday)
+  { value: 5, label: "Sab" },  // Sabtu (Saturday)
+  { value: 6, label: "Min" },  // Minggu (Sunday)
 ]
 
 export function AddAvailabilityDialog({
