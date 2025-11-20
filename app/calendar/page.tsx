@@ -193,6 +193,7 @@ export default function CalendarPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false)
   const [newBookingData, setNewBookingData] = useState<any>({
+    outletId: "",
     treatmentId: "",
     patientId: "",
     staffId: "",
@@ -224,6 +225,9 @@ export default function CalendarPage() {
   const [customerSearchResult, setCustomerSearchResult] = useState<'not_searched' | 'found' | 'not_found'>('not_searched')
   const [customerConfirmed, setCustomerConfirmed] = useState(false)
   const [phoneValidationError, setPhoneValidationError] = useState<string>('')
+
+  // Outlets state
+  const [outlets, setOutlets] = useState<any[]>([])
 
   // Calculate date range based on selection
   const { startDate, endDate } = useMemo(() => {
@@ -275,7 +279,7 @@ export default function CalendarPage() {
   }, [outletId])
 
   // Helper function to get pricing display info (for strikethrough etc)
-  const getTreatmentPricingDisplay = useCallback((treatment: any) => {
+  const getTreatmentPricingDisplay = useCallback((treatment: any, selectedOutletId?: string | null) => {
     if (!treatment) return {
       effectivePrice: 0,
       basePrice: 0,
@@ -290,7 +294,9 @@ export default function CalendarPage() {
       currency: treatment.currency || 'IDR',
     }
 
-    const displayInfo = getPricingDisplayInfo(pricing, outletId)
+    // Use selectedOutletId if provided, otherwise fall back to outletId
+    const effectiveOutletId = selectedOutletId !== undefined ? selectedOutletId : outletId
+    const displayInfo = getPricingDisplayInfo(pricing, effectiveOutletId)
     return {
       effectivePrice: displayInfo.price,
       basePrice: displayInfo.basePrice,
@@ -579,6 +585,26 @@ export default function CalendarPage() {
       console.log('[Calendar] Outlet ID loaded from staff:', staff[0].outlet_id)
     }
   }, [staff])
+
+  // Fetch outlets on mount
+  useEffect(() => {
+    const fetchOutlets = async () => {
+      try {
+        const response = await fetch('/api/outlets')
+        if (response.ok) {
+          const data = await response.json()
+          // Handle both paginated and non-paginated responses
+          const outletsList = data.items || data.data || data
+          setOutlets(Array.isArray(outletsList) ? outletsList : [])
+          console.log('[Calendar] Outlets loaded:', outletsList)
+        }
+      } catch (error) {
+        console.error('[Calendar] Error fetching outlets:', error)
+      }
+    }
+
+    fetchOutlets()
+  }, [])
 
   // Reset weekStart and clear cache when service or staff changes
   useEffect(() => {
@@ -905,6 +931,7 @@ export default function CalendarPage() {
   const handleNewBookingFromCalendar = (date: Date) => {
     setNewBookingData({
       ...newBookingData,
+      outletId: outletId || "", // Set current outlet as default
       date: format(date, "yyyy-MM-dd")
     })
     setNewBookingOpen(true)
@@ -913,6 +940,7 @@ export default function CalendarPage() {
 
   const handleNewBookingFromButton = () => {
     setNewBookingData({
+      outletId: outletId || "", // Set current outlet as default
       treatmentId: "",
       patientId: "",
       staffId: "",
@@ -2728,7 +2756,47 @@ export default function CalendarPage() {
 
             {/* Main Content - Scrollable */}
             <div className="flex-1 overflow-y-auto px-7 py-6">
-              {/* Top Bar: Customer, Service, Staff - 12 Column Grid */}
+              {/* Outlet Selection - Full Width */}
+              <div className="mb-6 pb-6 border-b border-gray-200">
+                <Label className="text-sm font-semibold text-gray-800 mb-3 block">Outlet Location</Label>
+                <div className="w-full max-w-md space-y-2">
+                  <Select
+                    value={newBookingData.outletId || ''}
+                    onValueChange={(value) => {
+                      setNewBookingData({
+                        ...newBookingData,
+                        outletId: value,
+                        treatmentId: "", // Reset treatment when outlet changes
+                        staffId: "",
+                        date: "",
+                        time: ""
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="h-12 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 bg-white">
+                      <SelectValue placeholder="Select outlet location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {outlets.map((outlet) => (
+                        <SelectItem key={outlet.id} value={outlet.id}>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-indigo-500" />
+                            <span className="font-medium">{outlet.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {newBookingData.outletId && (
+                    <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-purple-500" />
+                      Service prices may vary by outlet
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Customer, Service, Staff - 3 Column Grid */}
               <div className="grid grid-cols-12 gap-6 mb-8">
                 {/* Customer Selection - 4 cols */}
                 <div className="col-span-4 space-y-3">
@@ -3038,7 +3106,11 @@ export default function CalendarPage() {
                 {/* Service Selection - 4 cols */}
                 <div className="col-span-4 space-y-2">
                   <Label className="text-sm font-semibold text-gray-800">Service</Label>
-                  {!newBookingData.treatmentId ? (
+                  {!newBookingData.outletId ? (
+                    <div className="h-11 flex items-center px-3 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-500">
+                      Please select an outlet first
+                    </div>
+                  ) : !newBookingData.treatmentId ? (
                     <div className="relative">
                       <Select
                         value={newBookingData.treatmentId}
@@ -3071,7 +3143,7 @@ export default function CalendarPage() {
                               )
                             return filtered.length > 0 ? (
                               filtered.map((treatment) => {
-                                const pricingDisplay = getTreatmentPricingDisplay(treatment)
+                                const pricingDisplay = getTreatmentPricingDisplay(treatment, newBookingData.outletId)
                                 return (
                                 <SelectItem key={treatment.id} value={treatment.id} className="group relative text-sm py-2.5">
                                   <div className="flex items-center gap-2.5">
@@ -3177,7 +3249,11 @@ export default function CalendarPage() {
                 {/* Staff Selection - 4 cols */}
                 <div className="col-span-4 space-y-2">
                   <Label className="text-sm font-semibold text-gray-800">Staff</Label>
-                  {!newBookingData.staffId ? (
+                  {!newBookingData.outletId ? (
+                    <div className="h-11 flex items-center px-3 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-500">
+                      Please select an outlet first
+                    </div>
+                  ) : !newBookingData.staffId ? (
                     <div className="relative">
                       <Select
                         value={newBookingData.staffId}
@@ -3207,6 +3283,11 @@ export default function CalendarPage() {
                             let availableStaff = treatment?.staffIds?.length
                               ? staff.filter(s => treatment.staffIds.includes(s.id))
                               : staff
+
+                            // Filter by outlet - staff must work at the selected outlet
+                            if (newBookingData.outletId) {
+                              availableStaff = availableStaff.filter(s => s.outlet_id === newBookingData.outletId)
+                            }
 
                             // Apply search filter
                             const filtered = availableStaff.filter(s =>
@@ -3254,7 +3335,9 @@ export default function CalendarPage() {
                               ))
                             ) : (
                               <div className="py-6 text-center text-sm text-gray-500">
-                                No staff found
+                                {newBookingData.outletId
+                                  ? "No staff available at this outlet for the selected service"
+                                  : "No staff found"}
                               </div>
                             )
                           })()}
@@ -3410,8 +3493,8 @@ export default function CalendarPage() {
                       setIsCreatingAppointment(false)
                       return
                     }
-                    if (!outletId) {
-                      toast({ title: "Outlet not found", variant: "destructive" })
+                    if (!newBookingData.outletId) {
+                      toast({ title: "Please select an outlet", variant: "destructive" })
                       setIsCreatingAppointment(false)
                       return
                     }
@@ -3423,7 +3506,7 @@ export default function CalendarPage() {
                     const bookingData: any = {
                       service_id: newBookingData.treatmentId,
                       staff_id: newBookingData.staffId,
-                      outlet_id: outletId,
+                      outlet_id: newBookingData.outletId || outletId,
                       appointment_date: newBookingData.date,
                       start_time: newBookingData.time,
                       notes: newBookingData.notes || '',
@@ -3511,6 +3594,7 @@ export default function CalendarPage() {
                     setCustomerSearchResult('not_searched')
                     setCustomerConfirmed(false)
                     setNewBookingData({
+                      outletId: "",
                       treatmentId: "",
                       patientId: "",
                       staffId: "",
@@ -3536,7 +3620,7 @@ export default function CalendarPage() {
                     setIsCreatingAppointment(false)
                   }
                 }}
-                disabled={isCreatingAppointment || (!newBookingData.patientId && !newBookingData.isNewClient) || !newBookingData.treatmentId || !newBookingData.staffId || !newBookingData.date || !newBookingData.time}
+                disabled={isCreatingAppointment || !newBookingData.outletId || (!newBookingData.patientId && !newBookingData.isNewClient) || !newBookingData.treatmentId || !newBookingData.staffId || !newBookingData.date || !newBookingData.time}
                 className="px-10 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2.5"
               >
                 {isCreatingAppointment ? (

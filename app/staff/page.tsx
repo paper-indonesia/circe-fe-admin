@@ -71,6 +71,7 @@ export default function StaffPage() {
     position: "",
     email: "",
     phone: "",
+    outlet_id: "",
     photo: "",
     profile_image_url: "",
     employment_type: "full_time" as "full_time" | "part_time" | "contract" | "freelance" | "intern",
@@ -789,6 +790,7 @@ export default function StaffPage() {
         email: editStaffForm.email,
         phone: editStaffForm.phone,
         position: editStaffForm.position || editStaffForm.role,
+        outlet_id: editStaffForm.outlet_id,
         employment_type: editStaffForm.employment_type,
         is_bookable: editStaffForm.is_bookable,
         accepts_online_booking: editStaffForm.accepts_online_booking,
@@ -1837,6 +1839,23 @@ export default function StaffPage() {
                         </div>
                       </div>
 
+                      {selectedStaff.outlet_id && (
+                        <div>
+                          <Label className="text-sm text-muted-foreground">Outlet Location</Label>
+                          <div className="flex items-center gap-2 text-sm mt-1">
+                            <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span className="font-medium">
+                              {(() => {
+                                const outlet = outlets.find(o => (o._id || o.id) === selectedStaff.outlet_id)
+                                return outlet ? outlet.name : selectedStaff.outlet_id
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       <div>
                         <Label className="text-sm text-muted-foreground">Specialties</Label>
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -1978,6 +1997,7 @@ export default function StaffPage() {
                           position: selectedStaff.position || selectedStaff.role || "",
                           email: selectedStaff.email,
                           phone: selectedStaff.phone || "",
+                          outlet_id: selectedStaff.outlet_id || "",
                           photo: selectedStaff.photo || selectedStaff.profile_image_url || "",
                           profile_image_url: selectedStaff.profile_image_url || selectedStaff.photo || "",
                           employment_type: selectedStaff.employment_type || selectedStaff.employmentType || "full_time",
@@ -2135,18 +2155,21 @@ export default function StaffPage() {
                             Outlet <span className="text-red-500">*</span>
                           </Label>
                           <Select
-                            value={editStaffForm.outlet_id || outlets[0]?.id}
+                            value={editStaffForm.outlet_id || (outlets[0]?._id || outlets[0]?.id)}
                             onValueChange={(value) => setEditStaffForm((prev) => ({ ...prev, outlet_id: value }))}
                           >
                             <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
                               <SelectValue placeholder="Select outlet" />
                             </SelectTrigger>
                             <SelectContent>
-                              {outlets.map((outlet: any) => (
-                                <SelectItem key={outlet.id} value={outlet.id}>
-                                  {outlet.name}
-                                </SelectItem>
-                              ))}
+                              {outlets.map((outlet: any) => {
+                                const outletId = outlet._id || outlet.id
+                                return (
+                                  <SelectItem key={outletId} value={outletId}>
+                                    {outlet.name}
+                                  </SelectItem>
+                                )
+                              })}
                             </SelectContent>
                           </Select>
                         </div>
