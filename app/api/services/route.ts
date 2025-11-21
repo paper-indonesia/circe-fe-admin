@@ -73,6 +73,14 @@ export async function GET(req: NextRequest) {
       currency: service.pricing?.currency || 'IDR',
       isActive: service.is_active !== false && service.isActive !== false,
       status: service.status || 'active',
+      // Keep full pricing object for pricing strategy
+      pricing: service.pricing || {
+        base_price: service.price || 0,
+        currency: service.currency || 'IDR',
+        outlet_prices: {},
+        promotional_price: null,
+        promotional_valid_until: null,
+      },
     })
 
     // Handle different response formats
@@ -181,6 +189,9 @@ export async function POST(req: NextRequest) {
       pricing: {
         base_price: parseFloat(String(body.price || body.pricing?.base_price || 0)) || 0,
         currency: body.currency || body.pricing?.currency || 'IDR',
+        outlet_prices: body.pricing?.outlet_prices || {},
+        promotional_price: body.pricing?.promotional_price ? parseFloat(String(body.pricing.promotional_price)) : undefined,
+        promotional_valid_until: body.pricing?.promotional_valid_until || undefined,
       },
       tags: body.tags || [],
       image_url: body.photo || body.image_url || '',
@@ -235,6 +246,14 @@ export async function POST(req: NextRequest) {
       currency: data.pricing?.currency || 'IDR',
       isActive: data.is_active !== false,
       status: data.status || 'active',
+      // Keep full pricing object
+      pricing: data.pricing || {
+        base_price: data.price || 0,
+        currency: data.currency || 'IDR',
+        outlet_prices: {},
+        promotional_price: null,
+        promotional_valid_until: null,
+      },
     }
 
     return NextResponse.json(frontendData, { status: 201 })
@@ -334,6 +353,9 @@ export async function PUT(req: NextRequest) {
             ? parseFloat(String(updateData.pricing.base_price)) || 0
             : 0,
         currency: updateData.currency || updateData.pricing?.currency || 'IDR',
+        outlet_prices: updateData.pricing?.outlet_prices || {},
+        promotional_price: updateData.pricing?.promotional_price ? parseFloat(String(updateData.pricing.promotional_price)) : undefined,
+        promotional_valid_until: updateData.pricing?.promotional_valid_until || undefined,
       }
     }
 
@@ -383,6 +405,14 @@ export async function PUT(req: NextRequest) {
       currency: data.pricing?.currency || 'IDR',
       isActive: data.is_active !== false,
       status: data.status || 'active',
+      // Keep full pricing object
+      pricing: data.pricing || {
+        base_price: data.price || 0,
+        currency: data.currency || 'IDR',
+        outlet_prices: {},
+        promotional_price: null,
+        promotional_valid_until: null,
+      },
     }
 
     return NextResponse.json(frontendData)

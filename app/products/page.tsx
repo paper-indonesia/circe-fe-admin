@@ -14,10 +14,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/context"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
-import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, Banknote, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp } from "lucide-react"
+import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, Banknote, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp, Sparkles, TrendingDown, Building2, Tag } from "lucide-react"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 import { AddButton } from "@/components/ui/add-button"
+import { PricingStrategySection } from "@/components/pricing-strategy-section"
 
 export default function TreatmentsPage() {
   const { toast } = useToast()
@@ -61,6 +62,8 @@ export default function TreatmentsPage() {
   const [categoryTemplates, setCategoryTemplates] = useState<string[]>([])
   const [loadingCategories, setLoadingCategories] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [outlets, setOutlets] = useState<Array<{ id: string; name: string }>>([])
+  const [loadingOutlets, setLoadingOutlets] = useState(false)
   const pageSize = 10
 
   const [treatmentForm, setTreatmentForm] = useState({
@@ -83,6 +86,10 @@ export default function TreatmentsPage() {
     tags: [] as string[],
     isActive: true,
     status: "active" as "active" | "inactive" | "archived",
+    // Pricing fields
+    outletPrices: {} as Record<string, number>,
+    promotionalPrice: null as number | null,
+    promotionalValidUntil: null as string | null,
   })
 
   useEffect(() => {
@@ -107,6 +114,30 @@ export default function TreatmentsPage() {
     }
 
     fetchCategoryTemplates()
+  }, [])
+
+  useEffect(() => {
+    const fetchOutlets = async () => {
+      setLoadingOutlets(true)
+      try {
+        const response = await fetch('/api/outlets')
+        if (response.ok) {
+          const data = await response.json()
+          // Map outlets to simple format for pricing component
+          const outletsData = (data.items || data || []).map((outlet: any) => ({
+            id: outlet.id || outlet._id,
+            name: outlet.name
+          }))
+          setOutlets(outletsData)
+        }
+      } catch (error) {
+        console.error('Failed to fetch outlets:', error)
+      } finally {
+        setLoadingOutlets(false)
+      }
+    }
+
+    fetchOutlets()
   }, [])
 
   const treatmentsWithStats = useMemo(() => {
@@ -212,6 +243,9 @@ export default function TreatmentsPage() {
           pricing: {
             base_price: treatmentForm.price,
             currency: treatmentForm.currency || "IDR",
+            outlet_prices: treatmentForm.outletPrices || {},
+            promotional_price: treatmentForm.promotionalPrice || undefined,
+            promotional_valid_until: treatmentForm.promotionalValidUntil || undefined,
           },
           tags: treatmentForm.tags,
           image_url: treatmentForm.photo || undefined,
@@ -293,6 +327,9 @@ export default function TreatmentsPage() {
           pricing: {
             base_price: treatmentForm.price,
             currency: treatmentForm.currency || "IDR",
+            outlet_prices: treatmentForm.outletPrices || {},
+            promotional_price: treatmentForm.promotionalPrice || undefined,
+            promotional_valid_until: treatmentForm.promotionalValidUntil || undefined,
           },
           tags: treatmentForm.tags,
           image_url: treatmentForm.photo || undefined,
@@ -448,6 +485,10 @@ export default function TreatmentsPage() {
       tags: treatment.tags || [],
       isActive: treatment.is_active !== false && treatment.isActive !== false,
       status: treatment.status || "active",
+      // Pricing strategy fields
+      outletPrices: treatment.pricing?.outlet_prices || {},
+      promotionalPrice: treatment.pricing?.promotional_price || null,
+      promotionalValidUntil: treatment.pricing?.promotional_valid_until || null,
     }
 
     console.log('[DEBUG] Mapped form data:', formData)
@@ -479,7 +520,35 @@ export default function TreatmentsPage() {
       tags: [],
       isActive: true,
       status: "active",
+      // Reset pricing fields
+      outletPrices: {},
+      promotionalPrice: null,
+      promotionalValidUntil: null,
     })
+  }
+
+  // Helper function to check if promotional price is active
+  const isPromotionalActive = (treatment: any) => {
+    if (!treatment.pricing?.promotional_price || !treatment.pricing?.promotional_valid_until) {
+      return false
+    }
+    return new Date(treatment.pricing.promotional_valid_until) > new Date()
+  }
+
+  // Helper function to get pricing info for display
+  const getPricingInfo = (treatment: any) => {
+    const basePrice = treatment.price ?? treatment.pricing?.base_price ?? 0
+    const hasOutletPricing = treatment.pricing?.outlet_prices && Object.keys(treatment.pricing.outlet_prices).length > 0
+    const promotionalPrice = treatment.pricing?.promotional_price
+    const isPromoActive = isPromotionalActive(treatment)
+
+    return {
+      basePrice,
+      hasOutletPricing,
+      promotionalPrice,
+      isPromoActive,
+      displayPrice: isPromoActive ? promotionalPrice : basePrice
+    }
   }
 
   function getStatusBadge(status: string) {
@@ -647,21 +716,59 @@ export default function TreatmentsPage() {
                         <TableCell className="p-4">
                           <Badge
                             variant="secondary"
-                            className="bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] text-gray-800 border-0"
+                            className="bg-gradient-to-r from-[#8B5CF6] to-[#A78BFA] text-white border-0"
                           >
                             {treatment.category}
                           </Badge>
                         </TableCell>
                         <TableCell className="p-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                              <Clock className="h-3 w-3" />
-                              {treatment.durationMin} min
-                            </div>
-                            <div className="font-semibold text-[#8B5CF6]">
-                              Rp {treatment.price.toLocaleString("id-ID")}
-                            </div>
-                          </div>
+                          {(() => {
+                            const pricingInfo = getPricingInfo(treatment)
+                            return (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <Clock className="h-3 w-3" />
+                                  {treatment.durationMin} min
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {pricingInfo.isPromoActive ? (
+                                    <>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm line-through text-gray-400">
+                                          Rp {pricingInfo.basePrice.toLocaleString("id-ID")}
+                                        </span>
+                                        <span className="font-bold text-orange-600">
+                                          Rp {pricingInfo.promotionalPrice.toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
+                                      <Badge className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-1.5 py-0">
+                                        <Sparkles className="h-3 w-3 mr-0.5" />
+                                        SALE
+                                      </Badge>
+                                    </>
+                                  ) : (
+                                    <span className="font-semibold text-[#8B5CF6]">
+                                      Rp {pricingInfo.basePrice.toLocaleString("id-ID")}
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Pricing indicators */}
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  {pricingInfo.hasOutletPricing && (
+                                    <Badge variant="outline" className="text-xs px-1.5 py-0 border-purple-300 text-purple-700">
+                                      <Building2 className="h-2.5 w-2.5 mr-0.5" />
+                                      {Object.keys(treatment.pricing?.outlet_prices || {}).length} outlets
+                                    </Badge>
+                                  )}
+                                  {treatment.pricing?.promotional_price && !pricingInfo.isPromoActive && (
+                                    <Badge variant="outline" className="text-xs px-1.5 py-0 border-gray-300 text-gray-500">
+                                      Promo expired
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })()}
                         </TableCell>
                         <TableCell className="p-4">{getStatusBadge(treatment.status || "active")}</TableCell>
                         <TableCell className="p-4">{getPopularityBadge(treatment.popularity)}</TableCell>
@@ -1002,6 +1109,28 @@ export default function TreatmentsPage() {
               </div>
             </div>
 
+            {/* Pricing Strategy Section */}
+            <div className="pt-4 border-t">
+              <PricingStrategySection
+                basePrice={treatmentForm.price}
+                currency={treatmentForm.currency}
+                outletPrices={treatmentForm.outletPrices}
+                promotionalPrice={treatmentForm.promotionalPrice}
+                promotionalValidUntil={treatmentForm.promotionalValidUntil}
+                onOutletPricesChange={(outletPrices) => {
+                  setTreatmentForm((prev) => ({ ...prev, outletPrices }))
+                }}
+                onPromotionalPriceChange={(price, validUntil) => {
+                  setTreatmentForm((prev) => ({
+                    ...prev,
+                    promotionalPrice: price,
+                    promotionalValidUntil: validUntil
+                  }))
+                }}
+                availableOutlets={outlets}
+              />
+            </div>
+
             {/* Advanced Settings - Collapsible */}
             <div className="pt-4 border-t">
               <button
@@ -1095,7 +1224,7 @@ export default function TreatmentsPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="maxParallelBookings" className="text-xs">Max Parallel</Label>
+                        <Label htmlFor="maxParallelBookings" className="text-xs">Max Parallel Capacity</Label>
                         <Input
                           id="maxParallelBookings"
                           type="number"

@@ -40,6 +40,7 @@ export interface Booking {
   source: "walk-in" | "online"
   paymentStatus: "unpaid" | "deposit" | "paid"
   notes?: string
+  completion_notes?: string
 }
 
 export interface Payment {

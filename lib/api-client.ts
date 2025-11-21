@@ -404,6 +404,13 @@ class ApiClient {
     })
   }
 
+  async bulkDeleteAvailability(ids: string[]) {
+    return this.request<any>('/api/availability/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    })
+  }
+
   async createBulkAvailability(data: any) {
     return this.request<any>('/api/availability/bulk', {
       method: 'POST',

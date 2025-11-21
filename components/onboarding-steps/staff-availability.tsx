@@ -413,12 +413,9 @@ export function StaffAvailabilityStep({ onValidChange }: StaffAvailabilityStepPr
         return threeMonthsLater.toISOString().split('T')[0]
       })()
 
-      // Convert UI weekday values to API weekday values
-      // UI: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-      // API: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
-      // Mapping: apiDay = (uiDay + 6) % 7
+      // Both UI and API use same convention: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+      // No conversion needed - pass days directly
       const apiRecurrenceDays = availabilityForm.recurrence_days
-        .map(day => (day + 6) % 7)
         .sort((a, b) => a - b) // Sort for consistency
 
       // Create single availability with weekly recurrence

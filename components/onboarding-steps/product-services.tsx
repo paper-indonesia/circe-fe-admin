@@ -597,7 +597,7 @@ export function ProductServicesStep({ onValidChange }: ProductServicesStepProps)
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="max_parallel" className="text-xs">Max Parallel</Label>
+                      <Label htmlFor="max_parallel" className="text-xs">Max Parallel Capacity</Label>
                       <Input
                         id="max_parallel"
                         type="number"

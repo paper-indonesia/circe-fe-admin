@@ -71,6 +71,7 @@ export default function StaffPage() {
     position: "",
     email: "",
     phone: "",
+    outlet_id: "",
     photo: "",
     profile_image_url: "",
     employment_type: "full_time" as "full_time" | "part_time" | "contract" | "freelance" | "intern",
@@ -137,6 +138,9 @@ export default function StaffPage() {
   const [showEditAvailability, setShowEditAvailability] = useState(false)
   const [editingAvailability, setEditingAvailability] = useState<any>(null)
   const [calendarViewDate, setCalendarViewDate] = useState(() => new Date())
+  const [selectedAvailabilityIds, setSelectedAvailabilityIds] = useState<Set<string>>(new Set())
+  const [isBulkMode, setIsBulkMode] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [availabilityForm, setAvailabilityForm] = useState(() => ({
     date: new Date().toISOString().split('T')[0],
     start_time: "09:00",
@@ -314,19 +318,23 @@ export default function StaffPage() {
     setCalendarViewDate(today)
 
     // Set date range for calendar view (7 days from today to avoid API error)
+    // Use format() to avoid timezone issues with toISOString()
     const startDate = today
     const endDate = addDays(today, 6) // 7 days total
 
-    setDateRange({
-      start: startDate.toISOString().split('T')[0],
-      end: endDate.toISOString().split('T')[0]
-    })
+    const newDateRange = {
+      start: format(startDate, 'yyyy-MM-dd'),
+      end: format(endDate, 'yyyy-MM-dd')
+    }
+
+    setDateRange(newDateRange)
 
     // Show dialog and fetch availability for THIS specific staff
     setShowViewAvailability(true)
 
     // Use the staffMember parameter directly, not selectedStaff state
-    await fetchAvailabilityEntries(staffMember.id, false)
+    // IMPORTANT: Pass newDateRange directly to avoid stale state
+    await fetchAvailabilityEntries(staffMember.id, false, newDateRange)
   }
 
   // Handle click on empty date to add availability
@@ -355,12 +363,13 @@ export default function StaffPage() {
     setCalendarViewDate(newDate)
 
     // Update date range to 7 days from newDate
+    // Use format() to avoid timezone issues with toISOString()
     const startDate = newDate
     const endDate = addDays(newDate, 6)
 
     const newDateRange = {
-      start: startDate.toISOString().split('T')[0],
-      end: endDate.toISOString().split('T')[0]
+      start: format(startDate, 'yyyy-MM-dd'),
+      end: format(endDate, 'yyyy-MM-dd')
     }
 
     setDateRange(newDateRange)
@@ -407,29 +416,9 @@ export default function StaffPage() {
     }
   }
 
-  // Create new availability entry
-  const handleCreateAvailability = async () => {
+  // Create new availability entry (callback from AddAvailabilityDialog)
+  const handleCreateAvailability = async (data: any) => {
     if (!selectedStaff) return
-
-    // Validation
-    if (!availabilityForm.date || !availabilityForm.start_time || !availabilityForm.end_time) {
-      toast({
-        title: "Error",
-        description: "Tanggal dan waktu wajib diisi",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Check recurrence validation
-    if (availabilityForm.recurrence_type !== 'none' && !availabilityForm.recurrence_end_date) {
-      toast({
-        title: "Error",
-        description: "Tanggal akhir pengulangan wajib diisi untuk pola berulang",
-        variant: "destructive",
-      })
-      return
-    }
 
     setSavingAvailability(true)
     try {
@@ -449,16 +438,11 @@ export default function StaffPage() {
         throw new Error("Tenant ID tidak ditemukan. Silakan login kembali.")
       }
 
+      // Use data from AddAvailabilityDialog
       const payload: any = {
+        ...data, // All fields from dialog
         tenant_id: tenantId,
-        staff_id: selectedStaff.id,
-        date: availabilityForm.date,
-        start_time: availabilityForm.start_time,
-        end_time: availabilityForm.end_time,
-        availability_type: availabilityTab,
-        recurrence_type: availabilityForm.recurrence_type,
-        is_available: availabilityTab === 'working_hours',
-        notes: availabilityForm.notes || undefined,
+        staff_id: data.staff_id || selectedStaff.id,
       }
 
       // Add outlet_id if available
@@ -466,24 +450,14 @@ export default function StaffPage() {
         payload.outlet_id = selectedStaff.outlet_id || selectedStaff.outletId
       }
 
-      // Add recurrence data if applicable
-      if (availabilityForm.recurrence_type !== 'none') {
-        payload.recurrence_end_date = availabilityForm.recurrence_end_date
-        if (availabilityForm.recurrence_type === 'weekly' && availabilityForm.recurrence_days.length > 0) {
-          payload.recurrence_days = availabilityForm.recurrence_days
-        }
-      }
-
-      // Add service_ids if specified (null = all services)
-      if (availabilityForm.service_ids.length > 0) {
-        payload.service_ids = availabilityForm.service_ids
-      }
+      // Debug log
+      console.log('[StaffPage] Creating availability:', JSON.stringify(payload, null, 2))
 
       await apiClient.createAvailability(payload)
 
       toast({
         title: "Berhasil",
-        description: availabilityForm.recurrence_type !== 'none'
+        description: data.recurrence_type !== 'none'
           ? "Ketersediaan berulang berhasil dibuat"
           : "Ketersediaan berhasil ditambahkan",
       })
@@ -572,6 +546,74 @@ export default function StaffPage() {
         variant: "destructive",
       })
     }
+  }
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedAvailabilityIds.size === 0) {
+      toast({
+        title: "Peringatan",
+        description: "Pilih minimal satu jadwal untuk dihapus",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Apakah Anda yakin ingin menghapus ${selectedAvailabilityIds.size} jadwal ketersediaan?`
+    )
+
+    if (!confirmed) return
+
+    setIsDeleting(true)
+    try {
+      const idsArray = Array.from(selectedAvailabilityIds)
+      const result = await apiClient.bulkDeleteAvailability(idsArray)
+
+      toast({
+        title: "Berhasil",
+        description: result.message || `${result.succeeded} jadwal berhasil dihapus`,
+      })
+
+      // Clear selection and refresh
+      setSelectedAvailabilityIds(new Set())
+      setIsBulkMode(false)
+
+      if (selectedStaff) {
+        await fetchAvailabilityEntries(selectedStaff.id)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Gagal menghapus jadwal",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Toggle bulk selection mode
+  const toggleBulkMode = () => {
+    setIsBulkMode(!isBulkMode)
+    setSelectedAvailabilityIds(new Set()) // Clear selection when toggling
+  }
+
+  // Toggle individual selection
+  const toggleSelection = (id: string) => {
+    const newSelection = new Set(selectedAvailabilityIds)
+    if (newSelection.has(id)) {
+      newSelection.delete(id)
+    } else {
+      newSelection.add(id)
+    }
+    setSelectedAvailabilityIds(newSelection)
+  }
+
+  // Select all visible entries
+  const selectAllVisible = () => {
+    const allIds = new Set(availabilityEntries.map(entry => entry.id))
+    setSelectedAvailabilityIds(allIds)
   }
 
   // Handle edit availability from view dialog
@@ -789,6 +831,7 @@ export default function StaffPage() {
         email: editStaffForm.email,
         phone: editStaffForm.phone,
         position: editStaffForm.position || editStaffForm.role,
+        outlet_id: editStaffForm.outlet_id,
         employment_type: editStaffForm.employment_type,
         is_bookable: editStaffForm.is_bookable,
         accepts_online_booking: editStaffForm.accepts_online_booking,
@@ -1601,7 +1644,7 @@ export default function StaffPage() {
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="inline-flex items-center justify-center w-12 h-8 bg-gradient-to-br from-[#EDE9FE] to-[#8B5CF6] rounded-full">
-                        <span className="text-sm font-semibold text-[#6D28D9]">
+                        <span className="text-sm font-semibold text-white">
                           {Math.round(performance.completionRate)}%
                         </span>
                       </div>
@@ -1837,6 +1880,23 @@ export default function StaffPage() {
                         </div>
                       </div>
 
+                      {selectedStaff.outlet_id && (
+                        <div>
+                          <Label className="text-sm text-muted-foreground">Outlet Location</Label>
+                          <div className="flex items-center gap-2 text-sm mt-1">
+                            <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span className="font-medium">
+                              {(() => {
+                                const outlet = outlets.find(o => (o._id || o.id) === selectedStaff.outlet_id)
+                                return outlet ? outlet.name : selectedStaff.outlet_id
+                              })()}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       <div>
                         <Label className="text-sm text-muted-foreground">Specialties</Label>
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -1909,11 +1969,11 @@ export default function StaffPage() {
                                 <div className="font-semibold text-primary">{performance.totalBookings}</div>
                                 <div className="text-xs text-muted-foreground">Total Bookings</div>
                               </div>
-                              <div className="text-center p-2 bg-muted/30 rounded">
-                                <div className="font-semibold text-green-600">
+                              <div className="text-center p-2 bg-green-100 rounded">
+                                <div className="font-semibold text-green-700">
                                   {Math.round(performance.completionRate)}%
                                 </div>
-                                <div className="text-xs text-muted-foreground">Success Rate</div>
+                                <div className="text-xs text-green-600">Success Rate</div>
                               </div>
                             </div>
                           </div>
@@ -1978,6 +2038,7 @@ export default function StaffPage() {
                           position: selectedStaff.position || selectedStaff.role || "",
                           email: selectedStaff.email,
                           phone: selectedStaff.phone || "",
+                          outlet_id: selectedStaff.outlet_id || "",
                           photo: selectedStaff.photo || selectedStaff.profile_image_url || "",
                           profile_image_url: selectedStaff.profile_image_url || selectedStaff.photo || "",
                           employment_type: selectedStaff.employment_type || selectedStaff.employmentType || "full_time",
@@ -2135,18 +2196,21 @@ export default function StaffPage() {
                             Outlet <span className="text-red-500">*</span>
                           </Label>
                           <Select
-                            value={editStaffForm.outlet_id || outlets[0]?.id}
+                            value={editStaffForm.outlet_id || (outlets[0]?._id || outlets[0]?.id)}
                             onValueChange={(value) => setEditStaffForm((prev) => ({ ...prev, outlet_id: value }))}
                           >
                             <SelectTrigger className="mt-1 border-[#EDE9FE] focus:border-[#8B5CF6]">
                               <SelectValue placeholder="Select outlet" />
                             </SelectTrigger>
                             <SelectContent>
-                              {outlets.map((outlet: any) => (
-                                <SelectItem key={outlet.id} value={outlet.id}>
-                                  {outlet.name}
-                                </SelectItem>
-                              ))}
+                              {outlets.map((outlet: any) => {
+                                const outletId = outlet._id || outlet.id
+                                return (
+                                  <SelectItem key={outletId} value={outletId}>
+                                    {outlet.name}
+                                  </SelectItem>
+                                )
+                              })}
                             </SelectContent>
                           </Select>
                         </div>
@@ -3243,6 +3307,44 @@ export default function StaffPage() {
             </DialogHeader>
 
             <div className="space-y-4">
+                  {/* Bulk Actions Bar */}
+                  <div className="flex items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg border">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={isBulkMode ? "default" : "outline"}
+                        size="sm"
+                        onClick={toggleBulkMode}
+                      >
+                        {isBulkMode ? "Batal" : "Hapus Jadwal"}
+                      </Button>
+                      {isBulkMode && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={selectAllVisible}
+                            disabled={availabilityEntries.length === 0}
+                          >
+                            Pilih Semua ({availabilityEntries.length})
+                          </Button>
+                          <span className="text-sm text-gray-600">
+                            {selectedAvailabilityIds.size} dipilih
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {isBulkMode && selectedAvailabilityIds.size > 0 && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        disabled={isDeleting}
+                      >
+                        {isDeleting ? "Menghapus..." : `Hapus ${selectedAvailabilityIds.size} Jadwal`}
+                      </Button>
+                    )}
+                  </div>
+
                   {/* Calendar Header with Week Navigation */}
                   <div className="flex items-center justify-between mb-4">
                     <Button
@@ -3274,15 +3376,24 @@ export default function StaffPage() {
                     <div className="border rounded-lg overflow-hidden">
                       {/* Calendar Grid */}
                       <div className="grid grid-cols-7 gap-0">
-                        {/* Day Headers */}
-                        {['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'].map((day) => (
-                          <div
-                            key={day}
-                            className="bg-gray-100 p-3 text-center text-sm font-semibold border-b"
-                          >
-                            {day}
-                          </div>
-                        ))}
+                        {/* Day Headers - Dynamic based on actual dates */}
+                        {(() => {
+                          const dayLabels = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab']
+                          const headers = []
+                          for (let i = 0; i < 7; i++) {
+                            const date = addDays(calendarViewDate, i)
+                            const dayOfWeek = date.getDay() // 0=Sunday, 1=Monday, etc.
+                            headers.push(
+                              <div
+                                key={i}
+                                className="bg-gray-100 p-3 text-center text-sm font-semibold border-b"
+                              >
+                                {dayLabels[dayOfWeek]}
+                              </div>
+                            )
+                          }
+                          return headers
+                        })()}
 
                         {/* Calendar Days - Show 7 days only */}
                         {(() => {
@@ -3340,16 +3451,35 @@ export default function StaffPage() {
                                         ? 'Blocked'
                                         : 'Cuti'
 
+                                    const isSelected = selectedAvailabilityIds.has(entry.id)
+
                                     return (
                                       <div
                                         key={entry.id}
-                                        className={`availability-entry text-xs p-1 rounded cursor-pointer hover:opacity-80 border ${colorClasses}`}
+                                        className={`availability-entry text-xs p-1 rounded cursor-pointer hover:opacity-80 border ${colorClasses} ${
+                                          isSelected && isBulkMode ? 'ring-2 ring-blue-500' : ''
+                                        }`}
                                         onClick={(e) => {
                                           e.stopPropagation()
-                                          handleEditAvailabilityFromView(entry)
+                                          if (isBulkMode) {
+                                            toggleSelection(entry.id)
+                                          } else {
+                                            handleEditAvailabilityFromView(entry)
+                                          }
                                         }}
                                         title={`${typeLabel}\n${entry.start_time} - ${entry.end_time}${entry.notes ? '\n' + entry.notes : ''}`}
                                       >
+                                        {isBulkMode && (
+                                          <div className="flex items-center gap-1 mb-0.5">
+                                            <input
+                                              type="checkbox"
+                                              checked={isSelected}
+                                              onChange={() => toggleSelection(entry.id)}
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="h-3 w-3"
+                                            />
+                                          </div>
+                                        )}
                                         <div className="font-semibold text-[10px] opacity-60 mb-0.5">
                                           {typeLabel}
                                         </div>
