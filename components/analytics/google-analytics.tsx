@@ -17,15 +17,25 @@ export function GoogleAnalytics() {
   useEffect(() => {
     const fetchConfig = async () => {
       try {
+        console.log('[Analytics] Fetching config from /api/config/analytics...')
         const response = await fetch('/api/config/analytics')
+        console.log('[Analytics] Response status:', response.status)
+
         if (response.ok) {
           const data = await response.json()
+          console.log('[Analytics] Config received:', data)
+
           if (data.ga_measurement_id) {
             setConfig(data)
+          } else {
+            console.warn('[Analytics] No GA measurement ID in response')
           }
+        } else {
+          const errorText = await response.text()
+          console.error('[Analytics] API error:', response.status, errorText)
         }
       } catch (error) {
-        console.error('Failed to fetch analytics config:', error)
+        console.error('[Analytics] Failed to fetch analytics config:', error)
       }
     }
 
