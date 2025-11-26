@@ -74,7 +74,7 @@ export function Sidebar() {
         label: 'Business',
         items: [
           { name: 'Products', href: '/products', icon: Star },
-          { name: 'Packages', href: '/packages', icon: Gift },
+          // { name: 'Packages', href: '/packages', icon: Gift },
           { name: 'Reports', href: '/reports', icon: BarChart3 },
         ]
       },
