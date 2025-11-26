@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Calendar, Users, Star, Settings, UserPlus, Menu, X, Sparkles, LogOut, BarChart3, Clock, Power, Shield, Building, Crown, HelpCircle, CalendarClock } from "lucide-react"
+import { Home, Calendar, Users, Star, Settings, UserPlus, Menu, X, Sparkles, LogOut, BarChart3, Clock, Power, Shield, Building, Crown, HelpCircle, CalendarClock, Gift } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useLayout } from "./main-layout"
@@ -74,6 +74,7 @@ export function Sidebar() {
         label: 'Business',
         items: [
           { name: 'Products', href: '/products', icon: Star },
+          { name: 'Packages', href: '/packages', icon: Gift },
           { name: 'Reports', href: '/reports', icon: BarChart3 },
         ]
       },

@@ -248,3 +248,156 @@ export interface AvailabilityRecurringResponse {
     end_time: string
   }
 }
+
+// ============================================
+// PACKAGE TYPES
+// ============================================
+
+export interface PackageItem {
+  service_id: string
+  service_name: string
+  quantity: number
+  unit_price: number
+}
+
+export interface Package {
+  id: string
+  tenant_id: string
+  name: string
+  description?: string
+  package_items: PackageItem[]
+  package_price: number
+  currency: string
+  validity_days?: number | null
+  is_active: boolean
+  status: 'active' | 'inactive' | 'archived'
+  outlet_ids: string[]
+  // Calculated fields
+  total_individual_price: number
+  discount_amount: number
+  discount_percentage: number
+  total_purchased: number
+  active_credits_count: number
+  total_revenue: number
+  // Metadata
+  created_at: string
+  updated_at: string
+}
+
+export interface PackageCreate {
+  name: string
+  description?: string
+  package_items: Array<{
+    service_id: string
+    service_name?: string
+    quantity: number
+    unit_price?: number
+  }>
+  package_price: number
+  currency?: string
+  validity_days?: number | null
+  is_active?: boolean
+  status?: 'active' | 'inactive'
+  outlet_ids?: string[]
+}
+
+export interface PackageUpdate {
+  name?: string
+  description?: string
+  package_price?: number
+  validity_days?: number | null
+  is_active?: boolean
+  status?: 'active' | 'inactive' | 'archived'
+  outlet_ids?: string[]
+}
+
+export interface PackageLimits {
+  packages_enabled: boolean
+  max_packages: number
+  current_packages: number
+  remaining_packages: number
+  max_package_items: number
+  limit_reached: boolean
+}
+
+export interface PackageListResponse {
+  items: Package[]
+  total: number
+  page: number
+  size: number
+  pages: number
+}
+
+// ============================================
+// CUSTOMER PACKAGE TYPES
+// ============================================
+
+export interface CustomerCredit {
+  id: string
+  tenant_id: string
+  customer_id: string
+  customer_package_id: string
+  service_id: string
+  service_name: string
+  allocated_credits: number
+  used_credits: number
+  remaining_credits: number
+  expires_at: string
+  is_expired: boolean
+  created_at: string
+}
+
+export interface CustomerPackage {
+  id: string
+  tenant_id: string
+  customer_id: string
+  package_id: string
+  outlet_id: string
+  payment_method: 'manual_onspot' | 'paper_digital' | 'bank_transfer'
+  payment_status: 'pending' | 'paid' | 'failed'
+  amount_paid: number
+  currency: string
+  package_name: string
+  validity_days: number
+  purchased_at: string
+  expires_at: string
+  payment_confirmed_at?: string
+  status: 'active' | 'pending_payment' | 'partially_used' | 'depleted' | 'expired'
+  total_credits: number
+  used_credits: number
+  remaining_credits: number
+  expired_credits: number
+  notes?: string
+  package_details?: Package
+  credits_details?: CustomerCredit[]
+  days_until_expiry: number
+  is_expiring_soon: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CustomerCreditSummary {
+  total_packages: number
+  active_packages: number
+  total_credits: number
+  used_credits: number
+  remaining_credits: number
+  expired_credits: number
+  expiring_soon: number
+}
+
+export interface StaffPackagePurchaseCreate {
+  customer_id: string
+  package_id: string
+  outlet_id: string
+  payment_method?: 'manual_onspot' | 'paper_digital' | 'bank_transfer'
+  amount_paid: number
+  currency?: string
+  notes?: string
+}
+
+export interface CreditRedeemRequest {
+  customer_id: string
+  service_id: string
+  notes?: string
+}
