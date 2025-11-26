@@ -190,12 +190,37 @@ export const trackValidationError = (
 // CONVERSION EVENTS
 // ============================================
 
+// Google Ads Conversion Tracking for Sign-up
+export const trackGoogleAdsSignupConversion = (callback?: () => void) => {
+  if (typeof window !== 'undefined' && window.gtag) {
+    const conversionCallback = () => {
+      console.log('[Google Ads] Signup conversion tracked')
+      if (callback) {
+        callback()
+      }
+    }
+
+    window.gtag('event', 'conversion', {
+      'send_to': 'AW-17652682467/ub6FCO7a_cYbEOOduuFB',
+      'event_callback': conversionCallback
+    })
+
+    console.log('[Google Ads Conversion]', 'AW-17652682467/ub6FCO7a_cYbEOOduuFB')
+  } else if (callback) {
+    // If gtag is not available, still call the callback
+    callback()
+  }
+}
+
 // Create business account (final conversion)
 export const trackCreateBusinessAccount = (
   businessType: string,
   userEmail: string,
   userId?: string
 ) => {
+  // Track Google Ads conversion for signup
+  trackGoogleAdsSignupConversion()
+
   // Track custom event
   trackEvent('create_business_account', {
     registration_step: 3,

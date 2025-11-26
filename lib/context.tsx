@@ -166,7 +166,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           durationMin: t.durationMin || t.duration_minutes || 60,
           duration_minutes: t.duration_minutes || t.durationMin || 60,
           price: parseFloat(t.price || t.pricing?.base_price || 0),
-          currency: t.currency || t.pricing?.currency || 'USD',
+          currency: t.currency || t.pricing?.currency || 'IDR',
           description: t.description || '',
           popularity: t.popularity || 0,
           assignedStaff: t.assignedStaff || t.assigned_staff || [],
@@ -190,7 +190,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Pricing object
           pricing: t.pricing || {
             base_price: t.price || 0,
-            currency: t.currency || 'USD',
+            currency: t.currency || 'IDR',
           },
         }))
 
@@ -270,6 +270,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             paymentStatus: b.paymentStatus || b.payment_status || 'unpaid',
             payment_status: b.payment_status || b.paymentStatus || 'unpaid', // Add snake_case alias for API consistency
             notes: b.notes || '',
+            completion_notes: b.completion_notes || '',
             queueNumber: b.queueNumber || b.queue_number,
             createdAt: new Date(b.createdAt || b.created_at || Date.now()),
             // New fields from appointments API
@@ -279,6 +280,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             services: b.services || [],
             total_price: b.total_price,
             fee_breakdown: b.fee_breakdown,
+            // Payment fields
+            payment_id: b.payment_id,
+            paper_payment_url: b.paper_payment_url,
             // Customer details
             customer: customer || null,
             customer_name: b.customer_name, // Keep original customer_name from API
@@ -605,6 +609,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           paymentStatus: b.paymentStatus || b.payment_status || 'unpaid',
           payment_status: b.payment_status || b.paymentStatus || 'unpaid',
           notes: b.notes || '',
+          completion_notes: b.completion_notes || '',
           queueNumber: b.queueNumber || b.queue_number,
           createdAt: new Date(b.createdAt || b.created_at || Date.now()),
           appointment_date: b.appointment_date,
@@ -613,6 +618,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           services: b.services || [],
           total_price: b.total_price,
           fee_breakdown: b.fee_breakdown,
+          // Payment fields
+          payment_id: b.payment_id,
+          paper_payment_url: b.paper_payment_url,
           customer: customer || null,
           customer_name: b.customer_name, // Keep original customer_name from API
         }
@@ -645,7 +653,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         duration: newTreatment.durationMin || newTreatment.duration_minutes || 60,
         durationMin: newTreatment.durationMin || newTreatment.duration_minutes || 60,
         price: parseFloat(newTreatment.price || newTreatment.pricing?.base_price || 0),
-        currency: newTreatment.currency || newTreatment.pricing?.currency || 'USD',
+        currency: newTreatment.currency || newTreatment.pricing?.currency || 'IDR',
         description: newTreatment.description || '',
         popularity: 0,
         assignedStaff: newTreatment.assignedStaff || newTreatment.assigned_staff || [],
@@ -676,7 +684,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         duration: updatedTreatment.durationMin || updatedTreatment.duration_minutes || 60,
         durationMin: updatedTreatment.durationMin || updatedTreatment.duration_minutes || 60,
         price: parseFloat(updatedTreatment.price || updatedTreatment.pricing?.base_price || 0),
-        currency: updatedTreatment.currency || updatedTreatment.pricing?.currency || 'USD',
+        currency: updatedTreatment.currency || updatedTreatment.pricing?.currency || 'IDR',
         description: updatedTreatment.description || '',
         popularity: updatedTreatment.popularity || 0,
         assignedStaff: updatedTreatment.assignedStaff || updatedTreatment.assigned_staff || [],

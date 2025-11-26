@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useBookings, usePatients, useStaff, useTreatments } from "@/lib/context"
 import { formatCurrency, cn } from "@/lib/utils"
 import { apiClient } from "@/lib/api-client"
+import { calculateEffectivePrice, getPricingDisplayInfo } from "@/lib/pricing-utils"
 import { BookingDateTime } from "@/components/booking-date-time"
 import PaymentStatusDisplay from "@/components/payment-status-display"
 import RecordPaymentDialog from "@/components/record-payment-dialog"
@@ -65,6 +66,7 @@ import {
   Loader2,
   UserPlus,
   RefreshCw,
+  Sparkles,
 } from "lucide-react"
 import { AddButton } from "@/components/ui/add-button"
 import GradientLoading from "@/components/gradient-loading"
@@ -132,6 +134,9 @@ export default function CalendarPage() {
   const [isCompleting, setIsCompleting] = useState(false)
   const [completePaymentStatus, setCompletePaymentStatus] = useState<PaymentStatusResponse | null>(null)
 
+  // Confirm appointment state
+  const [isConfirming, setIsConfirming] = useState(false)
+
   // Record payment state
   const [recordPaymentDialogOpen, setRecordPaymentDialogOpen] = useState(false)
   const [paymentRefreshKey, setPaymentRefreshKey] = useState(0)
@@ -188,6 +193,7 @@ export default function CalendarPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false)
   const [newBookingData, setNewBookingData] = useState<any>({
+    outletId: "",
     treatmentId: "",
     patientId: "",
     staffId: "",
@@ -219,6 +225,9 @@ export default function CalendarPage() {
   const [customerSearchResult, setCustomerSearchResult] = useState<'not_searched' | 'found' | 'not_found'>('not_searched')
   const [customerConfirmed, setCustomerConfirmed] = useState(false)
   const [phoneValidationError, setPhoneValidationError] = useState<string>('')
+
+  // Outlets state
+  const [outlets, setOutlets] = useState<any[]>([])
 
   // Calculate date range based on selection
   const { startDate, endDate } = useMemo(() => {
@@ -255,6 +264,97 @@ export default function CalendarPage() {
 
     return days
   }, [startDate, endDate])
+
+  // Helper function to get effective price for a treatment
+  const getEffectiveTreatmentPrice = useCallback((treatment: any) => {
+    if (!treatment) return 0
+
+    const pricing = treatment.pricing || {
+      base_price: treatment.price || 0,
+      currency: treatment.currency || 'IDR',
+    }
+
+    const result = calculateEffectivePrice(pricing, outletId)
+    return result.price
+  }, [outletId])
+
+  // Helper function to get pricing display info (for strikethrough etc)
+  const getTreatmentPricingDisplay = useCallback((treatment: any, selectedOutletId?: string | null) => {
+    if (!treatment) return {
+      effectivePrice: 0,
+      basePrice: 0,
+      hasPromo: false,
+      isPromoActive: false,
+      hasOutletPricing: false,
+      isOutletPromo: false,
+      source: 'base' as 'promotional' | 'outlet' | 'base'
+    }
+
+    const pricing = treatment.pricing || {
+      base_price: treatment.price || 0,
+      currency: treatment.currency || 'IDR',
+    }
+
+    // Use selectedOutletId if provided, otherwise fall back to outletId
+    const effectiveOutletId = selectedOutletId !== undefined ? selectedOutletId : outletId
+    const displayInfo = getPricingDisplayInfo(pricing, effectiveOutletId)
+    return {
+      effectivePrice: displayInfo.price,
+      basePrice: displayInfo.basePrice,
+      hasPromo: displayInfo.source === 'promotional',
+      isPromoActive: displayInfo.isPromoActive,
+      showStrikethrough: displayInfo.showStrikethrough,
+      discountPercent: displayInfo.discountPercent,
+      hasOutletPricing: displayInfo.source === 'outlet',
+      isOutletPromo: displayInfo.isOutletPromo || false,
+      source: displayInfo.source,
+    }
+  }, [outletId])
+
+  // Helper to format payment URL with protocol
+  const formatPaymentUrl = useCallback((url: string | null | undefined): string => {
+    if (!url) return ''
+    // If URL already has protocol, return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url
+    }
+    // Add https:// protocol
+    return `https://${url}`
+  }, [])
+
+  // Helper to identify payment type for online appointments
+  const getPaymentType = useCallback((booking: any) => {
+    // Check appointment type - could be in 'source' or 'appointment_type' field
+    const appointmentType = booking.source || (booking as any).appointment_type
+
+    // Only for online appointments
+    if (appointmentType !== 'online') {
+      return null
+    }
+
+    // Check for paper_payment_url field (both direct and nested)
+    const paperUrl = (booking as any).paper_payment_url || (booking as any).paperPaymentUrl
+
+    // "Pay on Arrival" - payment not required, no paper URL
+    if (booking.payment_status === 'not_required' && !paperUrl) {
+      return 'pay_on_arrival'
+    }
+
+    // "Pay with Invoice" - pending payment with paper URL
+    if (booking.payment_status === 'pending' && paperUrl) {
+      return 'pay_with_invoice'
+    }
+
+    return null
+  }, [])
+
+  // Count pending invoice payments
+  const pendingInvoiceCount = useMemo(() => {
+    return bookings.filter(booking => {
+      const paymentType = getPaymentType(booking)
+      return paymentType === 'pay_with_invoice' && booking.payment_status === 'pending'
+    }).length
+  }, [bookings, getPaymentType])
 
   // Get bookings for a specific date
   const getBookingsForDate = (date: Date) => {
@@ -326,7 +426,7 @@ export default function CalendarPage() {
 
     const totalRevenue = rangeBookings.reduce((sum, b) => {
       const treatment = treatments.find(t => t.id === b.treatmentId)
-      return sum + (treatment?.price || 0)
+      return sum + getEffectiveTreatmentPrice(treatment)
     }, 0)
 
     const confirmedCount = rangeBookings.filter(b => b.status === 'confirmed').length
@@ -340,11 +440,101 @@ export default function CalendarPage() {
       cancelled: cancelledCount,
       revenue: totalRevenue,
     }
-  }, [bookings, treatments, startDate, endDate])
+  }, [bookings, treatments, startDate, endDate, getEffectiveTreatmentPrice])
+
+  // Auto-refresh when window gains focus (user returns from payment tab)
+  useEffect(() => {
+    const handleFocus = async () => {
+      console.log('[Calendar] Window gained focus - refreshing bookings...')
+      try {
+        await reloadBookings()
+        toast({
+          title: "Bookings refreshed",
+          description: "Latest payment status loaded",
+          duration: 2000,
+        })
+      } catch (error) {
+        console.error('[Calendar] Failed to refresh on focus:', error)
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [reloadBookings, toast])
+
+  // Auto-polling for appointments with pending invoices
+  useEffect(() => {
+    // Get current pending invoices with their IDs
+    const pendingInvoiceIds = bookings
+      .filter(booking => {
+        const paymentType = getPaymentType(booking)
+        return paymentType === 'pay_with_invoice' && booking.payment_status === 'pending'
+      })
+      .map(b => b.id)
+
+    if (pendingInvoiceIds.length === 0) return
+
+    console.log('[Calendar] Detected', pendingInvoiceIds.length, 'pending invoices - starting polling...')
+
+    // Poll every 10 seconds
+    const interval = setInterval(async () => {
+      console.log('[Calendar] Polling for payment status updates...')
+      try {
+        await reloadBookings()
+
+        // Check if any payments were completed
+        const stillPending = bookings
+          .filter(booking => {
+            const paymentType = getPaymentType(booking)
+            return paymentType === 'pay_with_invoice' && booking.payment_status === 'pending'
+          })
+          .map(b => b.id)
+
+        // Find which invoices got paid
+        const completedInvoices = pendingInvoiceIds.filter(id => !stillPending.includes(id))
+
+        if (completedInvoices.length > 0) {
+          toast({
+            title: "Payment received! 🎉",
+            description: `${completedInvoices.length} invoice${completedInvoices.length > 1 ? 's have' : ' has'} been paid. Appointment${completedInvoices.length > 1 ? 's are' : ' is'} now confirmed.`,
+            duration: 5000,
+          })
+        }
+      } catch (error) {
+        console.error('[Calendar] Polling failed:', error)
+      }
+    }, 10000) // 10 seconds
+
+    return () => {
+      console.log('[Calendar] Stopping payment polling')
+      clearInterval(interval)
+    }
+  }, [bookings, getPaymentType, reloadBookings, toast])
+
+  // Auto-update selectedBooking when bookings data changes
+  useEffect(() => {
+    if (selectedBooking && selectedBooking.id) {
+      // Find the updated booking from bookings array
+      const updatedBooking = bookings.find(b => b.id === selectedBooking.id)
+
+      if (updatedBooking) {
+        // Check if there are any changes (payment_status or status)
+        const hasChanges =
+          updatedBooking.payment_status !== selectedBooking.payment_status ||
+          updatedBooking.status !== selectedBooking.status
+
+        if (hasChanges) {
+          console.log('[Calendar] Updating selectedBooking with fresh data')
+          setSelectedBooking(updatedBooking)
+        }
+      }
+    }
+  }, [bookings, selectedBooking])
 
   // Fetch availability grid from API (real-time, no caching)
-  const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string) => {
-    if (!serviceId || !staffId || !outletId) return
+  const fetchAvailabilityGrid = async (serviceId: string, staffId: string, startDate: string, selectedOutletId?: string) => {
+    const effectiveOutletId = selectedOutletId || outletId
+    if (!serviceId || !staffId || !effectiveOutletId) return
 
     // Get selected treatment to use its duration
     const selectedTreatment = treatments.find(t => t.id === serviceId)
@@ -355,6 +545,7 @@ export default function CalendarPage() {
       console.log('[Calendar] Fetching availability grid from API (real-time):', {
         serviceId,
         staffId,
+        outletId: effectiveOutletId,
         startDate,
         slotInterval
       })
@@ -363,7 +554,7 @@ export default function CalendarPage() {
         `/api/availability/grid?` +
         `service_id=${serviceId}&` +
         `staff_id=${staffId}&` +
-        `outlet_id=${outletId}&` +
+        `outlet_id=${effectiveOutletId}&` +
         `start_date=${startDate}&` +
         `num_days=7&` +
         `slot_interval_minutes=${slotInterval}`
@@ -399,6 +590,26 @@ export default function CalendarPage() {
     }
   }, [staff])
 
+  // Fetch outlets on mount
+  useEffect(() => {
+    const fetchOutlets = async () => {
+      try {
+        const response = await fetch('/api/outlets')
+        if (response.ok) {
+          const data = await response.json()
+          // Handle both paginated and non-paginated responses
+          const outletsList = data.items || data.data || data
+          setOutlets(Array.isArray(outletsList) ? outletsList : [])
+          console.log('[Calendar] Outlets loaded:', outletsList)
+        }
+      } catch (error) {
+        console.error('[Calendar] Error fetching outlets:', error)
+      }
+    }
+
+    fetchOutlets()
+  }, [])
+
   // Reset weekStart and clear cache when service or staff changes
   useEffect(() => {
     // Reset to today when service or staff changes
@@ -408,7 +619,7 @@ export default function CalendarPage() {
 
   // Trigger availability grid fetch when treatment and staff are selected
   useEffect(() => {
-    if (newBookingData.treatmentId && newBookingData.staffId && outletId) {
+    if (newBookingData.treatmentId && newBookingData.staffId && newBookingData.outletId) {
       // Use today's date or week start, whichever is later
       const today = startOfDay(new Date())
       const weekStartDay = startOfDay(weekStart)
@@ -418,20 +629,21 @@ export default function CalendarPage() {
       console.log('[Calendar] useEffect triggered - Fetching availability grid:', {
         treatmentId: newBookingData.treatmentId,
         staffId: newBookingData.staffId,
+        outletId: newBookingData.outletId,
         weekStart: format(weekStart, 'yyyy-MM-dd'),
         startDate: startDateStr,
         today: format(today, 'yyyy-MM-dd')
       })
 
-      fetchAvailabilityGrid(newBookingData.treatmentId, newBookingData.staffId, startDateStr)
+      fetchAvailabilityGrid(newBookingData.treatmentId, newBookingData.staffId, startDateStr, newBookingData.outletId)
     } else {
       console.log('[Calendar] useEffect skipped - Missing data:', {
         hasTreatment: !!newBookingData.treatmentId,
         hasStaff: !!newBookingData.staffId,
-        hasOutlet: !!outletId
+        hasOutlet: !!newBookingData.outletId
       })
     }
-  }, [newBookingData.treatmentId, newBookingData.staffId, weekStart, outletId])
+  }, [newBookingData.treatmentId, newBookingData.staffId, newBookingData.outletId, weekStart])
 
   // Load initial customers
   const loadInitialCustomers = async () => {
@@ -724,6 +936,7 @@ export default function CalendarPage() {
   const handleNewBookingFromCalendar = (date: Date) => {
     setNewBookingData({
       ...newBookingData,
+      outletId: outletId || "", // Set current outlet as default
       date: format(date, "yyyy-MM-dd")
     })
     setNewBookingOpen(true)
@@ -732,6 +945,7 @@ export default function CalendarPage() {
 
   const handleNewBookingFromButton = () => {
     setNewBookingData({
+      outletId: outletId || "", // Set current outlet as default
       treatmentId: "",
       patientId: "",
       staffId: "",
@@ -1053,6 +1267,52 @@ export default function CalendarPage() {
     setCompleteDialogOpen(true)
   }
 
+  const handleConfirmAppointment = async () => {
+    if (!selectedBooking) return
+
+    setIsConfirming(true)
+    try {
+      const response = await fetch(`/api/appointments/${selectedBooking.id}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to confirm appointment')
+      }
+
+      toast({
+        title: "Appointment confirmed",
+        description: "The appointment has been confirmed successfully",
+      })
+
+      // Reload bookings to refresh the list
+      await reloadBookings()
+
+      // Update selectedBooking with confirmed status
+      if (selectedBooking) {
+        setSelectedBooking({
+          ...selectedBooking,
+          status: 'confirmed',
+          confirmed_at: data.confirmed_at || new Date().toISOString()
+        })
+      }
+    } catch (error: any) {
+      console.error('Failed to confirm appointment:', error)
+      toast({
+        title: "Failed to confirm appointment",
+        description: error?.message || "An error occurred while confirming the appointment",
+        variant: "destructive"
+      })
+    } finally {
+      setIsConfirming(false)
+    }
+  }
+
   const handleConfirmComplete = async () => {
     if (!selectedBooking) return
 
@@ -1197,6 +1457,17 @@ export default function CalendarPage() {
             <p className="text-gray-500 mt-1">Manage your bookings and schedule</p>
           </div>
           <div className="flex items-center gap-3">
+            {/* {pendingInvoiceCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-medium text-amber-700">
+                    {pendingInvoiceCount} invoice{pendingInvoiceCount > 1 ? 's' : ''} pending
+                  </span>
+                </div>
+                <span className="text-[10px] text-amber-600">Auto-updating...</span>
+              </div>
+            )} */}
             <Button
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -1359,7 +1630,7 @@ export default function CalendarPage() {
                   // Calculate day revenue
                   const dayRevenue = dayBookings.reduce((sum, b) => {
                     const treatment = treatments.find(t => t.id === b.treatmentId)
-                    return sum + (treatment?.price || 0)
+                    return sum + getEffectiveTreatmentPrice(treatment)
                   }, 0)
 
                   return (
@@ -1398,14 +1669,24 @@ export default function CalendarPage() {
                           <div className="space-y-1.5">
                             {dayBookings.slice(0, 2).map((booking, i) => {
                               const treatment = treatments.find(t => t.id === booking.treatmentId)
+                              const pricingDisplay = getTreatmentPricingDisplay(treatment)
                               return (
                                 <div
                                   key={i}
                                   className={cn(
-                                    "text-xs px-2 py-1.5 rounded-md truncate shadow-sm",
+                                    "text-xs px-2 py-1.5 rounded-md shadow-sm relative",
                                     getStatusColor(booking.status)
                                   )}
                                 >
+                                  {pricingDisplay.showStrikethrough ? (
+                                    <div className="absolute -top-1 -right-1 bg-orange-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-sm">
+                                      %
+                                    </div>
+                                  ) : pricingDisplay.hasOutletPricing ? (
+                                    <div className="absolute -top-1 -right-1 bg-purple-500 text-white text-[8px] font-bold px-1 py-0.5 rounded-sm">
+                                      O
+                                    </div>
+                                  ) : null}
                                   <div className="flex items-center justify-between gap-1">
                                     <div className="font-semibold truncate">
                                       {format(new Date(booking.startAt), "HH:mm")}
@@ -1576,7 +1857,36 @@ export default function CalendarPage() {
                           <TableCell className="py-3 px-4">
                             {getPaymentStatusBadge((booking as any).payment_status)}
                           </TableCell>
-                          <TableCell className="py-3 px-4 text-sm font-medium">{formatCurrency(treatment?.price || 0)}</TableCell>
+                          <TableCell className="py-3 px-4">
+                            {(() => {
+                              const pricingDisplay = getTreatmentPricingDisplay(treatment)
+                              return (
+                                <div className="flex items-center gap-2">
+                                  {pricingDisplay.showStrikethrough ? (
+                                    <>
+                                      <span className="text-xs line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                      <span className="text-sm font-semibold text-orange-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                      <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-[10px] px-1.5 py-0">
+                                        <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                                        PROMO
+                                      </Badge>
+                                    </>
+                                  ) : pricingDisplay.hasOutletPricing ? (
+                                    <>
+                                      <span className="text-xs line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                      <span className="text-sm font-semibold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                      <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 text-[10px] px-1.5 py-0">
+                                        <Building2 className="h-2.5 w-2.5 mr-0.5" />
+                                        OUTLET
+                                      </Badge>
+                                    </>
+                                  ) : (
+                                    <span className="text-sm font-medium text-gray-900">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                  )}
+                                </div>
+                              )
+                            })()}
+                          </TableCell>
                           <TableCell className="py-3 px-4 text-right">
                             <Button
                               variant="ghost"
@@ -1610,19 +1920,16 @@ export default function CalendarPage() {
                       Previous
                     </Button>
                     <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      {Array.from({ length: Math.min(10, totalPages) }, (_, i) => {
                         let pageNum = i
-                        if (totalPages > 5) {
-                          if (tablePage > 2) {
-                            pageNum = tablePage - 2 + i
-                          }
-                          if (pageNum >= totalPages) {
-                            pageNum = totalPages - 5 + i
-                          }
+                        if (totalPages > 10) {
+                          // Calculate start page to center current page
+                          let startPage = Math.max(0, Math.min(tablePage - 4, totalPages - 10))
+                          pageNum = startPage + i
                         }
                         return (
                           <Button
-                            key={pageNum}
+                            key={`page-${pageNum}`}
                             variant={tablePage === pageNum ? "default" : "outline"}
                             size="sm"
                             className={cn(
@@ -1654,7 +1961,7 @@ export default function CalendarPage() {
 
         {/* Sliding Panel for Date Details */}
         <Sheet open={slideOpen} onOpenChange={setSlideOpen}>
-          <SheetContent className="w-[1000px] sm:w-[1100px] max-w-[95vw] overflow-y-auto bg-gray-50">
+          <SheetContent className="w-[600px] m:w-[1200px] max-w-[95vw] overflow-y-auto bg-gray-50">
             <SheetHeader className="border-b border-gray-200 pb-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
@@ -1836,7 +2143,7 @@ export default function CalendarPage() {
                                       </div>
 
                                       {/* Details Grid */}
-                                      <div className="grid grid-cols-2 gap-3 text-xs">
+                                      <div className="grid grid-cols-4 gap-4 text-xs">
                                         <div className="flex items-center gap-2">
                                           <Star className="h-3.5 w-3.5 text-[#8B5CF6] flex-shrink-0" />
                                           <div className="min-w-0">
@@ -1863,12 +2170,73 @@ export default function CalendarPage() {
 
                                         <div className="flex items-center gap-2">
                                           <Banknote className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
-                                          <div className="min-w-0">
+                                          <div className="min-w-0 flex-1">
                                             <p className="text-gray-400 text-[10px]">Price</p>
-                                            <p className="font-semibold text-gray-900">{formatCurrency(treatment?.price || 0)}</p>
+                                            {(() => {
+                                              const pricingDisplay = getTreatmentPricingDisplay(treatment)
+                                              return pricingDisplay.showStrikethrough ? (
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                  <span className="text-xs line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                                  <span className="font-bold text-orange-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-[9px] px-1 py-0">
+                                                    PROMO
+                                                  </Badge>
+                                                </div>
+                                              ) : pricingDisplay.hasOutletPricing ? (
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                  <span className="text-xs line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                                  <span className="font-bold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                  <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100 text-[9px] px-1 py-0">
+                                                    OUTLET
+                                                  </Badge>
+                                                </div>
+                                              ) : (
+                                                <p className="font-semibold text-gray-900">{formatCurrency(pricingDisplay.effectivePrice)}</p>
+                                              )
+                                            })()}
                                           </div>
                                         </div>
                                       </div>
+
+                                      {/* Payment Type Indicator for Online Bookings */}
+                                      {(() => {
+                                        const paymentType = getPaymentType(booking)
+                                        if (!paymentType) return null
+
+                                        return (
+                                          <div className="mt-3 pt-3 border-t border-gray-100">
+                                            <div className="flex items-center gap-2">
+                                              <CreditCard className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                              <div className="flex-1">
+                                                <p className="text-gray-400 text-[10px]">Payment Method</p>
+                                                {paymentType === 'pay_on_arrival' ? (
+                                                  <div className="flex items-center gap-2 mt-0.5">
+                                                    <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[9px] px-2 py-0.5">
+                                                      Pay on Arrival
+                                                    </Badge>
+                                                    <span className="text-xs text-gray-500">Can be manually paid</span>
+                                                  </div>
+                                                ) : (
+                                                  <div className="flex items-center gap-2 mt-0.5">
+                                                    <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[9px] px-2 py-0.5">
+                                                      Pay with Invoice
+                                                    </Badge>
+                                                    <a
+                                                      href={formatPaymentUrl(booking.paper_payment_url)}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                                                      onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                      View Invoice →
+                                                    </a>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      })()}
 
                                       {/* Notes */}
                                       {booking.notes && (
@@ -2137,10 +2505,88 @@ export default function CalendarPage() {
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-[10px] text-gray-400 font-semibold mb-1">TOTAL PRICE</p>
-                          <p className="text-gray-900 font-bold text-base">{formatCurrency((selectedBooking as any).total_price || treatment?.price || 0)}</p>
+                          {(() => {
+                            const pricingDisplay = getTreatmentPricingDisplay(treatment)
+                            return (
+                              <div className="flex items-center gap-2">
+                                {pricingDisplay.showStrikethrough ? (
+                                  <>
+                                    <span className="text-sm line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                    <span className="text-lg font-bold text-orange-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                    <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[10px] px-1.5 py-0.5">
+                                      <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                                      -{pricingDisplay.discountPercent}%
+                                    </Badge>
+                                  </>
+                                ) : pricingDisplay.hasOutletPricing ? (
+                                  <>
+                                    <span className="text-sm line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                    <span className="text-lg font-bold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                    <Badge className="bg-purple-500 hover:bg-purple-600 text-white text-[10px] px-1.5 py-0.5">
+                                      <Building2 className="h-2.5 w-2.5 mr-0.5" />
+                                      OUTLET
+                                    </Badge>
+                                  </>
+                                ) : (
+                                  <span className="text-gray-900 font-bold text-base">{formatCurrency((selectedBooking as any).total_price || pricingDisplay.effectivePrice)}</span>
+                                )}
+                              </div>
+                            )
+                          })()}
                         </div>
                       </div>
                     </div>
+
+                    {/* Payment Method Info for Online Bookings */}
+                    {(() => {
+                      const paymentType = getPaymentType(selectedBooking)
+                      if (!paymentType) return null
+
+                      return (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1 h-3 bg-[#8B5CF6] rounded-full"></div>
+                            <h3 className="text-xs font-bold text-gray-900">Payment Method</h3>
+                          </div>
+                          <div className="bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-lg p-4 border border-gray-200">
+                            {paymentType === 'pay_on_arrival' ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1">
+                                    Pay on Arrival
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600">
+                                  Customer will pay at the venue. You can manually record the payment when they arrive.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Badge className="bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1">
+                                    Pay with Invoice
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-gray-600 mb-2">
+                                  Customer should complete payment via invoice before appointment.
+                                </p>
+                                {selectedBooking.paper_payment_url && (
+                                  <a
+                                    href={formatPaymentUrl(selectedBooking.paper_payment_url)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium"
+                                  >
+                                    <CreditCard className="h-3.5 w-3.5" />
+                                    View Payment Invoice →
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })()}
 
                     {/* Notes */}
                     {(selectedBooking.notes || isEditMode) && (
@@ -2161,6 +2607,19 @@ export default function CalendarPage() {
                             <p className="text-xs text-gray-700">{selectedBooking.notes}</p>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Completion Notes */}
+                    {selectedBooking.completion_notes && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-1 h-3 bg-[#8B5CF6] rounded-full"></div>
+                          <h3 className="text-xs font-bold text-gray-900">Completion Notes</h3>
+                        </div>
+                        <div className="bg-green-50 border-l-4 border-green-400 rounded-lg p-3">
+                          <p className="text-xs text-gray-700">{selectedBooking.completion_notes}</p>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2191,6 +2650,58 @@ export default function CalendarPage() {
                           This appointment has been {(selectedBooking.status === 'no-show' || selectedBooking.status === 'no_show') ? 'marked as no-show' : selectedBooking.status}
                         </p>
                       </div>
+                    ) : selectedBooking.status === 'pending' ? (
+                      (() => {
+                        const paymentType = getPaymentType(selectedBooking)
+                        const isPayWithInvoice = paymentType === 'pay_with_invoice'
+                        const canConfirm = !isPayWithInvoice || selectedBooking.payment_status === 'paid'
+
+                        return (
+                          <>
+                            <Button
+                              variant="outline"
+                              className="flex-1 h-10 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 text-sm"
+                              onClick={() => handleDeleteBooking(selectedBooking.id)}
+                              disabled={isConfirming}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Cancel
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="flex-1 h-10 border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 text-sm"
+                              onClick={handleOpenReschedule}
+                              disabled={isConfirming}
+                            >
+                              <Clock className="h-3.5 w-3.5 mr-2" />
+                              Reschedule
+                            </Button>
+                            <Button
+                              className="flex-1 h-10 bg-green-600 hover:bg-green-700 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                              onClick={handleConfirmAppointment}
+                              disabled={isConfirming || !canConfirm}
+                              title={!canConfirm ? "Waiting for invoice payment" : ""}
+                            >
+                              {isConfirming ? (
+                                <>
+                                  <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                                  Confirming...
+                                </>
+                              ) : !canConfirm ? (
+                                <>
+                                  <CreditCard className="h-3.5 w-3.5 mr-2" />
+                                  Bayar Invoice Dulu
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
+                                  Confirm
+                                </>
+                              )}
+                            </Button>
+                          </>
+                        )
+                      })()
                     ) : (
                       <>
                         <Button
@@ -2250,11 +2761,51 @@ export default function CalendarPage() {
 
             {/* Main Content - Scrollable */}
             <div className="flex-1 overflow-y-auto px-7 py-6">
-              {/* Top Bar: Customer, Service, Staff - 12 Column Grid */}
+              {/* Outlet Selection - Full Width */}
+              <div className="mb-6 pb-6 border-b border-gray-200">
+                <Label className="text-sm font-semibold text-gray-800 mb-3 block">Outlet Location</Label>
+                <div className="w-full max-w-md space-y-2">
+                  <Select
+                    value={newBookingData.outletId || ''}
+                    onValueChange={(value) => {
+                      setNewBookingData({
+                        ...newBookingData,
+                        outletId: value,
+                        treatmentId: "", // Reset treatment when outlet changes
+                        staffId: "",
+                        date: "",
+                        time: ""
+                      })
+                    }}
+                  >
+                    <SelectTrigger className="h-12 text-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 bg-white">
+                      <SelectValue placeholder="Select outlet location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {outlets.map((outlet) => (
+                        <SelectItem key={outlet.id} value={outlet.id}>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-indigo-500" />
+                            <span className="font-medium">{outlet.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {newBookingData.outletId && (
+                    <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-purple-500" />
+                      Service prices may vary by outlet
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Customer, Service, Staff - 3 Column Grid */}
               <div className="grid grid-cols-12 gap-6 mb-8">
                 {/* Customer Selection - 4 cols */}
-                <div className="col-span-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                <div className="col-span-4 space-y-2">
+                  <div className="flex items-center justify-between h-[28px]">
                     <Label className="text-sm font-semibold text-gray-800">Customer</Label>
                     <div className="flex gap-1.5 bg-gray-100 p-1 rounded-lg">
                       <button
@@ -2396,7 +2947,7 @@ export default function CalendarPage() {
                         // Selected Customer Chip
                         const selectedCustomer = customers.find(c => (c._id || c.id) === newBookingData.patientId)
                         return selectedCustomer && (
-                          <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50/60 border border-indigo-200 rounded-lg">
+                          <div className="flex items-center gap-2 px-3 h-11 bg-indigo-50/60 border border-indigo-200 rounded-lg">
                             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                               {selectedCustomer.first_name?.charAt(0)}{selectedCustomer.last_name?.charAt(0)}
                             </div>
@@ -2559,8 +3110,14 @@ export default function CalendarPage() {
 
                 {/* Service Selection - 4 cols */}
                 <div className="col-span-4 space-y-2">
-                  <Label className="text-sm font-semibold text-gray-800">Service</Label>
-                  {!newBookingData.treatmentId ? (
+                  <div className="h-[28px] flex items-center">
+                    <Label className="text-sm font-semibold text-gray-800">Service</Label>
+                  </div>
+                  {!newBookingData.outletId ? (
+                    <div className="h-11 flex items-center px-3 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-500">
+                      Please select an outlet first
+                    </div>
+                  ) : !newBookingData.treatmentId ? (
                     <div className="relative">
                       <Select
                         value={newBookingData.treatmentId}
@@ -2592,15 +3149,37 @@ export default function CalendarPage() {
                                 t.category?.toLowerCase().includes(treatmentSearch.toLowerCase())
                               )
                             return filtered.length > 0 ? (
-                              filtered.map((treatment) => (
+                              filtered.map((treatment) => {
+                                const pricingDisplay = getTreatmentPricingDisplay(treatment, newBookingData.outletId)
+                                return (
                                 <SelectItem key={treatment.id} value={treatment.id} className="group relative text-sm py-2.5">
                                   <div className="flex items-center gap-2.5">
                                     <Star className="h-4 w-4 text-[#8B5CF6] flex-shrink-0" />
                                     <div className="flex-1 min-w-0">
                                       <p className="font-medium truncate text-sm">{treatment.name}</p>
-                                      <p className="text-xs text-gray-500">
-                                        {formatCurrency(treatment.price)} · {treatment.duration || treatment.durationMin} min
-                                      </p>
+                                      <div className="flex items-center gap-2 text-xs">
+                                        {pricingDisplay.source === 'promotional' ? (
+                                          <>
+                                            <span className="line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                            <span className="font-semibold text-orange-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                            <span className="text-[10px] bg-orange-100 text-orange-700 px-1 py-0.5 rounded">PROMO</span>
+                                          </>
+                                        ) : pricingDisplay.source === 'outlet' && pricingDisplay.isOutletPromo ? (
+                                          <>
+                                            <span className="line-through text-gray-400">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                            <span className="font-semibold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                            <span className="text-[10px] bg-purple-100 text-purple-700 px-1 py-0.5 rounded">OUTLET PROMO</span>
+                                          </>
+                                        ) : pricingDisplay.source === 'outlet' ? (
+                                          <>
+                                            <span className="font-semibold text-purple-600">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                            <span className="text-[10px] bg-purple-100 text-purple-700 px-1 py-0.5 rounded">OUTLET</span>
+                                          </>
+                                        ) : (
+                                          <span className="text-gray-500">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                        )}
+                                        <span className="text-gray-500">· {treatment.duration || treatment.durationMin} min</span>
+                                      </div>
                                     </div>
                                   </div>
 
@@ -2615,7 +3194,37 @@ export default function CalendarPage() {
                                           )}
                                         </div>
                                         <div className="space-y-0.5 text-gray-300">
-                                          <p>💰 {formatCurrency(treatment.price)}</p>
+                                          {pricingDisplay.source === 'promotional' ? (
+                                            <div className="flex items-center gap-2">
+                                              <p>💰</p>
+                                              <div>
+                                                <span className="line-through text-gray-500">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                                {' → '}
+                                                <span className="font-bold text-orange-400">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                <span className="ml-1 text-[10px] bg-orange-600 px-1.5 py-0.5 rounded">-{pricingDisplay.discountPercent}%</span>
+                                              </div>
+                                            </div>
+                                          ) : pricingDisplay.source === 'outlet' && pricingDisplay.isOutletPromo ? (
+                                            <div className="flex items-center gap-2">
+                                              <p>💰</p>
+                                              <div>
+                                                <span className="line-through text-gray-500">{formatCurrency(pricingDisplay.basePrice)}</span>
+                                                {' → '}
+                                                <span className="font-bold text-purple-400">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                <span className="ml-1 text-[10px] bg-purple-600 px-1.5 py-0.5 rounded">OUTLET -{pricingDisplay.discountPercent}%</span>
+                                              </div>
+                                            </div>
+                                          ) : pricingDisplay.source === 'outlet' ? (
+                                            <div className="flex items-center gap-2">
+                                              <p>💰</p>
+                                              <div>
+                                                <span className="font-bold text-purple-400">{formatCurrency(pricingDisplay.effectivePrice)}</span>
+                                                <span className="ml-1 text-[10px] bg-purple-600 px-1.5 py-0.5 rounded">OUTLET</span>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <p>💰 {formatCurrency(pricingDisplay.effectivePrice)}</p>
+                                          )}
                                           <p>⏱️ {treatment.duration || treatment.durationMin} minutes</p>
                                           {treatment.description && (
                                             <p className="text-xs text-gray-400 mt-1 pt-1 border-t border-gray-700">{treatment.description}</p>
@@ -2627,7 +3236,7 @@ export default function CalendarPage() {
                                     </div>
                                   </div>
                                 </SelectItem>
-                              ))
+                              )})
                             ) : (
                               <div className="py-6 text-center text-sm text-gray-500">
                                 No services found
@@ -2639,11 +3248,12 @@ export default function CalendarPage() {
                     </div>
                   ) : (() => {
                     const selected = treatments.find(t => t.id === newBookingData.treatmentId)
+                    const pricingDisplay = selected ? getTreatmentPricingDisplay(selected, newBookingData.outletId) : null
                     return selected && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-[#EDE9FE]/60 border border-[#C4B5FD] rounded-lg">
+                      <div className="flex items-center gap-2 px-3 h-11 bg-[#EDE9FE]/60 border border-[#C4B5FD] rounded-lg">
                         <Star className="h-4 w-4 text-[#8B5CF6] flex-shrink-0" />
                         <span className="text-sm text-gray-900 flex-1 truncate">
-                          {selected.name} · <span className="text-[#8B5CF6]">{formatCurrency(selected.price)}</span> · {selected.duration || selected.durationMin} min
+                          {selected.name} · <span className="text-[#8B5CF6]">{formatCurrency(pricingDisplay?.effectivePrice || selected.price)}</span> · {selected.duration || selected.durationMin} min
                         </span>
                         <button
                           type="button"
@@ -2659,8 +3269,14 @@ export default function CalendarPage() {
 
                 {/* Staff Selection - 4 cols */}
                 <div className="col-span-4 space-y-2">
-                  <Label className="text-sm font-semibold text-gray-800">Staff</Label>
-                  {!newBookingData.staffId ? (
+                  <div className="h-[28px] flex items-center">
+                    <Label className="text-sm font-semibold text-gray-800">Staff</Label>
+                  </div>
+                  {!newBookingData.outletId ? (
+                    <div className="h-11 flex items-center px-3 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-500">
+                      Please select an outlet first
+                    </div>
+                  ) : !newBookingData.staffId ? (
                     <div className="relative">
                       <Select
                         value={newBookingData.staffId}
@@ -2690,6 +3306,11 @@ export default function CalendarPage() {
                             let availableStaff = treatment?.staffIds?.length
                               ? staff.filter(s => treatment.staffIds.includes(s.id))
                               : staff
+
+                            // Filter by outlet - staff must work at the selected outlet
+                            if (newBookingData.outletId) {
+                              availableStaff = availableStaff.filter(s => s.outlet_id === newBookingData.outletId)
+                            }
 
                             // Apply search filter
                             const filtered = availableStaff.filter(s =>
@@ -2737,7 +3358,9 @@ export default function CalendarPage() {
                               ))
                             ) : (
                               <div className="py-6 text-center text-sm text-gray-500">
-                                No staff found
+                                {newBookingData.outletId
+                                  ? "No staff available at this outlet for the selected service"
+                                  : "No staff found"}
                               </div>
                             )
                           })()}
@@ -2747,7 +3370,7 @@ export default function CalendarPage() {
                   ) : (() => {
                     const selectedStaff = staff.find(s => s.id === newBookingData.staffId)
                     return selectedStaff && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50/60 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 px-3 h-11 bg-blue-50/60 border border-blue-200 rounded-lg">
                         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
                           {selectedStaff.name.charAt(0)}
                         </div>
@@ -2893,8 +3516,8 @@ export default function CalendarPage() {
                       setIsCreatingAppointment(false)
                       return
                     }
-                    if (!outletId) {
-                      toast({ title: "Outlet not found", variant: "destructive" })
+                    if (!newBookingData.outletId) {
+                      toast({ title: "Please select an outlet", variant: "destructive" })
                       setIsCreatingAppointment(false)
                       return
                     }
@@ -2906,7 +3529,7 @@ export default function CalendarPage() {
                     const bookingData: any = {
                       service_id: newBookingData.treatmentId,
                       staff_id: newBookingData.staffId,
-                      outlet_id: outletId,
+                      outlet_id: newBookingData.outletId || outletId,
                       appointment_date: newBookingData.date,
                       start_time: newBookingData.time,
                       notes: newBookingData.notes || '',
@@ -2994,6 +3617,7 @@ export default function CalendarPage() {
                     setCustomerSearchResult('not_searched')
                     setCustomerConfirmed(false)
                     setNewBookingData({
+                      outletId: "",
                       treatmentId: "",
                       patientId: "",
                       staffId: "",
@@ -3019,7 +3643,7 @@ export default function CalendarPage() {
                     setIsCreatingAppointment(false)
                   }
                 }}
-                disabled={isCreatingAppointment || (!newBookingData.patientId && !newBookingData.isNewClient) || !newBookingData.treatmentId || !newBookingData.staffId || !newBookingData.date || !newBookingData.time}
+                disabled={isCreatingAppointment || !newBookingData.outletId || (!newBookingData.patientId && !newBookingData.isNewClient) || !newBookingData.treatmentId || !newBookingData.staffId || !newBookingData.date || !newBookingData.time}
                 className="px-10 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold text-base rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2.5"
               >
                 {isCreatingAppointment ? (
@@ -3421,7 +4045,7 @@ export default function CalendarPage() {
                     if (pendingAppointment) {
                       // Get treatment to calculate total amount
                       const treatment = treatments.find(t => t.id === pendingAppointment.treatmentId)
-                      const totalAmount = treatment?.price || 0
+                      const totalAmount = getEffectiveTreatmentPrice(treatment)
 
                       // Set selected booking
                       setSelectedBooking(pendingAppointment)
