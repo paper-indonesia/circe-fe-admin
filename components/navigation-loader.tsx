@@ -40,6 +40,8 @@ export function NavigationLoader() {
       setLoadingText('Loading Availability')
     } else if (pathname.includes('/help-desk')) {
       setLoadingText('Loading Help Desk')
+    } else if (pathname.includes('/packages')) {
+      setLoadingText('Loading Package')
     } else {
       setLoadingText('Loading')
     }

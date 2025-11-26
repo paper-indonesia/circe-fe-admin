@@ -432,6 +432,121 @@ class ApiClient {
 
     return this.request<any[]>(`/api/availability/staff/${staffId}?${query.toString()}`)
   }
+
+  // Package endpoints
+  async getPackages(params?: {
+    page?: number
+    size?: number
+    status?: string
+    is_active?: boolean
+    outlet_id?: string
+  }) {
+    const query = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          query.append(key, value.toString())
+        }
+      })
+    }
+    const queryString = query.toString()
+    return this.request<any>(`/packages${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async getPackageLimits() {
+    return this.request<any>('/packages/limits')
+  }
+
+  async getPackage(id: string) {
+    return this.request<any>(`/packages/${id}`)
+  }
+
+  async createPackage(data: {
+    name: string
+    description?: string
+    package_items: Array<{
+      service_id: string
+      service_name?: string
+      quantity: number
+      unit_price?: number
+    }>
+    package_price: number
+    currency?: string
+    validity_days?: number | null
+    is_active?: boolean
+    status?: string
+    outlet_ids?: string[]
+  }) {
+    return this.request<any>('/packages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updatePackage(id: string, data: {
+    name?: string
+    description?: string
+    package_price?: number
+    validity_days?: number | null
+    is_active?: boolean
+    status?: string
+    outlet_ids?: string[]
+  }) {
+    return this.request<any>(`/packages/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deletePackage(id: string) {
+    return this.request<any>(`/packages/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  // Staff Customer Package endpoints
+  async createCustomerPackagePurchase(data: {
+    customer_id: string
+    package_id: string
+    outlet_id: string
+    payment_method?: 'manual_onspot' | 'paper_digital' | 'bank_transfer'
+    amount_paid: number
+    currency?: string
+    notes?: string
+  }) {
+    return this.request<any>('/staff/customer-packages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getCustomerCredits(customerId: string, params?: {
+    service_id?: string
+    include_expired?: boolean
+  }) {
+    const query = new URLSearchParams()
+    if (params?.service_id) query.append('service_id', params.service_id)
+    if (params?.include_expired !== undefined) {
+      query.append('include_expired', params.include_expired.toString())
+    }
+    const queryString = query.toString()
+    return this.request<any>(`/staff/customer-packages/${customerId}/credits${queryString ? `?${queryString}` : ''}`)
+  }
+
+  async getCustomerCreditSummary(customerId: string) {
+    return this.request<any>(`/staff/customer-packages/${customerId}/summary`)
+  }
+
+  async redeemCredit(data: {
+    customer_id: string
+    service_id: string
+    notes?: string
+  }) {
+    return this.request<any>('/staff/customer-packages/credits/redeem', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
 }
 
 export const apiClient = new ApiClient()

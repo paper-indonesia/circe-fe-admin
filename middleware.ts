@@ -30,7 +30,7 @@ export function middleware(request: NextRequest) {
     if (possibleTenants.includes(firstSegment) ||
         (firstSegment.length < 20 && !['signin', 'signup', 'dashboard', 'calendar', 'clients', 'staff', 'products',
            'walk-in', 'withdrawal', 'reports', 'settings', 'user-management', 'outlet-management', 'subscription',
-            'terms', 'privacy', 'help-desk','availability'].includes(firstSegment))) {
+            'terms', 'privacy', 'help-desk','availability','packages'].includes(firstSegment))) {
 
       // Build new path without tenant
       const newPath = '/' + segments.slice(1).join('/')
