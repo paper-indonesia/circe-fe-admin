@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     })
 
     const data = await response.json()

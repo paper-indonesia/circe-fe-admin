@@ -33,6 +33,7 @@ export async function GET(
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     })
 
     const data = await response.json()

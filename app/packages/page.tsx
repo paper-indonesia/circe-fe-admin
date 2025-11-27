@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
-import { Package, Clock, Edit, Trash2, ChevronLeft, ChevronRight, Search, AlertCircle, Gift, Percent, ShoppingBag, TrendingUp } from "lucide-react"
+import { Package, Clock, Edit, Trash2, ChevronLeft, ChevronRight, Search, AlertCircle, Gift, Percent, ShoppingBag, TrendingUp, Loader2 } from "lucide-react"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 import { AddButton } from "@/components/ui/add-button"
@@ -19,10 +20,12 @@ import type { Package as PackageType, PackageLimits, Treatment } from "@/lib/typ
 
 export default function PackagesPage() {
   const { toast } = useToast()
+  const router = useRouter()
 
   const [packages, setPackages] = useState<PackageType[]>([])
   const [packageLimits, setPackageLimits] = useState<PackageLimits | null>(null)
   const [services, setServices] = useState<Treatment[]>([])
+  const [outlets, setOutlets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingLimits, setLoadingLimits] = useState(true)
 
@@ -34,6 +37,7 @@ export default function PackagesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isNavigatingToUpgrade, setIsNavigatingToUpgrade] = useState(false)
   const pageSize = 10
 
   // Fetch packages
@@ -57,10 +61,11 @@ export default function PackagesPage() {
 
   // Fetch package limits
   const fetchPackageLimits = async () => {
+    console.log('[Packages] Fetching package limits...')
     setLoadingLimits(true)
     try {
       const data = await apiClient.getPackageLimits()
-      console.log('[Packages] Package limits response:', data)
+      console.log('[Packages] Package limits response:', JSON.stringify(data))
 
       // Validate response - max_packages should be > 0 for valid subscription
       if (data && typeof data.limit_reached === 'boolean' && data.max_packages > 0) {
@@ -96,10 +101,30 @@ export default function PackagesPage() {
     }
   }
 
+  // Fetch outlets for the form
+  const fetchOutlets = async () => {
+    try {
+      const data = await apiClient.getOutlets()
+      // Handle both array and { items: [...] } response formats
+      const outletsList = Array.isArray(data) ? data : (data?.items || [])
+      // Transform outlets to ensure id field exists
+      const transformedOutlets = outletsList.map((outlet: any) => ({
+        ...outlet,
+        id: outlet.id || outlet._id,
+      }))
+      setOutlets(transformedOutlets)
+    } catch (error: any) {
+      console.error('Error fetching outlets:', error)
+      setOutlets([])
+    }
+  }
+
   useEffect(() => {
+    console.log('[Packages] Initializing - fetching data...')
     fetchPackages()
     fetchPackageLimits()
     fetchServices()
+    fetchOutlets()
   }, [])
 
   const filteredPackages = useMemo(() => {
@@ -291,7 +316,7 @@ export default function PackagesPage() {
                     <span className={packageLimits.limit_reached ? "text-orange-800" : "text-blue-800"}>
                       {packageLimits.limit_reached
                         ? `Package limit reached (${packageLimits.current_packages}/${packageLimits.max_packages})`
-                        : `${packageLimits.remaining_packages} of ${packageLimits.max_packages} packages remaining`
+                        : `${packageLimits.current_packages} of ${packageLimits.max_packages} packages used (${packageLimits.remaining_packages} remaining)`
                       }
                     </span>
                   </div>
@@ -300,9 +325,20 @@ export default function PackagesPage() {
                       variant="outline"
                       size="sm"
                       className="border-orange-300 text-orange-700 hover:bg-orange-100"
-                      onClick={() => window.location.href = '/subscription/upgrade'}
+                      disabled={isNavigatingToUpgrade}
+                      onClick={() => {
+                        setIsNavigatingToUpgrade(true)
+                        router.push('/subscription/upgrade')
+                      }}
                     >
-                      Upgrade Plan
+                      {isNavigatingToUpgrade ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Upgrade Plan'
+                      )}
                     </Button>
                   )}
                 </div>
@@ -379,16 +415,19 @@ export default function PackagesPage() {
                           </TableCell>
                           <TableCell className="p-4">
                             <div className="space-y-1">
-                              {pkg.package_items.slice(0, 2).map((item, idx) => (
+                              {(pkg.package_items || []).slice(0, 2).map((item, idx) => (
                                 <div key={idx} className="text-sm">
                                   <span className="text-gray-600">{item.quantity}x</span>{" "}
                                   <span className="text-gray-900">{item.service_name}</span>
                                 </div>
                               ))}
-                              {pkg.package_items.length > 2 && (
+                              {(pkg.package_items || []).length > 2 && (
                                 <div className="text-sm text-gray-500">
-                                  +{pkg.package_items.length - 2} more services
+                                  +{(pkg.package_items || []).length - 2} more services
                                 </div>
+                              )}
+                              {(!pkg.package_items || pkg.package_items.length === 0) && (
+                                <div className="text-sm text-gray-400">No services</div>
                               )}
                             </div>
                           </TableCell>
@@ -538,6 +577,7 @@ export default function PackagesPage() {
         }}
         package={editingPackage}
         services={services}
+        outlets={outlets}
         maxItems={packageLimits?.max_package_items || 10}
         onSubmit={editingPackage ? handleUpdatePackage : handleCreatePackage}
         isSubmitting={isSubmitting}
@@ -552,7 +592,7 @@ export default function PackagesPage() {
         entityDetails={[
           { label: "Name", value: packageToDelete?.name || "-" },
           { label: "Price", value: packageToDelete?.package_price ? `Rp ${packageToDelete.package_price.toLocaleString("id-ID")}` : "-" },
-          { label: "Services", value: `${packageToDelete?.package_items.length || 0} services` },
+          { label: "Services", value: `${packageToDelete?.package_items?.length || 0} services` },
           { label: "Status", value: packageToDelete?.status || "active" },
         ]}
         onConfirmDelete={confirmDeletePackage}
