@@ -57,6 +57,9 @@ import {
 } from "lucide-react"
 import { AddButton } from "@/components/ui/add-button"
 import { ImportCustomerDialog } from "@/components/customers/import-customer-dialog"
+import { SellPackageDialog } from "@/components/customers/sell-package-dialog"
+import { CustomerCreditsSection } from "@/components/customers/customer-credits-section"
+import { Gift } from "lucide-react"
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -90,6 +93,8 @@ export default function ClientsPage() {
   const [showClientDialog, setShowClientDialog] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
+  const [showSellPackageDialog, setShowSellPackageDialog] = useState(false)
+  const [sellPackageCustomer, setSellPackageCustomer] = useState<any>(null)
   const [editingClient, setEditingClient] = useState<any>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<any>(null)
@@ -1800,11 +1805,21 @@ export default function ClientsPage() {
                       </div>
                     </div>
 
+                    {/* Package Credits Section */}
+                    <CustomerCreditsSection
+                      customerId={selectedClient.id}
+                      customerName={selectedClient.name}
+                      onSellPackage={() => {
+                        setSellPackageCustomer(selectedClient)
+                        setShowSellPackageDialog(true)
+                      }}
+                    />
+
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-medium">Quick Actions</h4>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-4 gap-2">
                         <Button size="sm" variant="outline" onClick={() => handleNewBooking(selectedClient)}>
                           <CalendarIcon className="h-4 w-4 mr-2" />
                           New Booking
@@ -1812,6 +1827,13 @@ export default function ClientsPage() {
                         <Button size="sm" variant="outline" onClick={() => openAppointmentHistory(selectedClient)}>
                           <History className="h-4 w-4 mr-2" />
                           History
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          setSellPackageCustomer(selectedClient)
+                          setShowSellPackageDialog(true)
+                        }}>
+                          <Gift className="h-4 w-4 mr-2" />
+                          Sell Package
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => openEditDialog(selectedClient)}>
                           <Edit className="h-4 w-4 mr-2" />
@@ -1856,6 +1878,24 @@ export default function ClientsPage() {
           onImportSuccess={() => {
             fetchCustomers()
             setShowImportDialog(false)
+          }}
+        />
+
+        {/* Sell Package Dialog */}
+        <SellPackageDialog
+          open={showSellPackageDialog}
+          onOpenChange={setShowSellPackageDialog}
+          customerId={sellPackageCustomer?.id || ''}
+          customerName={sellPackageCustomer?.name || ''}
+          onSuccess={() => {
+            toast({
+              title: "Package Sold",
+              description: "Package has been sold successfully to the customer",
+            })
+            // Refresh the customer data to show updated credits
+            if (selectedClient?.id === sellPackageCustomer?.id) {
+              // The CustomerCreditsSection will auto-refresh
+            }
           }}
         />
 

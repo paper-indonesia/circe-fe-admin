@@ -339,12 +339,19 @@ export interface CustomerCredit {
   customer_package_id: string
   service_id: string
   service_name: string
-  allocated_credits: number
+  total_credits: number // Backend uses total_credits
+  allocated_credits?: number // Alias for compatibility
   used_credits: number
   remaining_credits: number
-  expires_at: string
+  unit_price?: string
+  expires_at: string | null // Can be null for no expiry
+  last_used_at?: string | null
+  expired_credits: number
   is_expired: boolean
+  is_available?: boolean
+  days_until_expiry?: number | null
   created_at: string
+  updated_at?: string
 }
 
 export interface CustomerPackage {

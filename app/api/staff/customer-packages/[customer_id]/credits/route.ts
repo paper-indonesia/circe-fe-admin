@@ -36,6 +36,9 @@ export async function GET(
     if (searchParams.get('include_expired')) {
       queryParams.append('include_expired', searchParams.get('include_expired')!)
     }
+    if (searchParams.get('include_used')) {
+      queryParams.append('include_used', searchParams.get('include_used')!)
+    }
 
     const queryString = queryParams.toString()
     const url = `${FASTAPI_URL}/api/v1/staff/customer-packages/${customer_id}/credits${queryString ? '?' + queryString : ''}`
@@ -46,6 +49,7 @@ export async function GET(
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     })
 
     const data = await response.json()

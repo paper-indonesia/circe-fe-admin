@@ -149,6 +149,11 @@ export default function CalendarPage() {
   const [paymentOptionsDialogOpen, setPaymentOptionsDialogOpen] = useState(false)
   const [pendingAppointment, setPendingAppointment] = useState<any>(null)
 
+  // Package credit state for payment options
+  const [customerCredits, setCustomerCredits] = useState<any[]>([])
+  const [loadingCredits, setLoadingCredits] = useState(false)
+  const [isRedeemingCredit, setIsRedeemingCredit] = useState(false)
+
   // Fix hydration error - only render after client mount
   useEffect(() => {
     setIsMounted(true)
@@ -610,6 +615,69 @@ export default function CalendarPage() {
     fetchOutlets()
   }, [])
 
+  // Fetch customer credits when payment options dialog opens
+  useEffect(() => {
+    const fetchCustomerCredits = async () => {
+      if (!paymentOptionsDialogOpen || !pendingAppointment) {
+        setCustomerCredits([])
+        return
+      }
+
+      const customerId = pendingAppointment.patientId
+      const serviceId = pendingAppointment.treatmentId
+
+      console.log('[Calendar] Fetching credits for:', { customerId, serviceId })
+
+      if (!customerId) {
+        console.log('[Calendar] No customerId, skipping credit fetch')
+        setCustomerCredits([])
+        return
+      }
+
+      setLoadingCredits(true)
+      try {
+        // First, fetch ALL credits for this customer (without service filter) to see what's available
+        const allCreditsResponse = await fetch(
+          `/api/staff/customer-packages/${customerId}/credits?include_expired=false`
+        )
+        if (allCreditsResponse.ok) {
+          const allCreditsData = await allCreditsResponse.json()
+          const allCreditsList = Array.isArray(allCreditsData) ? allCreditsData : (allCreditsData.items || [])
+          console.log('[Calendar] All customer credits:', allCreditsList)
+          console.log('[Calendar] Looking for service_id:', serviceId)
+
+          // Filter credits that match the selected service AND have remaining credits
+          const matchingCredits = allCreditsList.filter((c: any) => {
+            const matches = c.service_id === serviceId && c.remaining_credits > 0 && !c.is_expired
+            if (c.remaining_credits > 0) {
+              console.log('[Calendar] Credit check:', {
+                creditServiceId: c.service_id,
+                selectedServiceId: serviceId,
+                serviceName: c.service_name,
+                remaining: c.remaining_credits,
+                matches
+              })
+            }
+            return matches
+          })
+
+          setCustomerCredits(matchingCredits)
+          console.log('[Calendar] Matching credits for selected service:', matchingCredits)
+        } else {
+          console.log('[Calendar] Failed to fetch credits, status:', allCreditsResponse.status)
+          setCustomerCredits([])
+        }
+      } catch (error) {
+        console.error('[Calendar] Error fetching customer credits:', error)
+        setCustomerCredits([])
+      } finally {
+        setLoadingCredits(false)
+      }
+    }
+
+    fetchCustomerCredits()
+  }, [paymentOptionsDialogOpen, pendingAppointment])
+
   // Reset weekStart and clear cache when service or staff changes
   useEffect(() => {
     // Reset to today when service or staff changes
@@ -879,7 +947,7 @@ export default function CalendarPage() {
     }
   }
 
-  const getPaymentStatusBadge = (paymentStatus?: string) => {
+  const getPaymentStatusBadge = (paymentStatus?: string, notes?: string) => {
     if (!paymentStatus) {
       return (
         <Badge className="text-xs bg-gray-100 text-gray-600 border-gray-200">
@@ -889,8 +957,19 @@ export default function CalendarPage() {
       )
     }
 
+    // Check if paid with package credit
+    const isPaidWithCredit = notes?.includes('[PAID WITH PACKAGE CREDIT')
+
     switch (paymentStatus) {
       case "paid":
+        if (isPaidWithCredit) {
+          return (
+            <Badge className="text-xs bg-purple-100 text-purple-700 border-purple-200">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Credit
+            </Badge>
+          )
+        }
         return (
           <Badge className="text-xs bg-green-100 text-green-700 border-green-200">
             <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -1855,7 +1934,7 @@ export default function CalendarPage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="py-3 px-4">
-                            {getPaymentStatusBadge((booking as any).payment_status)}
+                            {getPaymentStatusBadge((booking as any).payment_status, booking.notes)}
                           </TableCell>
                           <TableCell className="py-3 px-4">
                             {(() => {
@@ -2138,7 +2217,7 @@ export default function CalendarPage() {
                                           <Badge className={cn("text-[10px] px-2 py-0.5 font-medium", getStatusColor(booking.status))}>
                                             {booking.status}
                                           </Badge>
-                                          {getPaymentStatusBadge((booking as any).payment_status)}
+                                          {getPaymentStatusBadge((booking as any).payment_status, booking.notes)}
                                         </div>
                                       </div>
 
@@ -2497,7 +2576,7 @@ export default function CalendarPage() {
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-[10px] text-gray-400 font-semibold mb-1">PAYMENT STATUS</p>
-                          {getPaymentStatusBadge((selectedBooking as any).payment_status)}
+                          {getPaymentStatusBadge((selectedBooking as any).payment_status, selectedBooking.notes)}
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-[10px] text-gray-400 font-semibold mb-1">APPOINTMENT TYPE</p>
@@ -4038,6 +4117,90 @@ export default function CalendarPage() {
 
               <div className="space-y-3">
                 <p className="text-sm font-medium text-gray-700">Choose payment option:</p>
+
+                {/* Use Package Credit Button - Only show if customer has available credits */}
+                {loadingCredits ? (
+                  <div className="flex items-center justify-center py-3 text-sm text-gray-500">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Checking package credits...
+                  </div>
+                ) : customerCredits.length > 0 && (
+                  <Button
+                    onClick={async () => {
+                      if (pendingAppointment && customerCredits.length > 0) {
+                        setIsRedeemingCredit(true)
+                        try {
+                          // Use the first available credit (FIFO)
+                          const credit = customerCredits[0]
+
+                          // Call redeem API
+                          const response = await fetch('/api/staff/customer-packages/credits/redeem', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              customer_id: pendingAppointment.patientId,
+                              service_id: pendingAppointment.treatmentId,
+                              notes: `Used for appointment ${pendingAppointment.id}`,
+                            }),
+                          })
+
+                          const data = await response.json()
+
+                          if (!response.ok) {
+                            throw new Error(data.error || 'Failed to redeem credit')
+                          }
+
+                          // Update appointment notes to indicate credit was used
+                          const currentNotes = pendingAppointment.notes || ''
+                          const creditNote = `\n[PAID WITH PACKAGE CREDIT - ${credit.service_name}]`
+                          await apiClient.updateAppointment(pendingAppointment.id, {
+                            notes: currentNotes + creditNote,
+                            payment_status: 'paid', // Mark as paid since credit covers the service
+                          })
+
+                          toast({
+                            title: "Package Credit Used!",
+                            description: `1 credit redeemed for ${credit.service_name}. ${credit.remaining_credits - 1} credits remaining.`,
+                          })
+
+                          setPaymentOptionsDialogOpen(false)
+                          setPendingAppointment(null)
+                          setCustomerCredits([])
+
+                          // Reload bookings to show updated appointment
+                          await reloadBookings()
+                        } catch (error: any) {
+                          console.error('Failed to redeem credit:', error)
+                          toast({
+                            title: "Failed to use credit",
+                            description: error.message || "Could not redeem package credit",
+                            variant: "destructive"
+                          })
+                        } finally {
+                          setIsRedeemingCredit(false)
+                        }
+                      }
+                    }}
+                    disabled={isRedeemingCredit}
+                    className="w-full h-auto py-4 px-6 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white shadow-md"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        {isRedeemingCredit ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-5 w-5" />
+                        )}
+                        <span className="text-lg font-semibold">
+                          {isRedeemingCredit ? 'Redeeming...' : 'Use Package Credit'}
+                        </span>
+                      </div>
+                      <span className="text-xs opacity-90">
+                        {customerCredits[0]?.remaining_credits} credit(s) available for {customerCredits[0]?.service_name}
+                      </span>
+                    </div>
+                  </Button>
+                )}
 
                 {/* Pay Now Button */}
                 <Button
