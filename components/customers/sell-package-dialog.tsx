@@ -148,6 +148,33 @@ export function SellPackageDialog({
         throw new Error(data.error || 'Failed to sell package')
       }
 
+      // If payment method is not cash, store as pending in localStorage
+      if (formData.payment_method !== 'manual_onspot') {
+        const pendingPackage = {
+          id: data.id || data._id,
+          package_name: selectedPackage?.name || 'Package',
+          package_price: selectedPackage?.package_price || formData.amount_paid,
+          amount_paid: formData.amount_paid,
+          payment_method: formData.payment_method,
+          payment_status: 'pending',
+          status: 'pending_payment',
+          purchased_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          total_credits: selectedPackage?.package_items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0,
+        }
+
+        // Get existing pending packages
+        const existingPending = localStorage.getItem(`pending_packages_${customerId}`)
+        let pendingList = []
+        if (existingPending) {
+          try {
+            pendingList = JSON.parse(existingPending)
+          } catch {}
+        }
+        pendingList.push(pendingPackage)
+        localStorage.setItem(`pending_packages_${customerId}`, JSON.stringify(pendingList))
+      }
+
       setSuccess(true)
       setTimeout(() => {
         onSuccess()

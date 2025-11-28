@@ -9,7 +9,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Gift, Plus, Trash2, Search, AlertCircle, Percent, Calculator, Building2 } from "lucide-react"
+import { Gift, Plus, Trash2, Search, AlertCircle, Percent, Calculator, Building2, Calendar } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { format, differenceInDays, addDays } from "date-fns"
+import { cn } from "@/lib/utils"
 import type { Package, Treatment } from "@/lib/types"
 
 interface Outlet {
@@ -60,6 +64,8 @@ export function PackageFormDialog({
   const [packageItems, setPackageItems] = useState<PackageItem[]>([])
   const [serviceSearchQuery, setServiceSearchQuery] = useState("")
   const [showServiceSelector, setShowServiceSelector] = useState(false)
+  const [validUntilDate, setValidUntilDate] = useState<Date | undefined>(undefined)
+  const [hasNoExpiry, setHasNoExpiry] = useState(true)
 
   // Reset form when dialog opens/closes or editing package changes
   useEffect(() => {
@@ -83,6 +89,15 @@ export function PackageFormDialog({
         console.log('[PackageForm] Loaded package items:', items)
         console.log('[PackageForm] Package total_individual_price:', editingPackage.total_individual_price)
         setPackageItems(items)
+
+        // Set valid until date from validity_days
+        if (editingPackage.validity_days && editingPackage.validity_days > 0) {
+          setHasNoExpiry(false)
+          setValidUntilDate(addDays(new Date(), editingPackage.validity_days))
+        } else {
+          setHasNoExpiry(true)
+          setValidUntilDate(undefined)
+        }
       } else {
         // For new package, select all outlets by default
         const allOutletIds = outlets.map(o => o.id || o._id).filter(Boolean) as string[]
@@ -96,6 +111,8 @@ export function PackageFormDialog({
           outlet_ids: allOutletIds,
         })
         setPackageItems([])
+        setHasNoExpiry(true)
+        setValidUntilDate(undefined)
       }
       setServiceSearchQuery("")
       setShowServiceSelector(false)
@@ -115,6 +132,22 @@ export function PackageFormDialog({
     if (totalIndividualPrice === 0) return 0
     return Math.round((discountAmount / totalIndividualPrice) * 100)
   }, [discountAmount, totalIndividualPrice])
+
+  // Calculate validity_days from selected date
+  const calculatedValidityDays = useMemo(() => {
+    if (hasNoExpiry || !validUntilDate) return null
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const selectedDate = new Date(validUntilDate)
+    selectedDate.setHours(0, 0, 0, 0)
+    const days = differenceInDays(selectedDate, today)
+    return days > 0 ? days : null
+  }, [hasNoExpiry, validUntilDate])
+
+  // Update formData.validity_days when calculatedValidityDays changes
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, validity_days: calculatedValidityDays }))
+  }, [calculatedValidityDays])
 
   // Filter services for selector
   const filteredServices = useMemo(() => {
@@ -175,11 +208,6 @@ export function PackageFormDialog({
     }
 
     if (formData.package_price <= 0) {
-      return
-    }
-
-    // Validate validity_days: must be null (no expiry) or >= 7 days
-    if (formData.validity_days !== null && formData.validity_days > 0 && formData.validity_days < 7) {
       return
     }
 
@@ -430,31 +458,70 @@ export function PackageFormDialog({
           <div className="space-y-4 pt-4 border-t">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="validity_days">Validity Period (days)</Label>
-                <Input
-                  id="validity_days"
-                  type="number"
-                  min="7"
-                  placeholder="Leave empty for no expiry"
-                  value={formData.validity_days || ""}
-                  onChange={(e) => {
-                    const value = e.target.value ? parseInt(e.target.value) : null
-                    setFormData({
-                      ...formData,
-                      validity_days: value
-                    })
-                  }}
-                  className={formData.validity_days !== null && formData.validity_days < 7 ? "border-red-500 focus:ring-red-500" : ""}
-                />
-                {formData.validity_days !== null && formData.validity_days > 0 && formData.validity_days < 7 ? (
-                  <p className="text-xs text-red-500">
-                    Minimum validity period is 7 days
-                  </p>
-                ) : (
-                  <p className="text-xs text-gray-500">
-                    Minimum 7 days, or leave empty for no expiry
-                  </p>
-                )}
+                <Label>Valid Until</Label>
+                <div className="space-y-3">
+                  {/* No Expiry Checkbox */}
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="no-expiry"
+                      checked={hasNoExpiry}
+                      onCheckedChange={(checked) => {
+                        setHasNoExpiry(checked as boolean)
+                        if (checked) {
+                          setValidUntilDate(undefined)
+                        } else {
+                          // Default to 7 days from now
+                          setValidUntilDate(addDays(new Date(), 7))
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="no-expiry"
+                      className="text-sm cursor-pointer"
+                    >
+                      No expiry date
+                    </label>
+                  </div>
+
+                  {/* Date Picker */}
+                  {!hasNoExpiry && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !validUntilDate && "text-muted-foreground"
+                          )}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" />
+                          {validUntilDate ? format(validUntilDate, "dd MMM yyyy") : "Pick a date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={validUntilDate}
+                          onSelect={setValidUntilDate}
+                          disabled={(date) => {
+                            const tomorrow = new Date()
+                            tomorrow.setHours(0, 0, 0, 0)
+                            tomorrow.setDate(tomorrow.getDate() + 1)
+                            return date < tomorrow
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+
+                  {/* Show calculated days */}
+                  {!hasNoExpiry && calculatedValidityDays !== null && (
+                    <p className="text-xs text-gray-500">
+                      = {calculatedValidityDays} day{calculatedValidityDays > 1 ? 's' : ''} from today
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -575,7 +642,7 @@ export function PackageFormDialog({
             <Button
               onClick={handleSubmit}
               size="lg"
-              disabled={isSubmitting || !formData.name.trim() || packageItems.length === 0 || formData.package_price <= 0 || (formData.validity_days !== null && formData.validity_days > 0 && formData.validity_days < 7)}
+              disabled={isSubmitting || !formData.name.trim() || packageItems.length === 0 || formData.package_price <= 0}
               className="flex-1 h-11 bg-gradient-to-r from-[#FCD6F5] to-[#EDE9FE] text-gray-800 hover:from-[#EDE9FE] hover:to-[#8B5CF6] border-0 font-semibold disabled:opacity-50"
             >
               {isSubmitting

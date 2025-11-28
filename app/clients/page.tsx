@@ -95,6 +95,7 @@ export default function ClientsPage() {
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [showSellPackageDialog, setShowSellPackageDialog] = useState(false)
   const [sellPackageCustomer, setSellPackageCustomer] = useState<any>(null)
+  const [creditsRefreshTrigger, setCreditsRefreshTrigger] = useState(0)
   const [editingClient, setEditingClient] = useState<any>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<any>(null)
@@ -1813,6 +1814,7 @@ export default function ClientsPage() {
                         setSellPackageCustomer(selectedClient)
                         setShowSellPackageDialog(true)
                       }}
+                      refreshTrigger={creditsRefreshTrigger}
                     />
 
                     <div>
@@ -1892,10 +1894,8 @@ export default function ClientsPage() {
               title: "Package Sold",
               description: "Package has been sold successfully to the customer",
             })
-            // Refresh the customer data to show updated credits
-            if (selectedClient?.id === sellPackageCustomer?.id) {
-              // The CustomerCreditsSection will auto-refresh
-            }
+            // Trigger refresh for CustomerCreditsSection
+            setCreditsRefreshTrigger(prev => prev + 1)
           }}
         />
 
