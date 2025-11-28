@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { formatCurrency } from "@/lib/utils"
 import { apiClient, ApiError } from "@/lib/api-client"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
-import { Users, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown, CheckCircle, AlertCircle, ArrowLeft, Loader2, ChevronDown, ChevronUp } from "lucide-react"
+import { Users, User, Plus, Calendar, Star, Clock, Phone, Mail, Edit, TrendingUp, X, Search, Filter, ChevronLeft, ChevronRight, UserPlus, Trash2, Crown, CheckCircle, AlertCircle, ArrowLeft, Loader2, ChevronDown, ChevronUp } from "lucide-react"
 import { format, isToday, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, addMonths, subMonths, isSameDay, isSameMonth } from "date-fns"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
@@ -1526,12 +1526,16 @@ export default function StaffPage() {
                 return (
                   <TableRow key={staffMember.id} className="hover:bg-[#FCD6F5]/10 transition-colors">
                     <TableCell>
-                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#EDE9FE]">
-                        <img
-                          src={`/abstract-geometric-shapes.png?height=40&width=40&query=${staffMember.name} professional beauty therapist headshot portrait`}
-                          alt={staffMember.name}
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#EDE9FE] bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center">
+                        {staffMember.profile_image_url ? (
+                          <img
+                            src={staffMember.profile_image_url}
+                            alt={staffMember.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="h-5 w-5 text-[#8B5CF6]" />
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>

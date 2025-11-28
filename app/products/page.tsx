@@ -699,11 +699,15 @@ export default function TreatmentsPage() {
                         <TableCell className="p-4">
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center">
-                              <img
-                                src={`/abstract-geometric-shapes.png?key=yhwjw&height=48&width=48&query=${encodeURIComponent(`${treatment.name} beauty treatment icon`)}`}
-                                alt={treatment.name}
-                                className="w-8 h-8 object-cover"
-                              />
+                              {treatment.image_url ? (
+                                <img
+                                  src={treatment.image_url}
+                                  alt={treatment.name}
+                                  className="w-12 h-12 object-cover"
+                                />
+                              ) : (
+                                <Star className="h-6 w-6 text-[#8B5CF6]" />
+                              )}
                             </div>
                             <div>
                               <div className="font-semibold text-gray-900">{treatment.name}</div>
