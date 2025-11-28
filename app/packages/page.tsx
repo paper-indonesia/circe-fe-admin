@@ -458,9 +458,11 @@ export default function PackagesPage() {
                           <TableCell className="p-4">
                             <div className="text-sm">
                               <div className="font-medium">{pkg.total_purchased || 0} sold</div>
-                              <div className="text-gray-500">
-                                Rp {(pkg.total_revenue || 0).toLocaleString("id-ID")}
-                              </div>
+                              {(pkg.total_revenue || 0) > 0 && (
+                                <div className="text-gray-500">
+                                  Rp {pkg.total_revenue.toLocaleString("id-ID")}
+                                </div>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="p-4">
@@ -536,7 +538,7 @@ export default function PackagesPage() {
             </>
           )}
 
-          {/* Summary Stats */}
+          {/* Summary Stats - Hidden for now
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardContent className="pt-6">
@@ -563,6 +565,7 @@ export default function PackagesPage() {
               </CardContent>
             </Card>
           </div>
+          */}
         </div>
       )}
 
