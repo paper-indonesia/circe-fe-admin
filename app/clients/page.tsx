@@ -343,7 +343,12 @@ export default function ClientsPage() {
   const clientsWithStats = useMemo(() => {
     return customers.map((customer) => {
       // Map customer data from API to expected format
-      const name = `${customer.first_name || ''} ${customer.last_name || ''}`.trim()
+      const firstName = customer.first_name || ''
+      const lastName = customer.last_name || ''
+      // If first name and last name are the same, use first name only to avoid redundancy
+      const name = firstName.toLowerCase() === lastName.toLowerCase()
+        ? firstName
+        : `${firstName} ${lastName}`.trim()
       const totalAppointments = customer.total_appointments || 0
 
       // Determine status based on loyalty_points or total_appointments

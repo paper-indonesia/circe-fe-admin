@@ -72,6 +72,7 @@ export function CustomerCreditsSection({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set())
+  const [isCreditsExpanded, setIsCreditsExpanded] = useState(false)
 
   // Confirm payment dialog state (for bank_transfer)
   const [confirmPaymentDialog, setConfirmPaymentDialog] = useState(false)
@@ -278,15 +279,56 @@ export function CustomerCreditsSection({
     })
   }
 
-  // Group credits by customer_package_id
-  const groupedCredits = credits.reduce((acc, credit) => {
-    const key = credit.customer_package_id
-    if (!acc[key]) {
-      acc[key] = []
+  // Aggregate credits by service_name (combine same services across all packages)
+  const aggregatedCredits = credits.reduce((acc, credit) => {
+    const serviceName = credit.service_name
+    if (!acc[serviceName]) {
+      acc[serviceName] = {
+        service_name: serviceName,
+        total_credits: 0,
+        remaining_credits: 0,
+        used_credits: 0,
+        earliest_expiry: null as string | null,
+        has_no_expiry: false,
+        is_any_expired: false,
+        sources: [] as CustomerCredit[],
+      }
     }
-    acc[key].push(credit)
+
+    acc[serviceName].total_credits += credit.total_credits ?? credit.allocated_credits ?? 0
+    acc[serviceName].remaining_credits += credit.remaining_credits
+    acc[serviceName].used_credits += credit.used_credits
+    acc[serviceName].sources.push(credit)
+
+    // Track expiry - if any credit has no expiry, mark it
+    if (!credit.expires_at) {
+      acc[serviceName].has_no_expiry = true
+    } else if (!acc[serviceName].has_no_expiry) {
+      // Only track earliest expiry if we don't have a no-expiry credit
+      if (!acc[serviceName].earliest_expiry || credit.expires_at < acc[serviceName].earliest_expiry) {
+        acc[serviceName].earliest_expiry = credit.expires_at
+      }
+    }
+
+    // Track if any credit is expired
+    if (credit.is_expired) {
+      acc[serviceName].is_any_expired = true
+    }
+
     return acc
-  }, {} as Record<string, CustomerCredit[]>)
+  }, {} as Record<string, {
+    service_name: string
+    total_credits: number
+    remaining_credits: number
+    used_credits: number
+    earliest_expiry: string | null
+    has_no_expiry: boolean
+    is_any_expired: boolean
+    sources: CustomerCredit[]
+  }>)
+
+  // Convert to array for rendering
+  const aggregatedCreditsList = Object.values(aggregatedCredits)
 
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return 'No expiry'
@@ -486,7 +528,7 @@ export function CustomerCreditsSection({
         </div>
       )}
 
-      {/* Credits List */}
+      {/* Credits List - Aggregated by Service Name with Collapsible */}
       {credits.length === 0 && pendingPackages.length === 0 ? (
         <div className="text-center py-6 bg-white/40 rounded-lg">
           <Package className="h-10 w-10 mx-auto text-gray-300 mb-2" />
@@ -495,124 +537,105 @@ export function CustomerCreditsSection({
             Click "Sell Package" to add credits for this customer
           </p>
         </div>
-      ) : credits.length > 0 ? (
-        <div className="space-y-2">
-          {Object.entries(groupedCredits).map(([packageId, packageCredits]) => {
-            const isExpanded = expandedPackages.has(packageId)
-            const totalRemaining = packageCredits.reduce((sum, c) => sum + c.remaining_credits, 0)
-            const totalAllocated = packageCredits.reduce((sum, c) => sum + getTotalCredits(c), 0)
-            const firstCredit = packageCredits[0]
-            const hasExpiringSoon = packageCredits.some(c => {
-              if (!c.expires_at) return false // No expiry = not expiring soon
-              const days = getDaysUntilExpiry(c.expires_at)
-              return days !== null && days <= 30 && !c.is_expired
-            })
+      ) : aggregatedCreditsList.length > 0 ? (
+        <Collapsible open={isCreditsExpanded} onOpenChange={setIsCreditsExpanded}>
+          <CollapsibleTrigger asChild>
+            <div className="bg-white rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
+                    <Package className="h-4 w-4 text-[#8B5CF6]" />
+                  </div>
+                  <div>
+                    <span className="font-medium text-sm">Active Credits</span>
+                    <p className="text-xs text-muted-foreground">
+                      {aggregatedCreditsList.length} service(s) • {summary?.remaining_credits || 0} credits remaining
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="font-mono">
+                    {summary?.remaining_credits || 0} / {summary?.total_credits || 0}
+                  </Badge>
+                  {isCreditsExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-2 space-y-2">
+              {aggregatedCreditsList.map((aggregated) => {
+                const hasExpiringSoon = !aggregated.has_no_expiry && aggregated.earliest_expiry && (() => {
+                  const days = getDaysUntilExpiry(aggregated.earliest_expiry)
+                  return days !== null && days <= 30 && !aggregated.is_any_expired
+                })()
 
-            return (
-              <Collapsible
-                key={packageId}
-                open={isExpanded}
-                onOpenChange={() => togglePackageExpanded(packageId)}
-              >
-                <CollapsibleTrigger asChild>
-                  <div className="bg-white rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition-colors">
+                return (
+                  <div
+                    key={aggregated.service_name}
+                    className="bg-white rounded-lg p-3 border border-gray-100"
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-                          <Package className="h-4 w-4 text-[#8B5CF6]" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">Package Credits</span>
-                            {hasExpiringSoon && (
-                              <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Expiring Soon
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {packageCredits.length} service(s) • {totalRemaining} of {totalAllocated} credits remaining
-                          </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{aggregated.service_name}</span>
+                          {aggregated.has_no_expiry ? (
+                            <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-xs">No expiry</Badge>
+                          ) : hasExpiringSoon ? (
+                            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-xs">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Expiring Soon
+                            </Badge>
+                          ) : aggregated.is_any_expired ? (
+                            <Badge variant="destructive" className="text-xs">Some Expired</Badge>
+                          ) : null}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="font-mono">
-                          {totalRemaining} credits
-                        </Badge>
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4 text-gray-400" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-gray-400" />
-                        )}
+                      <div className="text-right">
+                        <div className="flex items-center gap-1">
+                          {aggregated.is_any_expired ? (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          ) : aggregated.remaining_credits === 0 ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Clock className="h-4 w-4 text-blue-500" />
+                          )}
+                          <span className={`font-bold ${
+                            aggregated.is_any_expired && aggregated.remaining_credits === 0 ? 'text-red-500' :
+                            aggregated.remaining_credits === 0 ? 'text-gray-400' :
+                            'text-[#6D28D9]'
+                          }`}>
+                            {aggregated.remaining_credits}/{aggregated.total_credits}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {aggregated.used_credits} used
+                        </p>
                       </div>
                     </div>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="mt-1 bg-white rounded-lg overflow-hidden border border-gray-100">
-                    <div className="divide-y divide-gray-100">
-                      {packageCredits.map((credit) => (
-                        <div key={credit.id} className="p-3 hover:bg-gray-50">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm">{credit.service_name}</span>
-                                {getExpiryBadge(credit.expires_at, credit.is_expired)}
-                              </div>
-                              {credit.expires_at && (
-                                <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    Expires: {formatDate(credit.expires_at)}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <div className="flex items-center gap-1">
-                                {credit.is_expired ? (
-                                  <XCircle className="h-4 w-4 text-red-500" />
-                                ) : credit.remaining_credits === 0 ? (
-                                  <CheckCircle className="h-4 w-4 text-green-500" />
-                                ) : (
-                                  <Clock className="h-4 w-4 text-blue-500" />
-                                )}
-                                <span className={`font-bold ${
-                                  credit.is_expired ? 'text-red-500' :
-                                  credit.remaining_credits === 0 ? 'text-gray-400' :
-                                  'text-[#6D28D9]'
-                                }`}>
-                                  {credit.remaining_credits}/{getTotalCredits(credit)}
-                                </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {credit.used_credits} used
-                              </p>
-                            </div>
-                          </div>
-                          {/* Progress bar */}
-                          <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${
-                                credit.is_expired ? 'bg-red-400' :
-                                credit.remaining_credits === 0 ? 'bg-gray-300' :
-                                'bg-[#8B5CF6]'
-                              }`}
-                              style={{
-                                width: `${getTotalCredits(credit) > 0 ? (credit.remaining_credits / getTotalCredits(credit)) * 100 : 0}%`
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                    {/* Progress bar */}
+                    <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          aggregated.is_any_expired && aggregated.remaining_credits === 0 ? 'bg-red-400' :
+                          aggregated.remaining_credits === 0 ? 'bg-gray-300' :
+                          'bg-[#8B5CF6]'
+                        }`}
+                        style={{
+                          width: `${aggregated.total_credits > 0 ? (aggregated.remaining_credits / aggregated.total_credits) * 100 : 0}%`
+                        }}
+                      />
                     </div>
                   </div>
-                </CollapsibleContent>
-              </Collapsible>
-            )
-          })}
-        </div>
+                )
+              })}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       ) : null}
 
       {/* Confirm Payment Dialog */}
