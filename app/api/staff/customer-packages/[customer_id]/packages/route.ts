@@ -9,7 +9,7 @@ function getAuthToken(req: NextRequest) {
   return req.cookies.get('auth-token')?.value
 }
 
-// GET - Get customer credits
+// GET - Get customer's purchased packages (including pending)
 export async function GET(
   req: NextRequest,
   { params }: { params: { customer_id: string } }
@@ -30,18 +30,20 @@ export async function GET(
     const searchParams = req.nextUrl.searchParams
     const queryParams = new URLSearchParams()
 
-    if (searchParams.get('service_id')) {
-      queryParams.append('service_id', searchParams.get('service_id')!)
+    if (searchParams.get('status')) {
+      queryParams.append('status', searchParams.get('status')!)
     }
     if (searchParams.get('include_expired')) {
       queryParams.append('include_expired', searchParams.get('include_expired')!)
     }
-    if (searchParams.get('include_used')) {
-      queryParams.append('include_used', searchParams.get('include_used')!)
-    }
 
     const queryString = queryParams.toString()
-    const url = `${FASTAPI_URL}/api/v1/staff/customer-packages/${customer_id}/credits${queryString ? '?' + queryString : ''}`
+
+    // Try to get packages from customer packages endpoint
+    // This might be /customer/packages or /staff/customer-packages depending on backend
+    const url = `${FASTAPI_URL}/api/v1/customer/packages?customer_id=${customer_id}${queryString ? '&' + queryString : ''}`
+
+    console.log('[Customer Packages API] Fetching packages from:', url)
 
     const response = await fetch(url, {
       method: 'GET',
@@ -55,15 +57,16 @@ export async function GET(
     const data = await response.json()
 
     if (!response.ok) {
+      console.error('[Customer Packages API] Error:', data)
       return NextResponse.json(
-        { error: data.detail || 'Failed to fetch customer credits' },
+        { error: data.detail || 'Failed to fetch customer packages' },
         { status: response.status }
       )
     }
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Error fetching customer credits:', error)
+    console.error('Error fetching customer packages:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -57,6 +57,9 @@ import {
 } from "lucide-react"
 import { AddButton } from "@/components/ui/add-button"
 import { ImportCustomerDialog } from "@/components/customers/import-customer-dialog"
+import { SellPackageDialog } from "@/components/customers/sell-package-dialog"
+import { CustomerCreditsSection } from "@/components/customers/customer-credits-section"
+import { Gift } from "lucide-react"
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -90,6 +93,9 @@ export default function ClientsPage() {
   const [showClientDialog, setShowClientDialog] = useState(false)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showImportDialog, setShowImportDialog] = useState(false)
+  const [showSellPackageDialog, setShowSellPackageDialog] = useState(false)
+  const [sellPackageCustomer, setSellPackageCustomer] = useState<any>(null)
+  const [creditsRefreshTrigger, setCreditsRefreshTrigger] = useState(0)
   const [editingClient, setEditingClient] = useState<any>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [clientToDelete, setClientToDelete] = useState<any>(null)
@@ -337,7 +343,12 @@ export default function ClientsPage() {
   const clientsWithStats = useMemo(() => {
     return customers.map((customer) => {
       // Map customer data from API to expected format
-      const name = `${customer.first_name || ''} ${customer.last_name || ''}`.trim()
+      const firstName = customer.first_name || ''
+      const lastName = customer.last_name || ''
+      // If first name and last name are the same, use first name only to avoid redundancy
+      const name = firstName.toLowerCase() === lastName.toLowerCase()
+        ? firstName
+        : `${firstName} ${lastName}`.trim()
       const totalAppointments = customer.total_appointments || 0
 
       // Determine status based on loyalty_points or total_appointments
@@ -1800,11 +1811,22 @@ export default function ClientsPage() {
                       </div>
                     </div>
 
+                    {/* Package Credits Section */}
+                    <CustomerCreditsSection
+                      customerId={selectedClient.id}
+                      customerName={selectedClient.name}
+                      onSellPackage={() => {
+                        setSellPackageCustomer(selectedClient)
+                        setShowSellPackageDialog(true)
+                      }}
+                      refreshTrigger={creditsRefreshTrigger}
+                    />
+
                     <div>
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="font-medium">Quick Actions</h4>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-4 gap-2">
                         <Button size="sm" variant="outline" onClick={() => handleNewBooking(selectedClient)}>
                           <CalendarIcon className="h-4 w-4 mr-2" />
                           New Booking
@@ -1812,6 +1834,13 @@ export default function ClientsPage() {
                         <Button size="sm" variant="outline" onClick={() => openAppointmentHistory(selectedClient)}>
                           <History className="h-4 w-4 mr-2" />
                           History
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => {
+                          setSellPackageCustomer(selectedClient)
+                          setShowSellPackageDialog(true)
+                        }}>
+                          <Gift className="h-4 w-4 mr-2" />
+                          Sell Package
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => openEditDialog(selectedClient)}>
                           <Edit className="h-4 w-4 mr-2" />
@@ -1856,6 +1885,22 @@ export default function ClientsPage() {
           onImportSuccess={() => {
             fetchCustomers()
             setShowImportDialog(false)
+          }}
+        />
+
+        {/* Sell Package Dialog */}
+        <SellPackageDialog
+          open={showSellPackageDialog}
+          onOpenChange={setShowSellPackageDialog}
+          customerId={sellPackageCustomer?.id || ''}
+          customerName={sellPackageCustomer?.name || ''}
+          onSuccess={() => {
+            toast({
+              title: "Package Sold",
+              description: "Package has been sold successfully to the customer",
+            })
+            // Trigger refresh for CustomerCreditsSection
+            setCreditsRefreshTrigger(prev => prev + 1)
           }}
         />
 

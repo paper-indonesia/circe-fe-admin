@@ -22,7 +22,9 @@
       "Bash(git push:*)",
       "Bash(npx tsc:*)",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npx shadcn@latest add collapsible --yes)",
+      "Bash(dir \"C:\\Users\\Aril Indra Permana\\Circe\\admin-beauty-clinic-app\\app\\api\\customer\\package-payments\" /s /b)"
     ],
     "deny": [],
     "ask": []

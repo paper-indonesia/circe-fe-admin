@@ -14,6 +14,9 @@ export async function GET(req: NextRequest) {
   try {
     const authToken = getAuthToken(req)
 
+    console.log('[Package Limits API] Auth token present:', !!authToken)
+    console.log('[Package Limits API] Auth token (first 50 chars):', authToken?.substring(0, 50))
+
     if (!authToken) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -22,6 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     const url = `${FASTAPI_URL}/api/v1/packages/limits`
+    console.log('[Package Limits API] Fetching from:', url)
 
     const response = await fetch(url, {
       method: 'GET',
@@ -29,9 +33,12 @@ export async function GET(req: NextRequest) {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
+      cache: 'no-store',
     })
 
     const data = await response.json()
+    console.log('[Package Limits API] Response status:', response.status)
+    console.log('[Package Limits API] Response data:', JSON.stringify(data))
 
     if (!response.ok) {
       return NextResponse.json(
@@ -42,7 +49,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Error fetching package limits:', error)
+    console.error('[Package Limits API] Error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

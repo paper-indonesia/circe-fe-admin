@@ -9,7 +9,7 @@ function getAuthToken(req: NextRequest) {
   return req.cookies.get('auth-token')?.value
 }
 
-// GET - Get customer credits
+// GET - Get customer's purchased packages (staff view)
 export async function GET(
   req: NextRequest,
   { params }: { params: { customer_id: string } }
@@ -28,20 +28,18 @@ export async function GET(
 
     // Get query parameters
     const searchParams = req.nextUrl.searchParams
+    const status = searchParams.get('status') || ''
+    const includeDetails = searchParams.get('include_details') || 'true'
+
+    // Build query string
     const queryParams = new URLSearchParams()
+    queryParams.append('customer_id', customer_id)
+    if (status) queryParams.append('status', status)
+    queryParams.append('include_details', includeDetails)
 
-    if (searchParams.get('service_id')) {
-      queryParams.append('service_id', searchParams.get('service_id')!)
-    }
-    if (searchParams.get('include_expired')) {
-      queryParams.append('include_expired', searchParams.get('include_expired')!)
-    }
-    if (searchParams.get('include_used')) {
-      queryParams.append('include_used', searchParams.get('include_used')!)
-    }
+    const url = `${FASTAPI_URL}/api/v1/customer/packages?${queryParams.toString()}`
 
-    const queryString = queryParams.toString()
-    const url = `${FASTAPI_URL}/api/v1/staff/customer-packages/${customer_id}/credits${queryString ? '?' + queryString : ''}`
+    console.log('[Customer Purchases API] Fetching from:', url)
 
     const response = await fetch(url, {
       method: 'GET',
@@ -55,15 +53,18 @@ export async function GET(
     const data = await response.json()
 
     if (!response.ok) {
+      console.error('[Customer Purchases API] Error:', data)
       return NextResponse.json(
-        { error: data.detail || 'Failed to fetch customer credits' },
+        { error: data.detail || 'Failed to fetch customer packages' },
         { status: response.status }
       )
     }
 
+    console.log('[Customer Purchases API] Response:', JSON.stringify(data).substring(0, 200))
+
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Error fetching customer credits:', error)
+    console.error('Error fetching customer packages:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

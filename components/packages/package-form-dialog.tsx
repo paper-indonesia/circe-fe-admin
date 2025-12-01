@@ -8,14 +8,23 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Gift, Plus, Trash2, Search, AlertCircle, Percent, Calculator } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Gift, Plus, Trash2, Search, AlertCircle, Percent, Calculator, Building2 } from "lucide-react"
 import type { Package, Treatment } from "@/lib/types"
+
+interface Outlet {
+  id: string
+  _id?: string
+  name: string
+  is_active?: boolean
+}
 
 interface PackageFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   package?: Package | null
   services: Treatment[]
+  outlets: Outlet[]
   maxItems: number
   onSubmit: (data: any) => Promise<void>
   isSubmitting: boolean
@@ -33,6 +42,7 @@ export function PackageFormDialog({
   onOpenChange,
   package: editingPackage,
   services,
+  outlets,
   maxItems,
   onSubmit,
   isSubmitting
@@ -64,13 +74,18 @@ export function PackageFormDialog({
           status: editingPackage.status === "archived" ? "inactive" : editingPackage.status,
           outlet_ids: editingPackage.outlet_ids || [],
         })
-        setPackageItems(editingPackage.package_items.map(item => ({
+        const items = (editingPackage.package_items || []).map(item => ({
           service_id: item.service_id,
           service_name: item.service_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-        })))
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+        }))
+        console.log('[PackageForm] Loaded package items:', items)
+        console.log('[PackageForm] Package total_individual_price:', editingPackage.total_individual_price)
+        setPackageItems(items)
       } else {
+        // For new package, select all outlets by default
+        const allOutletIds = outlets.map(o => o.id || o._id).filter(Boolean) as string[]
         setFormData({
           name: "",
           description: "",
@@ -78,14 +93,14 @@ export function PackageFormDialog({
           validity_days: null,
           is_active: true,
           status: "active",
-          outlet_ids: [],
+          outlet_ids: allOutletIds,
         })
         setPackageItems([])
       }
       setServiceSearchQuery("")
       setShowServiceSelector(false)
     }
-  }, [open, editingPackage])
+  }, [open, editingPackage, outlets])
 
   // Calculate totals
   const totalIndividualPrice = useMemo(() => {
@@ -410,20 +425,25 @@ export function PackageFormDialog({
           <div className="space-y-4 pt-4 border-t">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="validity_days">Validity Period (days)</Label>
+                <Label htmlFor="validity_days">Credit Validity (days)</Label>
                 <Input
                   id="validity_days"
                   type="number"
-                  min="0"
+                  min="1"
                   placeholder="Leave empty for no expiry"
                   value={formData.validity_days || ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    validity_days: e.target.value ? parseInt(e.target.value) : null
-                  })}
+                  onChange={(e) => {
+                    const value = e.target.value ? parseInt(e.target.value) : null
+                    setFormData({
+                      ...formData,
+                      validity_days: value
+                    })
+                  }}
                 />
                 <p className="text-xs text-gray-500">
-                  How long customer has to use credits after purchase
+                  {formData.validity_days
+                    ? `Credits can be used within ${formData.validity_days} days from purchase`
+                    : "Leave empty for unlimited validity"}
                 </p>
               </div>
 
@@ -458,6 +478,87 @@ export function PackageFormDialog({
               </div>
             </div>
           </div>
+
+          {/* Outlets Selection */}
+          {outlets.length > 0 && (
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-[#8B5CF6]" />
+                  <Label className="text-base font-semibold">Available at Outlets</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const allIds = outlets.map(o => o.id || o._id).filter(Boolean) as string[]
+                      setFormData({ ...formData, outlet_ids: allIds })
+                    }}
+                    className="text-xs h-7"
+                  >
+                    Select All
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFormData({ ...formData, outlet_ids: [] })}
+                    className="text-xs h-7"
+                  >
+                    Clear All
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {outlets.map((outlet) => {
+                  const outletId = outlet.id || outlet._id || ''
+                  const isSelected = formData.outlet_ids.includes(outletId)
+                  return (
+                    <div
+                      key={outletId}
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'border-[#8B5CF6] bg-[#EDE9FE]/30'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => {
+                        const newOutletIds = isSelected
+                          ? formData.outlet_ids.filter(id => id !== outletId)
+                          : [...formData.outlet_ids, outletId]
+                        setFormData({ ...formData, outlet_ids: newOutletIds })
+                      }}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => {
+                          const newOutletIds = checked
+                            ? [...formData.outlet_ids, outletId]
+                            : formData.outlet_ids.filter(id => id !== outletId)
+                          setFormData({ ...formData, outlet_ids: newOutletIds })
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{outlet.name}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {formData.outlet_ids.length === 0 && (
+                <p className="text-xs text-orange-600">
+                  Please select at least one outlet
+                </p>
+              )}
+
+              <p className="text-xs text-gray-500">
+                {formData.outlet_ids.length} of {outlets.length} outlets selected
+              </p>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3 pt-6 border-t">

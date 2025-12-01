@@ -9,6 +9,72 @@ function getAuthToken(req: NextRequest) {
   return req.cookies.get('auth-token')?.value
 }
 
+// GET - List customer packages (staff view)
+export async function GET(req: NextRequest) {
+  try {
+    const authToken = getAuthToken(req)
+
+    if (!authToken) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Get query parameters
+    const searchParams = req.nextUrl.searchParams
+    const queryParams = new URLSearchParams()
+
+    if (searchParams.get('customer_id')) {
+      queryParams.append('customer_id', searchParams.get('customer_id')!)
+    }
+    if (searchParams.get('status_filter')) {
+      queryParams.append('status_filter', searchParams.get('status_filter')!)
+    }
+    if (searchParams.get('include_details')) {
+      queryParams.append('include_details', searchParams.get('include_details')!)
+    }
+    if (searchParams.get('page')) {
+      queryParams.append('page', searchParams.get('page')!)
+    }
+    if (searchParams.get('size')) {
+      queryParams.append('size', searchParams.get('size')!)
+    }
+
+    const queryString = queryParams.toString()
+    const url = `${FASTAPI_URL}/api/v1/staff/customer-packages${queryString ? '?' + queryString : ''}`
+
+    console.log('[Staff Customer Packages API] Fetching from:', url)
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error('[Staff Customer Packages API] Error:', data)
+      return NextResponse.json(
+        { error: data.detail || 'Failed to fetch customer packages' },
+        { status: response.status }
+      )
+    }
+
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error('Error fetching customer packages:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
 // POST - Staff creates package purchase for customer
 export async function POST(req: NextRequest) {
   try {

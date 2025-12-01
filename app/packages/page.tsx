@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
-import { Package, Clock, Edit, Trash2, ChevronLeft, ChevronRight, Search, AlertCircle, Gift, Percent, ShoppingBag, TrendingUp } from "lucide-react"
+import { Package, Clock, Edit, Trash2, ChevronLeft, ChevronRight, Search, AlertCircle, Gift, Percent, ShoppingBag, TrendingUp, Loader2, ShoppingCart, User } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 import { AddButton } from "@/components/ui/add-button"
@@ -19,10 +23,12 @@ import type { Package as PackageType, PackageLimits, Treatment } from "@/lib/typ
 
 export default function PackagesPage() {
   const { toast } = useToast()
+  const router = useRouter()
 
   const [packages, setPackages] = useState<PackageType[]>([])
   const [packageLimits, setPackageLimits] = useState<PackageLimits | null>(null)
   const [services, setServices] = useState<Treatment[]>([])
+  const [outlets, setOutlets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingLimits, setLoadingLimits] = useState(true)
 
@@ -34,7 +40,23 @@ export default function PackagesPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isNavigatingToUpgrade, setIsNavigatingToUpgrade] = useState(false)
   const pageSize = 10
+
+  // Quick Sell states
+  const [showSellDialog, setShowSellDialog] = useState(false)
+  const [selectedPackageToSell, setSelectedPackageToSell] = useState<PackageType | null>(null)
+  const [customers, setCustomers] = useState<any[]>([])
+  const [loadingCustomers, setLoadingCustomers] = useState(false)
+  const [customerSearchQuery, setCustomerSearchQuery] = useState("")
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null)
+  const [sellFormData, setSellFormData] = useState({
+    outlet_id: "",
+    payment_method: "manual_onspot" as "manual_onspot" | "paper_digital" | "bank_transfer",
+    amount_paid: 0,
+    notes: "",
+  })
+  const [isSelling, setIsSelling] = useState(false)
 
   // Fetch packages
   const fetchPackages = async () => {
@@ -57,10 +79,11 @@ export default function PackagesPage() {
 
   // Fetch package limits
   const fetchPackageLimits = async () => {
+    console.log('[Packages] Fetching package limits...')
     setLoadingLimits(true)
     try {
       const data = await apiClient.getPackageLimits()
-      console.log('[Packages] Package limits response:', data)
+      console.log('[Packages] Package limits response:', JSON.stringify(data))
 
       // Validate response - max_packages should be > 0 for valid subscription
       if (data && typeof data.limit_reached === 'boolean' && data.max_packages > 0) {
@@ -96,10 +119,30 @@ export default function PackagesPage() {
     }
   }
 
+  // Fetch outlets for the form
+  const fetchOutlets = async () => {
+    try {
+      const data = await apiClient.getOutlets()
+      // Handle both array and { items: [...] } response formats
+      const outletsList = Array.isArray(data) ? data : (data?.items || [])
+      // Transform outlets to ensure id field exists
+      const transformedOutlets = outletsList.map((outlet: any) => ({
+        ...outlet,
+        id: outlet.id || outlet._id,
+      }))
+      setOutlets(transformedOutlets)
+    } catch (error: any) {
+      console.error('Error fetching outlets:', error)
+      setOutlets([])
+    }
+  }
+
   useEffect(() => {
+    console.log('[Packages] Initializing - fetching data...')
     fetchPackages()
     fetchPackageLimits()
     fetchServices()
+    fetchOutlets()
   }, [])
 
   const filteredPackages = useMemo(() => {
@@ -206,6 +249,150 @@ export default function PackagesPage() {
     setShowFormDialog(true)
   }
 
+  // Helper to check if email is placeholder/fake (for display purposes)
+  const isPlaceholderEmail = (email?: string) => {
+    if (!email) return true
+    return email.endsWith('@example.co') || email.endsWith('@example.com')
+  }
+
+  // Helper to check if customer should be excluded from search results
+  const shouldExcludeCustomer = (customer: any) => {
+    const email = customer.email
+    if (!email) return false // Keep customers without email
+    return email.endsWith('@example.co') || email.endsWith('@example.com')
+  }
+
+  // Quick Sell functions
+  const fetchCustomers = async (search?: string) => {
+    setLoadingCustomers(true)
+    try {
+      const params = new URLSearchParams()
+      params.append('size', '50') // Fetch more to filter locally
+
+      const searchTerm = search?.trim() || ''
+      if (searchTerm) {
+        params.append('search', searchTerm)
+      }
+
+      const response = await fetch(`/api/customers?${params.toString()}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch customers')
+      }
+      const data = await response.json()
+      let customersList = data.items || data || []
+
+      // Filter out customers with placeholder emails (@example.co, @example.com)
+      // These might be pulled in if search term partially matches "example"
+      customersList = customersList.filter((customer: any) => {
+        return !shouldExcludeCustomer(customer)
+      })
+
+      // Transform customers to include full name
+      customersList = customersList.map((customer: any) => {
+        const firstName = customer.first_name || ''
+        const lastName = customer.last_name || ''
+        // If first name and last name are the same, use first name only to avoid redundancy
+        const fullName = firstName.toLowerCase() === lastName.toLowerCase()
+          ? firstName
+          : `${firstName} ${lastName}`.trim()
+
+        return {
+          ...customer,
+          id: customer.id || customer._id,
+          name: customer.name || fullName || 'Unknown'
+        }
+      })
+
+      setCustomers(customersList)
+    } catch (error: any) {
+      console.error('Error fetching customers:', error)
+      setCustomers([])
+    } finally {
+      setLoadingCustomers(false)
+    }
+  }
+
+  const openSellDialog = (pkg: PackageType) => {
+    setSelectedPackageToSell(pkg)
+    setSelectedCustomer(null)
+    setCustomerSearchQuery("")
+    setCustomers([]) // Reset customers list
+    setSellFormData({
+      outlet_id: outlets.length === 1 ? (outlets[0].id || outlets[0]._id) : "",
+      payment_method: "manual_onspot",
+      amount_paid: pkg.package_price,
+      notes: "",
+    })
+    setShowSellDialog(true)
+  }
+
+  const handleSellPackage = async () => {
+    if (!selectedPackageToSell || !selectedCustomer) return
+
+    setIsSelling(true)
+    try {
+      const response = await fetch('/api/staff/customer-packages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_id: selectedCustomer.id,
+          package_id: selectedPackageToSell.id,
+          outlet_id: sellFormData.outlet_id,
+          payment_method: sellFormData.payment_method,
+          amount_paid: sellFormData.amount_paid,
+          currency: 'IDR',
+          notes: sellFormData.notes || undefined,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sell package')
+      }
+
+      const packageName = selectedPackageToSell?.name || 'Package'
+      const customerName = selectedCustomer?.name || 'customer'
+
+      toast({
+        title: "Package Sold Successfully!",
+        description: `${packageName} has been sold to ${customerName}. Check the package status in Customers menu.`,
+      })
+
+      setShowSellDialog(false)
+      setSelectedPackageToSell(null)
+      setSelectedCustomer(null)
+      fetchPackages()
+      fetchPackageLimits()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to sell package",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSelling(false)
+    }
+  }
+
+  // Debounced customer search
+  useEffect(() => {
+    if (!showSellDialog) return
+
+    const timer = setTimeout(() => {
+      fetchCustomers(customerSearchQuery)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [customerSearchQuery])
+
+  // Fetch customers when dialog opens
+  useEffect(() => {
+    if (showSellDialog) {
+      fetchCustomers()
+    }
+  }, [showSellDialog])
+
   function getStatusBadge(status: string) {
     switch (status) {
       case "active":
@@ -291,7 +478,7 @@ export default function PackagesPage() {
                     <span className={packageLimits.limit_reached ? "text-orange-800" : "text-blue-800"}>
                       {packageLimits.limit_reached
                         ? `Package limit reached (${packageLimits.current_packages}/${packageLimits.max_packages})`
-                        : `${packageLimits.remaining_packages} of ${packageLimits.max_packages} packages remaining`
+                        : `${packageLimits.current_packages} of ${packageLimits.max_packages} packages used (${packageLimits.remaining_packages} remaining)`
                       }
                     </span>
                   </div>
@@ -300,9 +487,20 @@ export default function PackagesPage() {
                       variant="outline"
                       size="sm"
                       className="border-orange-300 text-orange-700 hover:bg-orange-100"
-                      onClick={() => window.location.href = '/subscription/upgrade'}
+                      disabled={isNavigatingToUpgrade}
+                      onClick={() => {
+                        setIsNavigatingToUpgrade(true)
+                        router.push('/subscription/upgrade')
+                      }}
                     >
-                      Upgrade Plan
+                      {isNavigatingToUpgrade ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Upgrade Plan'
+                      )}
                     </Button>
                   )}
                 </div>
@@ -379,16 +577,19 @@ export default function PackagesPage() {
                           </TableCell>
                           <TableCell className="p-4">
                             <div className="space-y-1">
-                              {pkg.package_items.slice(0, 2).map((item, idx) => (
+                              {(pkg.package_items || []).slice(0, 2).map((item, idx) => (
                                 <div key={idx} className="text-sm">
                                   <span className="text-gray-600">{item.quantity}x</span>{" "}
                                   <span className="text-gray-900">{item.service_name}</span>
                                 </div>
                               ))}
-                              {pkg.package_items.length > 2 && (
+                              {(pkg.package_items || []).length > 2 && (
                                 <div className="text-sm text-gray-500">
-                                  +{pkg.package_items.length - 2} more services
+                                  +{(pkg.package_items || []).length - 2} more services
                                 </div>
+                              )}
+                              {(!pkg.package_items || pkg.package_items.length === 0) && (
+                                <div className="text-sm text-gray-400">No services</div>
                               )}
                             </div>
                           </TableCell>
@@ -419,13 +620,26 @@ export default function PackagesPage() {
                           <TableCell className="p-4">
                             <div className="text-sm">
                               <div className="font-medium">{pkg.total_purchased || 0} sold</div>
-                              <div className="text-gray-500">
-                                Rp {(pkg.total_revenue || 0).toLocaleString("id-ID")}
-                              </div>
+                              {(pkg.total_revenue || 0) > 0 && (
+                                <div className="text-gray-500">
+                                  Rp {pkg.total_revenue.toLocaleString("id-ID")}
+                                </div>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="p-4">
                             <div className="flex justify-end gap-2">
+                              {pkg.status === 'active' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openSellDialog(pkg)}
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                                >
+                                  <ShoppingCart className="h-4 w-4 mr-1" />
+                                  Sell
+                                </Button>
+                              )}
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -497,7 +711,7 @@ export default function PackagesPage() {
             </>
           )}
 
-          {/* Summary Stats */}
+          {/* Summary Stats - Hidden for now
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardContent className="pt-6">
@@ -524,6 +738,7 @@ export default function PackagesPage() {
               </CardContent>
             </Card>
           </div>
+          */}
         </div>
       )}
 
@@ -538,6 +753,7 @@ export default function PackagesPage() {
         }}
         package={editingPackage}
         services={services}
+        outlets={outlets}
         maxItems={packageLimits?.max_package_items || 10}
         onSubmit={editingPackage ? handleUpdatePackage : handleCreatePackage}
         isSubmitting={isSubmitting}
@@ -552,7 +768,7 @@ export default function PackagesPage() {
         entityDetails={[
           { label: "Name", value: packageToDelete?.name || "-" },
           { label: "Price", value: packageToDelete?.package_price ? `Rp ${packageToDelete.package_price.toLocaleString("id-ID")}` : "-" },
-          { label: "Services", value: `${packageToDelete?.package_items.length || 0} services` },
+          { label: "Services", value: `${packageToDelete?.package_items?.length || 0} services` },
           { label: "Status", value: packageToDelete?.status || "active" },
         ]}
         onConfirmDelete={confirmDeletePackage}
@@ -563,6 +779,205 @@ export default function PackagesPage() {
           "Historical sales data will be preserved"
         ]}
       />
+
+      {/* Quick Sell Dialog */}
+      <Dialog open={showSellDialog} onOpenChange={setShowSellDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-green-600" />
+              Sell Package
+            </DialogTitle>
+            <DialogDescription>
+              Sell <span className="font-semibold text-foreground">{selectedPackageToSell?.name}</span>
+              {selectedCustomer && (
+                <> to <span className="font-semibold text-foreground">{selectedCustomer.name}</span></>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Package Info */}
+            <div className="bg-purple-50 border border-purple-100 rounded-lg p-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-[#FCD6F5] to-[#EDE9FE] flex items-center justify-center">
+                  <Gift className="h-5 w-5 text-[#8B5CF6]" />
+                </div>
+                <div>
+                  <p className="font-semibold">{selectedPackageToSell?.name}</p>
+                  <p className="text-sm text-purple-700">
+                    Rp {selectedPackageToSell?.package_price.toLocaleString('id-ID')} • {selectedPackageToSell?.package_items?.length || 0} services
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Selection */}
+            <div className="space-y-2">
+              <Label>
+                {selectedCustomer ? `Customer: ${selectedCustomer.name}` : 'Select Customer *'}
+              </Label>
+              {selectedCustomer ? (
+                <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+                      <User className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{selectedCustomer.name}</p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {selectedCustomer.phone && <span>{selectedCustomer.phone}</span>}
+                        {selectedCustomer.phone && !isPlaceholderEmail(selectedCustomer.email) && <span>•</span>}
+                        {!isPlaceholderEmail(selectedCustomer.email) && <span>{selectedCustomer.email}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedCustomer(null)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    Change
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search customers by name, phone, or email..."
+                      value={customerSearchQuery}
+                      onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <div className="max-h-40 overflow-y-auto border rounded-lg">
+                    {loadingCustomers ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                      </div>
+                    ) : customers.length === 0 ? (
+                      <div className="text-center py-4 text-sm text-gray-500">
+                        No customers found
+                      </div>
+                    ) : (
+                      customers.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 text-left border-b last:border-b-0"
+                          onClick={() => setSelectedCustomer(customer)}
+                        >
+                          <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                            <User className="h-4 w-4 text-gray-500" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{customer.name}</p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              {customer.phone && <span>{customer.phone}</span>}
+                              {customer.phone && !isPlaceholderEmail(customer.email) && <span>•</span>}
+                              {!isPlaceholderEmail(customer.email) && <span className="truncate">{customer.email}</span>}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Outlet Selection */}
+            {outlets.length > 1 && (
+              <div className="space-y-2">
+                <Label>Outlet *</Label>
+                <Select
+                  value={sellFormData.outlet_id}
+                  onValueChange={(value) => setSellFormData({ ...sellFormData, outlet_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select outlet" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {outlets.map((outlet) => (
+                      <SelectItem key={outlet.id || outlet._id} value={outlet.id || outlet._id}>
+                        {outlet.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Payment Method */}
+            <div className="space-y-2">
+              <Label>Payment Method *</Label>
+              <Select
+                value={sellFormData.payment_method}
+                onValueChange={(value: "manual_onspot" | "paper_digital" | "bank_transfer") =>
+                  setSellFormData({ ...sellFormData, payment_method: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual_onspot">Cash / On-spot Payment</SelectItem>
+                  <SelectItem value="paper_digital">Paper / Digital Transfer</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Amount */}
+            <div className="space-y-2">
+              <Label>Amount Paid (IDR) *</Label>
+              <Input
+                type="number"
+                min={0}
+                value={sellFormData.amount_paid}
+                onChange={(e) => setSellFormData({ ...sellFormData, amount_paid: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label>Notes (Optional)</Label>
+              <Textarea
+                value={sellFormData.notes}
+                onChange={(e) => setSellFormData({ ...sellFormData, notes: e.target.value })}
+                placeholder="Add any notes..."
+                rows={2}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setShowSellDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSellPackage}
+                disabled={isSelling || !selectedCustomer || !sellFormData.outlet_id || sellFormData.amount_paid <= 0}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isSelling ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Sell Package
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
