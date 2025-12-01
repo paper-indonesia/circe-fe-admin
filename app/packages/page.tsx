@@ -287,6 +287,22 @@ export default function PackagesPage() {
         return !shouldExcludeCustomer(customer)
       })
 
+      // Transform customers to include full name
+      customersList = customersList.map((customer: any) => {
+        const firstName = customer.first_name || ''
+        const lastName = customer.last_name || ''
+        // If first name and last name are the same, use first name only to avoid redundancy
+        const fullName = firstName.toLowerCase() === lastName.toLowerCase()
+          ? firstName
+          : `${firstName} ${lastName}`.trim()
+
+        return {
+          ...customer,
+          id: customer.id || customer._id,
+          name: customer.name || fullName || 'Unknown'
+        }
+      })
+
       setCustomers(customersList)
     } catch (error: any) {
       console.error('Error fetching customers:', error)
@@ -335,9 +351,12 @@ export default function PackagesPage() {
         throw new Error(data.error || 'Failed to sell package')
       }
 
+      const packageName = selectedPackageToSell?.name || 'Package'
+      const customerName = selectedCustomer?.name || 'customer'
+
       toast({
-        title: "Package Sold!",
-        description: `${selectedPackageToSell.name} has been sold to ${selectedCustomer.name}`,
+        title: "Package Sold Successfully!",
+        description: `${packageName} has been sold to ${customerName}. Check the package status in Customers menu.`,
       })
 
       setShowSellDialog(false)
@@ -770,7 +789,10 @@ export default function PackagesPage() {
               Sell Package
             </DialogTitle>
             <DialogDescription>
-              Sell <span className="font-semibold text-foreground">{selectedPackageToSell?.name}</span> to a customer
+              Sell <span className="font-semibold text-foreground">{selectedPackageToSell?.name}</span>
+              {selectedCustomer && (
+                <> to <span className="font-semibold text-foreground">{selectedCustomer.name}</span></>
+              )}
             </DialogDescription>
           </DialogHeader>
 
@@ -792,7 +814,9 @@ export default function PackagesPage() {
 
             {/* Customer Selection */}
             <div className="space-y-2">
-              <Label>Select Customer *</Label>
+              <Label>
+                {selectedCustomer ? `Customer: ${selectedCustomer.name}` : 'Select Customer *'}
+              </Label>
               {selectedCustomer ? (
                 <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center gap-3">
