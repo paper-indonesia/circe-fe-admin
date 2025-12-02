@@ -57,14 +57,11 @@ export function SubscriptionWarningBanner({
         const storageKey = `subscription-warning-dismissed-${user.id}`
         const dismissedData = localStorage.getItem(storageKey)
         if (dismissedData) {
-          const { timestamp, planType } = JSON.parse(dismissedData)
+          const { timestamp } = JSON.parse(dismissedData)
           const hoursSinceDismissed = (Date.now() - timestamp) / (1000 * 60 * 60)
 
-          // For Free plan: show again after 24 hours
-          // For paid plans: show again if less than 3 days left
-          if (isFreeplan && planType === 'free' && hoursSinceDismissed < 24) {
-            setDismissed(true)
-          } else if (!isFreeplan && daysUntilExpiry !== null && daysUntilExpiry > 3) {
+          // Show again after 24 hours (remind tomorrow)
+          if (hoursSinceDismissed < 24) {
             setDismissed(true)
           }
         }
@@ -76,21 +73,14 @@ export function SubscriptionWarningBanner({
     if (subscription && user) {
       checkDismissed()
     }
-  }, [subscription, isFreeplan, daysUntilExpiry, user])
-
-  // Reset dismissed state when days change significantly (for paid plans)
-  useEffect(() => {
-    if (!isFreeplan && daysUntilExpiry !== null && daysUntilExpiry <= 3) {
-      setDismissed(false)
-    }
-  }, [daysUntilExpiry, isFreeplan])
+  }, [subscription, user])
 
   // Don't show banner if:
   // 1. No subscription data
-  // 2. User dismissed and more than 3 days left
+  // 2. User dismissed (will show again after 24 hours)
   // 3. More than 14 days until expiry (unless Free plan)
   if (!subscription) return null
-  if (dismissed && daysUntilExpiry !== null && daysUntilExpiry > 3) return null
+  if (dismissed) return null
 
   // For Free plan, always show (no expiry date check)
   // For paid plans, only show if within 14 days of expiry
@@ -131,7 +121,7 @@ export function SubscriptionWarningBanner({
         : 'Your subscription has expired. Renew now to restore full access to premium features.',
       ctaText: isFreeplan ? 'Upgrade Now' : 'Renew Now',
       ctaPrimary: true,
-      dismissable: isFreeplan
+      dismissable: true
     },
     critical: {
       variant: 'destructive' as const,
@@ -144,7 +134,7 @@ export function SubscriptionWarningBanner({
         : `Your ${subscription?.plan || 'Professional'} plan expires tomorrow (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Renew immediately to avoid service interruption.`,
       ctaText: isFreeplan ? 'Upgrade to Pro' : 'Renew Immediately',
       ctaPrimary: true,
-      dismissable: false
+      dismissable: true
     },
     urgent: {
       variant: 'default' as const,
@@ -157,7 +147,7 @@ export function SubscriptionWarningBanner({
         : `Your ${subscription?.plan || 'Professional'} plan expires in ${daysUntilExpiry} day${daysUntilExpiry === 1 ? '' : 's'} (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Renew now to continue enjoying premium features.`,
       ctaText: isFreeplan ? 'View Plans' : 'Renew Subscription',
       ctaPrimary: true,
-      dismissable: false
+      dismissable: true
     },
     warning: {
       variant: 'default' as const,
@@ -179,7 +169,7 @@ export function SubscriptionWarningBanner({
       iconColor: 'text-blue-600',
       title: isFreeplan ? 'Ready to Grow?' : 'Subscription Renewal Reminder',
       message: isFreeplan
-        ? 'See how premium features can help you manage more clients, track performance, and increase revenue.'
+        ? 'See how premium features can help you manage more clients, track performance, and increase revenue'
         : `Your ${subscription?.plan || 'Professional'} plan expires in ${daysUntilExpiry} days (${subscription?.end_date ? format(new Date(subscription.end_date), 'MMMM d, yyyy') : 'N/A'}). Consider renewing early.`,
       ctaText: isFreeplan ? 'Compare Plans' : 'View Subscription',
       ctaPrimary: false,

@@ -281,12 +281,6 @@ export default function PackagesPage() {
       const data = await response.json()
       let customersList = data.items || data || []
 
-      // Filter out customers with placeholder emails (@example.co, @example.com)
-      // These might be pulled in if search term partially matches "example"
-      customersList = customersList.filter((customer: any) => {
-        return !shouldExcludeCustomer(customer)
-      })
-
       // Transform customers to include full name
       customersList = customersList.map((customer: any) => {
         const firstName = customer.first_name || ''
@@ -375,13 +369,29 @@ export default function PackagesPage() {
     }
   }
 
-  // Debounced customer search
+  // Debounced customer search - only search when 3+ characters typed
   useEffect(() => {
     if (!showSellDialog) return
 
+    const searchTerm = customerSearchQuery.trim()
+
+    // If search is cleared, show all customers (with debounce)
+    if (searchTerm === '') {
+      const timer = setTimeout(() => {
+        fetchCustomers()
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+
+    // Only search if 3+ characters to reduce API calls
+    if (searchTerm.length < 3) {
+      return
+    }
+
+    // Wait 1 second after user stops typing before making API call
     const timer = setTimeout(() => {
-      fetchCustomers(customerSearchQuery)
-    }, 300)
+      fetchCustomers(searchTerm)
+    }, 1000)
 
     return () => clearTimeout(timer)
   }, [customerSearchQuery])
@@ -846,7 +856,7 @@ export default function PackagesPage() {
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="Search customers by name, phone, or email..."
+                      placeholder="Type min. 3 characters to search..."
                       value={customerSearchQuery}
                       onChange={(e) => setCustomerSearchQuery(e.target.value)}
                       className="pl-10"
@@ -856,6 +866,10 @@ export default function PackagesPage() {
                     {loadingCustomers ? (
                       <div className="flex items-center justify-center py-4">
                         <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                      </div>
+                    ) : customerSearchQuery.trim().length > 0 && customerSearchQuery.trim().length < 3 ? (
+                      <div className="text-center py-4 text-sm text-gray-500">
+                        Type at least 3 characters to search
                       </div>
                     ) : customers.length === 0 ? (
                       <div className="text-center py-4 text-sm text-gray-500">
