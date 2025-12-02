@@ -5,38 +5,92 @@ declare global {
   interface Window {
     dataLayer: any[]
     gtag: (...args: any[]) => void
+    __ANALYTICS_CONFIG__?: {
+      ga_measurement_id: string
+      google_ads_id: string
+      google_ads_signup_conversion_label: string
+    }
   }
 }
 
-// Initialize dataLayer if not exists
-if (typeof window !== 'undefined') {
-  window.dataLayer = window.dataLayer || []
-  window.gtag = function gtag() {
-    window.dataLayer.push(arguments)
+// Get analytics config from environment or cached config
+const getAnalyticsConfig = () => {
+  if (typeof window !== 'undefined') {
+    // First check if config is already cached
+    if (window.__ANALYTICS_CONFIG__) {
+      return window.__ANALYTICS_CONFIG__
+    }
+
+    // Fallback to NEXT_PUBLIC_ env vars (available at build time)
+    return {
+      ga_measurement_id: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || '',
+      google_ads_id: process.env.NEXT_PUBLIC_GOOGLE_ADS_ID || '',
+      google_ads_signup_conversion_label: process.env.NEXT_PUBLIC_GOOGLE_ADS_SIGNUP_CONVERSION_LABEL || ''
+    }
+  }
+  return {
+    ga_measurement_id: '',
+    google_ads_id: '',
+    google_ads_signup_conversion_label: ''
+  }
+}
+
+// Set analytics config (called by GoogleAnalytics component after fetching from API)
+export const setAnalyticsConfig = (config: {
+  ga_measurement_id: string
+  google_ads_id: string
+  google_ads_signup_conversion_label: string
+}) => {
+  if (typeof window !== 'undefined') {
+    window.__ANALYTICS_CONFIG__ = config
+    console.log('[Analytics] Config cached:',
+      config.ga_measurement_id ? 'GA SET' : 'GA NOT SET',
+      config.google_ads_id ? 'ADS SET' : 'ADS NOT SET',
+      config.google_ads_signup_conversion_label ? 'CONVERSION LABEL SET' : 'CONVERSION LABEL NOT SET'
+    )
+  }
+}
+
+// Initialize gtag lazily to avoid hydration issues
+const initGtag = () => {
+  if (typeof window !== 'undefined' && !window.gtag) {
+    window.dataLayer = window.dataLayer || []
+    window.gtag = function gtag() {
+      window.dataLayer.push(arguments)
+    }
   }
 }
 
 // Helper function to send events to GA4
 export const trackEvent = (eventName: string, params?: Record<string, any>) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', eventName, params)
-    console.log('[GA4 Event]', eventName, params) // Debug logging
+  if (typeof window !== 'undefined') {
+    initGtag()
+    if (window.gtag) {
+      window.gtag('event', eventName, params)
+      console.log('[GA4 Event]', eventName, params) // Debug logging
+    }
   }
 }
 
 // Set user properties
 export const setUserProperties = (properties: Record<string, any>) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('set', 'user_properties', properties)
-    console.log('[GA4 User Properties]', properties)
+  if (typeof window !== 'undefined') {
+    initGtag()
+    if (window.gtag) {
+      window.gtag('set', 'user_properties', properties)
+      console.log('[GA4 User Properties]', properties)
+    }
   }
 }
 
 // Set user ID
 export const setUserId = (userId: string) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('set', 'user_id', userId)
-    console.log('[GA4 User ID]', userId)
+  if (typeof window !== 'undefined') {
+    initGtag()
+    if (window.gtag) {
+      window.gtag('set', 'user_id', userId)
+      console.log('[GA4 User ID]', userId)
+    }
   }
 }
 
@@ -192,22 +246,38 @@ export const trackValidationError = (
 
 // Google Ads Conversion Tracking for Sign-up
 export const trackGoogleAdsSignupConversion = (callback?: () => void) => {
-  if (typeof window !== 'undefined' && window.gtag) {
-    const conversionCallback = () => {
-      console.log('[Google Ads] Signup conversion tracked')
-      if (callback) {
-        callback()
+  if (typeof window !== 'undefined') {
+    initGtag()
+    const config = getAnalyticsConfig()
+
+    if (window.gtag && config.google_ads_id && config.google_ads_signup_conversion_label) {
+      const conversionCallback = () => {
+        console.log('[Google Ads] Signup conversion tracked')
+        if (callback) {
+          callback()
+        }
       }
+
+      // Build the full conversion ID: AW-XXXXXX/CONVERSION_LABEL
+      const conversionId = `${config.google_ads_id}/${config.google_ads_signup_conversion_label}`
+
+      window.gtag('event', 'conversion', {
+        'send_to': conversionId,
+        'event_callback': conversionCallback
+      })
+
+      console.log('[Google Ads Conversion]', conversionId)
+    } else if (callback) {
+      // If gtag is not available or missing config, still call the callback
+      if (!config.google_ads_id) {
+        console.warn('[Google Ads] No Google Ads ID configured')
+      }
+      if (!config.google_ads_signup_conversion_label) {
+        console.warn('[Google Ads] No Signup Conversion Label configured')
+      }
+      callback()
     }
-
-    window.gtag('event', 'conversion', {
-      'send_to': 'AW-17652682467/ub6FCO7a_cYbEOOduuFB',
-      'event_callback': conversionCallback
-    })
-
-    console.log('[Google Ads Conversion]', 'AW-17652682467/ub6FCO7a_cYbEOOduuFB')
   } else if (callback) {
-    // If gtag is not available, still call the callback
     callback()
   }
 }
