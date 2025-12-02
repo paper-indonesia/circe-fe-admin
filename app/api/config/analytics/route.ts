@@ -11,13 +11,16 @@ export async function GET() {
   try {
     const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || ''
     const googleAdsId = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID || ''
+    const googleAdsSignupConversionLabel = process.env.NEXT_PUBLIC_GOOGLE_ADS_SIGNUP_CONVERSION_LABEL || ''
 
     console.log('[Analytics API] GA Measurement ID:', gaMeasurementId ? 'SET' : 'NOT SET')
     console.log('[Analytics API] Google Ads ID:', googleAdsId ? 'SET' : 'NOT SET')
+    console.log('[Analytics API] Google Ads Signup Conversion Label:', googleAdsSignupConversionLabel ? 'SET' : 'NOT SET')
 
     return NextResponse.json({
       ga_measurement_id: gaMeasurementId,
       google_ads_id: googleAdsId,
+      google_ads_signup_conversion_label: googleAdsSignupConversionLabel,
       success: true
     })
   } catch (error) {

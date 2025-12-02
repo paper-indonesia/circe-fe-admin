@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import Script from 'next/script'
-import { setTrafficSource } from '@/lib/analytics'
+import { setTrafficSource, setAnalyticsConfig } from '@/lib/analytics'
 
 interface AnalyticsConfig {
   ga_measurement_id: string
   google_ads_id: string
+  google_ads_signup_conversion_label: string
 }
 
 export function GoogleAnalytics() {
@@ -27,6 +28,12 @@ export function GoogleAnalytics() {
 
           if (data.ga_measurement_id) {
             setConfig(data)
+            // Cache the config in window for use by analytics functions
+            setAnalyticsConfig({
+              ga_measurement_id: data.ga_measurement_id,
+              google_ads_id: data.google_ads_id || '',
+              google_ads_signup_conversion_label: data.google_ads_signup_conversion_label || ''
+            })
           } else {
             console.warn('[Analytics] No GA measurement ID in response')
           }
