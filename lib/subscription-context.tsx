@@ -30,15 +30,13 @@ interface SubscriptionContextType {
   usage: UsageData | null
   loading: boolean
   refetch: () => Promise<void>
-  isExpiredPaidPlan: () => boolean
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
   subscription: null,
   usage: null,
   loading: true,
-  refetch: async () => {},
-  isExpiredPaidPlan: () => false
+  refetch: async () => {}
 })
 
 export const useSubscription = () => useContext(SubscriptionContext)
@@ -107,31 +105,11 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     fetchSubscriptionData()
   }, [user])
 
-  // Check if subscription is in "stuck expired" state (paid plan that has expired)
-  const isExpiredPaidPlan = (): boolean => {
-    if (!subscription) return false
-
-    const plan = subscription.plan?.toLowerCase()
-    const endDate = subscription.end_date
-
-    // Plan is PRO or Enterprise but has expired
-    if ((plan === 'pro' || plan === 'enterprise') && endDate) {
-      const expiryDate = new Date(endDate)
-      const now = new Date()
-      // Set both to start of day for accurate comparison
-      expiryDate.setHours(0, 0, 0, 0)
-      now.setHours(0, 0, 0, 0)
-      return expiryDate < now
-    }
-    return false
-  }
-
   const value: SubscriptionContextType = {
     subscription,
     usage,
     loading,
-    refetch: fetchSubscriptionData,
-    isExpiredPaidPlan
+    refetch: fetchSubscriptionData
   }
 
   return (
