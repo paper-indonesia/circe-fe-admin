@@ -140,10 +140,10 @@ export default function SettingsPage() {
     description: "",
     website: "",
     settings: {
-      timezone: "Asia/Manila",
+      timezone: "Asia/Jakarta",
       currency: "IDR",
-      language: "en",
-      business_type: "spa",
+      language: "id",
+      business_type: "clinic",
       booking_advance_days: 30,
       cancellation_hours: 24,
       theme_color: "#3B82F6",
@@ -195,10 +195,10 @@ export default function SettingsPage() {
               description: tenantData.description || "",
               website: tenantData.website || "",
               settings: {
-                timezone: tenantData.settings?.timezone || "Asia/Manila",
+                timezone: tenantData.settings?.timezone || "Asia/Jakarta",
                 currency: tenantData.settings?.currency || "IDR",
-                language: tenantData.settings?.language || "en",
-                business_type: tenantData.settings?.business_type || "spa",
+                language: tenantData.settings?.language || "id",
+                business_type: tenantData.settings?.business_type || "clinic",
                 booking_advance_days: tenantData.settings?.booking_advance_days || 30,
                 cancellation_hours: tenantData.settings?.cancellation_hours || 24,
                 theme_color: tenantData.settings?.theme_color || "#3B82F6",
@@ -585,109 +585,6 @@ export default function SettingsPage() {
                         onChange={(e) => setTenantForm(prev => ({ ...prev, website: e.target.value }))}
                         placeholder="https://yourwebsite.com"
                       />
-                    </div>
-                  </div>
-
-                  {/* Regional & Business Settings */}
-                  <div className="space-y-4 pt-4 border-t">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-2">
-                      <Globe className="h-4 w-4 text-blue-600" />
-                      Regional & Business Settings
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="timezone" className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-blue-600" />
-                          Timezone
-                        </Label>
-                        <Select
-                          value={tenantForm.settings?.timezone || "Asia/Manila"}
-                          onValueChange={(value) => setTenantForm(prev => ({
-                            ...prev,
-                            settings: { ...prev.settings, timezone: value }
-                          }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Asia/Manila">Asia/Manila (GMT+8)</SelectItem>
-                            <SelectItem value="Asia/Jakarta">Asia/Jakarta (GMT+7)</SelectItem>
-                            <SelectItem value="Asia/Singapore">Asia/Singapore (GMT+8)</SelectItem>
-                            <SelectItem value="America/New_York">America/New York (GMT-5)</SelectItem>
-                            <SelectItem value="Europe/London">Europe/London (GMT+0)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="currency" className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-blue-600" />
-                          Currency
-                        </Label>
-                        <Select
-                          value={tenantForm.settings?.currency || "IDR"}
-                          onValueChange={(value) => setTenantForm(prev => ({
-                            ...prev,
-                            settings: { ...prev.settings, currency: value }
-                          }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="IDR">IDR (Indonesian Rupiah)</SelectItem>
-                            <SelectItem value="PHP">PHP (Philippine Peso)</SelectItem>
-                            <SelectItem value="USD">USD (US Dollar)</SelectItem>
-                            <SelectItem value="EUR">EUR (Euro)</SelectItem>
-                            <SelectItem value="SGD">SGD (Singapore Dollar)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="language" className="flex items-center gap-2">
-                          <Globe className="h-4 w-4 text-blue-600" />
-                          Language
-                        </Label>
-                        <Select
-                          value={tenantForm.settings?.language || "en"}
-                          onValueChange={(value) => setTenantForm(prev => ({
-                            ...prev,
-                            settings: { ...prev.settings, language: value }
-                          }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="en">English</SelectItem>
-                            <SelectItem value="id">Bahasa Indonesia</SelectItem>
-                            <SelectItem value="tl">Tagalog</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="businessType" className="flex items-center gap-2">
-                          <Briefcase className="h-4 w-4 text-blue-600" />
-                          Business Type
-                        </Label>
-                        <Select
-                          value={tenantForm.settings?.business_type || "spa"}
-                          onValueChange={(value) => setTenantForm(prev => ({
-                            ...prev,
-                            settings: { ...prev.settings, business_type: value }
-                          }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="spa">Spa</SelectItem>
-                            <SelectItem value="salon">Salon</SelectItem>
-                            <SelectItem value="clinic">Clinic</SelectItem>
-                            <SelectItem value="wellness">Wellness Center</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
                     </div>
                   </div>
 
