@@ -158,7 +158,7 @@ export default function HelpDeskPage() {
               <Button
                 variant="outline"
                 className="w-full bg-green-50 hover:bg-green-100 border-green-200 text-green-700 hover:text-green-800"
-                onClick={() => window.open('https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20aplikasi%20Reserva', '_blank')}
+                onClick={() => window.open('https://api.whatsapp.com/send?phone=628131793503&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20aplikasi%20Reserva', '_blank')}
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Chat via WhatsApp
@@ -331,7 +331,7 @@ export default function HelpDeskPage() {
             <Button
               size="lg"
               className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
-              onClick={() => window.open('https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20aplikasi%20Reserva', '_blank')}
+              onClick={() => window.open('https://api.whatsapp.com/send?phone=628131793503&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20aplikasi%20Reserva', '_blank')}
             >
               <MessageCircle className="h-5 w-5 mr-2" />
               Chat on WhatsApp
@@ -389,7 +389,7 @@ export default function HelpDeskPage() {
         <Button
           size="lg"
           className="h-14 w-14 rounded-full bg-green-500 hover:bg-green-600 text-white shadow-2xl hover:shadow-green-500/50 transition-all duration-300"
-          onClick={() => window.open('https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20aplikasi%20Reserva', '_blank')}
+          onClick={() => window.open('https://api.whatsapp.com/send?phone=628131793503&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20aplikasi%20Reserva', '_blank')}
           title="Chat on WhatsApp"
         >
           <MessageCircle className="h-6 w-6" />
