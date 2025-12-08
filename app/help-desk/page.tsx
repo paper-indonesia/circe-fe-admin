@@ -153,7 +153,7 @@ export default function HelpDeskPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Phone className="h-4 w-4" />
-                <span>+62 852-1353-9992</span>
+                <span>+62-813-179-3503</span>
               </div>
               <Button
                 variant="outline"
