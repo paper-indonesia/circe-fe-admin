@@ -5,7 +5,9 @@ import { useState, createContext, useContext, useEffect } from "react"
 import { Sidebar } from "./sidebar"
 import { NavigationLoader } from "@/components/navigation-loader"
 import { SubscriptionWarningBanner } from "@/components/subscription-warning-banner"
+import { DowngradeWarningBanner } from "@/components/downgrade-warning-banner"
 import { useAuth } from "@/lib/auth-context"
+import { useSubscription } from "@/lib/subscription-context"
 
 interface LayoutContextType {
   isCollapsed: boolean
@@ -25,6 +27,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { user, isAdmin } = useAuth()
+  const { isExpiredPaidPlan } = useSubscription()
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -63,8 +66,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <LayoutContext.Provider value={{ isCollapsed, setIsCollapsed: handleSetCollapsed }}>
       <div className="min-h-screen bg-gray-50" style={{ position: 'relative' }}>
-        {/* Floating Subscription Warning Banner - Only for tenant_admin */}
-        {user && isAdmin() && <SubscriptionWarningBanner />}
+        {/* Downgrade Warning Banner - Shows when paid plan has expired (blocking) */}
+        {user && isAdmin() && isExpiredPaidPlan() && <DowngradeWarningBanner />}
+
+        {/* Floating Subscription Warning Banner - Only for tenant_admin (non-blocking) */}
+        {user && isAdmin() && !isExpiredPaidPlan() && <SubscriptionWarningBanner />}
 
         <Sidebar />
         <div

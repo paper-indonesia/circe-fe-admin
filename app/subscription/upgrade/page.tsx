@@ -202,7 +202,7 @@ export default function UpgradePage() {
 
     if (planId === "enterprise") {
       // Redirect to WhatsApp for Enterprise plan inquiry
-      const whatsappUrl = "https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20tertarik%20untuk%20enterprise%20plan"
+      const whatsappUrl = "https://api.whatsapp.com/send?phone=628131793503&text=Halo%2C%20saya%20tertarik%20untuk%20enterprise%20plan"
       window.open(whatsappUrl, '_blank')
 
       toast({
@@ -576,7 +576,7 @@ export default function UpgradePage() {
                 variant="outline"
                 className="border-[#8B5CF6] text-[#A78BFA] hover:bg-[#8B5CF6]/10"
                 onClick={() => {
-                  const whatsappUrl = "https://api.whatsapp.com/send?phone=6285213539992&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20subscription%20di%20reserva"
+                  const whatsappUrl = "https://api.whatsapp.com/send?phone=628131793503&text=Halo%2C%20saya%20butuh%20bantuan%20terkait%20subscription%20di%20reserva"
                   window.open(whatsappUrl, '_blank')
                 }}
               >
