@@ -5,7 +5,9 @@ import { useState, createContext, useContext, useEffect } from "react"
 import { Sidebar } from "./sidebar"
 import { NavigationLoader } from "@/components/navigation-loader"
 import { SubscriptionWarningBanner } from "@/components/subscription-warning-banner"
+import { ExpiredSubscriptionBanner } from "@/components/expired-subscription-banner"
 import { useAuth } from "@/lib/auth-context"
+import { useSubscription } from "@/lib/subscription-context"
 
 interface LayoutContextType {
   isCollapsed: boolean
@@ -25,6 +27,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { user, isAdmin } = useAuth()
+  const { isSubscriptionExpired } = useSubscription()
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -63,8 +66,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <LayoutContext.Provider value={{ isCollapsed, setIsCollapsed: handleSetCollapsed }}>
       <div className="min-h-screen bg-gray-50" style={{ position: 'relative' }}>
-        {/* Floating Subscription Warning Banner - Only for tenant_admin */}
-        {user && isAdmin() && <SubscriptionWarningBanner />}
+        {/* Expired Subscription Banner - Blocking modal for expired subscriptions */}
+        {user && isAdmin() && isSubscriptionExpired() && <ExpiredSubscriptionBanner />}
+
+        {/* Floating Subscription Warning Banner - Only for tenant_admin (non-expired) */}
+        {user && isAdmin() && !isSubscriptionExpired() && <SubscriptionWarningBanner />}
 
         <Sidebar />
         <div

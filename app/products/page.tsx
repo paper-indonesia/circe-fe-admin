@@ -56,6 +56,8 @@ export default function TreatmentsPage() {
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [staffFilter, setStaffFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [popularityFilter, setPopularityFilter] = useState("all")
   const [staffAssignSearchQuery, setStaffAssignSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
@@ -166,10 +168,12 @@ export default function TreatmentsPage() {
         treatment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         treatment.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         treatment.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesStatus = statusFilter === "all" || treatment.status === statusFilter
+      const matchesPopularity = popularityFilter === "all" || treatment.popularity === popularityFilter
 
-      return matchesCategory && matchesSearch
+      return matchesCategory && matchesSearch && matchesStatus && matchesPopularity
     })
-  }, [treatmentsWithStats, categoryFilter, searchQuery])
+  }, [treatmentsWithStats, categoryFilter, searchQuery, statusFilter, popularityFilter])
 
   const totalPages = Math.ceil(filteredTreatments.length / pageSize)
   const paginatedTreatments = useMemo(() => {
@@ -179,7 +183,7 @@ export default function TreatmentsPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [categoryFilter, searchQuery])
+  }, [categoryFilter, searchQuery, statusFilter, popularityFilter])
 
   const categories = useMemo(() => {
     const uniqueCategories = [...new Set(treatments.map((t) => t.category))]
@@ -652,7 +656,7 @@ export default function TreatmentsPage() {
           </div>
 
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-40">
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
@@ -664,13 +668,37 @@ export default function TreatmentsPage() {
               ))}
             </SelectContent>
           </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="All status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="archived">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={popularityFilter} onValueChange={setPopularityFilter}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="All popularity" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All popularity</SelectItem>
+              <SelectItem value="high">High Demand</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading treatments...</div>
         ) : filteredTreatments.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            {categoryFilter !== "all" || searchQuery || staffFilter !== "all"
+            {categoryFilter !== "all" || searchQuery || staffFilter !== "all" || statusFilter !== "all" || popularityFilter !== "all"
               ? "No products found matching your filters"
               : "No products found"}
           </div>

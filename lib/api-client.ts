@@ -200,8 +200,11 @@ class ApiClient {
   }
 
   // Service endpoints (formerly treatments/products)
-  async getTreatments(includeStaff: boolean = true) {
-    const query = includeStaff ? '?include_staff=true' : ''
+  async getTreatments(includeStaff: boolean = true, size: number = 100) {
+    const params = new URLSearchParams()
+    if (includeStaff) params.append('include_staff', 'true')
+    params.append('size', size.toString())
+    const query = params.toString() ? `?${params.toString()}` : ''
     return this.request<any[]>(`/services${query}`)
   }
 

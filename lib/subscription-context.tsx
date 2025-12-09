@@ -30,13 +30,15 @@ interface SubscriptionContextType {
   usage: UsageData | null
   loading: boolean
   refetch: () => Promise<void>
+  isSubscriptionExpired: () => boolean
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType>({
   subscription: null,
   usage: null,
   loading: true,
-  refetch: async () => {}
+  refetch: async () => {},
+  isSubscriptionExpired: () => false
 })
 
 export const useSubscription = () => useContext(SubscriptionContext)
@@ -105,11 +107,34 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     fetchSubscriptionData()
   }, [user])
 
+  // Check if subscription is expired (only for paid plans - PRO/Enterprise)
+  // Free plan users can continue using the app without restriction
+  const isSubscriptionExpired = (): boolean => {
+    if (!subscription) return false
+
+    const plan = subscription.plan?.toLowerCase()
+    const endDate = subscription.end_date
+
+    // Free plan - no expiration check (disabled trial restriction)
+    if (plan === 'free') return false
+
+    if (!endDate) return false
+
+    const expiryDate = new Date(endDate)
+    const now = new Date()
+    // Set expiry to end of day for fair comparison
+    expiryDate.setHours(23, 59, 59, 999)
+    now.setHours(0, 0, 0, 0)
+
+    return expiryDate < now
+  }
+
   const value: SubscriptionContextType = {
     subscription,
     usage,
     loading,
-    refetch: fetchSubscriptionData
+    refetch: fetchSubscriptionData,
+    isSubscriptionExpired
   }
 
   return (

@@ -148,6 +148,13 @@ export function CustomerCreditsSection({
     setConfirmingPayment(true)
     try {
       const amountToConfirm = paymentAmount || getAmountPaid(selectedPendingPackage)
+      const originalPaymentMethod = selectedPendingPackage.payment_method || 'bank_transfer'
+      // Map pay_on_visit to cash for API compatibility
+      const apiPaymentMethod = originalPaymentMethod === 'pay_on_visit' ? 'cash' : originalPaymentMethod
+      const notesText = originalPaymentMethod === 'pay_on_visit'
+        ? 'Pay on visit payment confirmed by staff'
+        : 'Bank transfer payment confirmed by staff'
+
       const response = await fetch(
         `/api/customer/package-payments/${selectedPendingPackage.id}/record-payment`,
         {
@@ -155,9 +162,9 @@ export function CustomerCreditsSection({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             amount: amountToConfirm,
-            payment_method: 'bank_transfer', // Only bank_transfer uses this API
+            payment_method: apiPaymentMethod,
             receipt_number: receiptNumber || undefined,
-            notes: `Bank transfer payment confirmed by staff`,
+            notes: notesText,
           }),
         }
       )
@@ -454,9 +461,9 @@ export function CustomerCreditsSection({
             Pending Payment ({pendingPackages.length})
           </p>
           {pendingPackages.map((pkg) => {
-            // Only bank_transfer can be manually confirmed by staff
+            // bank_transfer and pay_on_visit can be manually confirmed by staff
             // paper_digital is confirmed via webhook from Paper.id
-            const canManualConfirm = pkg.payment_method === 'bank_transfer'
+            const canManualConfirm = pkg.payment_method === 'bank_transfer' || pkg.payment_method === 'pay_on_visit'
             const isPaperDigital = pkg.payment_method === 'paper_digital'
 
             return (
@@ -660,7 +667,7 @@ export function CustomerCreditsSection({
                   Amount: Rp {getAmountPaid(selectedPendingPackage).toLocaleString('id-ID')}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Payment Method: Bank Transfer
+                  Payment Method: {selectedPendingPackage.payment_method === 'pay_on_visit' ? 'Pay on Visit' : 'Bank Transfer'}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Total Credits: {selectedPendingPackage.total_credits}
@@ -669,8 +676,9 @@ export function CustomerCreditsSection({
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-700">
-                  Confirm that you have received the bank transfer payment from the customer.
-                  Credits will be activated immediately after confirmation.
+                  {selectedPendingPackage.payment_method === 'pay_on_visit'
+                    ? 'Confirm that the customer has paid on their visit. Credits will be activated immediately after confirmation.'
+                    : 'Confirm that you have received the bank transfer payment from the customer. Credits will be activated immediately after confirmation.'}
                 </p>
               </div>
 
