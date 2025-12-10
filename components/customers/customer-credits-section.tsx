@@ -35,6 +35,7 @@ import {
   MessageSquare,
 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format, parseISO, differenceInDays, isValid } from "date-fns"
 import type { CustomerPackage, CustomerCredit, CustomerCreditSummary } from "@/lib/types"
 
@@ -74,12 +75,24 @@ export function CustomerCreditsSection({
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set())
   const [isCreditsExpanded, setIsCreditsExpanded] = useState(false)
 
-  // Confirm payment dialog state (for bank_transfer)
+  // Confirm payment dialog state (for bank_transfer and pay_on_visit)
   const [confirmPaymentDialog, setConfirmPaymentDialog] = useState(false)
   const [selectedPendingPackage, setSelectedPendingPackage] = useState<PendingPackage | null>(null)
   const [confirmingPayment, setConfirmingPayment] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState<number>(0)
   const [receiptNumber, setReceiptNumber] = useState<string>('')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cash')
+
+  // Payment method options for pay_on_visit
+  const PAYMENT_METHOD_OPTIONS = [
+    { value: 'cash', label: 'Cash' },
+    { value: 'bank_transfer', label: 'Bank Transfer' },
+    // { value: 'virtual_account', label: 'Virtual Account' },
+    // { value: 'credit_card', label: 'Credit Card' },
+    // { value: 'e_wallet', label: 'E-Wallet' },
+    // { value: 'qris', label: 'QRIS' },
+    { value: 'pos_terminal', label: 'POS Terminal' },
+  ]
 
   // Send invoice dialog state (for paper_digital)
   const [sendInvoiceDialog, setSendInvoiceDialog] = useState(false)
@@ -149,10 +162,16 @@ export function CustomerCreditsSection({
     try {
       const amountToConfirm = paymentAmount || getAmountPaid(selectedPendingPackage)
       const originalPaymentMethod = selectedPendingPackage.payment_method || 'bank_transfer'
-      // Map pay_on_visit to cash for API compatibility
-      const apiPaymentMethod = originalPaymentMethod === 'pay_on_visit' ? 'cash' : originalPaymentMethod
+
+      // For pay_on_visit, use the selected payment method from dropdown
+      // For bank_transfer, use bank_transfer directly
+      const apiPaymentMethod = originalPaymentMethod === 'pay_on_visit'
+        ? selectedPaymentMethod
+        : originalPaymentMethod
+
+      const selectedMethodLabel = PAYMENT_METHOD_OPTIONS.find(opt => opt.value === selectedPaymentMethod)?.label || selectedPaymentMethod
       const notesText = originalPaymentMethod === 'pay_on_visit'
-        ? 'Pay on visit payment confirmed by staff'
+        ? `Pay on visit payment confirmed by staff (${selectedMethodLabel})`
         : 'Bank transfer payment confirmed by staff'
 
       const response = await fetch(
@@ -184,6 +203,7 @@ export function CustomerCreditsSection({
       setSelectedPendingPackage(null)
       setPaymentAmount(0)
       setReceiptNumber('')
+      setSelectedPaymentMethod('cash')
 
       // Refresh data
       await fetchCredits()
@@ -667,7 +687,7 @@ export function CustomerCreditsSection({
                   Amount: Rp {getAmountPaid(selectedPendingPackage).toLocaleString('id-ID')}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Payment Method: {selectedPendingPackage.payment_method === 'pay_on_visit' ? 'Pay on Visit' : 'Bank Transfer'}
+                  Purchase Method: {selectedPendingPackage.payment_method === 'pay_on_visit' ? 'Pay on Visit' : 'Bank Transfer'}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Total Credits: {selectedPendingPackage.total_credits}
@@ -677,10 +697,29 @@ export function CustomerCreditsSection({
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-700">
                   {selectedPendingPackage.payment_method === 'pay_on_visit'
-                    ? 'Confirm that the customer has paid on their visit. Credits will be activated immediately after confirmation.'
+                    ? 'Select the payment method used by the customer and confirm payment. Credits will be activated immediately.'
                     : 'Confirm that you have received the bank transfer payment from the customer. Credits will be activated immediately after confirmation.'}
                 </p>
               </div>
+
+              {/* Payment Method Selection - Only for pay_on_visit */}
+              {selectedPendingPackage.payment_method === 'pay_on_visit' && (
+                <div className="space-y-2">
+                  <Label htmlFor="actual-payment-method">Actual Payment Method</Label>
+                  <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
+                    <SelectTrigger id="actual-payment-method">
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHOD_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Amount Input */}
               <div className="space-y-2">
@@ -712,6 +751,7 @@ export function CustomerCreditsSection({
                   onClick={() => {
                     setConfirmPaymentDialog(false)
                     setSelectedPendingPackage(null)
+                    setSelectedPaymentMethod('cash')
                   }}
                 >
                   Cancel
