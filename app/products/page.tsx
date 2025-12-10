@@ -14,14 +14,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast"
 import { useAppContext } from "@/lib/context"
 import { DeleteEntityDialog } from "@/components/delete-entity-dialog"
-import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, Banknote, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp, Sparkles, TrendingDown, Building2, Tag } from "lucide-react"
+import { Plus, Clock, Edit, Trash2, Scissors, ChevronLeft, ChevronRight, Search, Users, Star, Banknote, AlertCircle, Settings, Image, FileText, ChevronDown, ChevronUp, Sparkles, TrendingDown, Building2, Tag, Lock, Crown } from "lucide-react"
 import GradientLoading from "@/components/gradient-loading"
 import { EmptyState } from "@/components/ui/empty-state"
 import { AddButton } from "@/components/ui/add-button"
 import { PricingStrategySection } from "@/components/pricing-strategy-section"
+import { useSubscription } from "@/lib/subscription-context"
+import { useRouter } from "next/navigation"
 
 export default function TreatmentsPage() {
   const { toast } = useToast()
+  const router = useRouter()
   const undoTimerRef = useRef<NodeJS.Timeout | null>(null)
   const undoToastDismissRef = useRef<(() => void) | null>(null)
 
@@ -34,6 +37,21 @@ export default function TreatmentsPage() {
     updateTreatment,
     deleteTreatment,
   } = useAppContext()
+
+  const { subscription } = useSubscription()
+
+  // Service limits by plan
+  const SERVICE_LIMITS: Record<string, number> = {
+    free: 10,
+    pro: 50,
+    enterprise: 999999, // effectively unlimited
+  }
+
+  const currentPlan = subscription?.plan?.toLowerCase() || 'free'
+  const serviceLimit = SERVICE_LIMITS[currentPlan] || SERVICE_LIMITS.free
+  const currentServiceCount = treatments.length
+  const canAddService = currentServiceCount < serviceLimit
+  const isAtLimit = currentServiceCount >= serviceLimit
 
   // Generate unique slug from name with timestamp
   const generateUniqueSlug = (name: string): string => {
@@ -459,6 +477,17 @@ export default function TreatmentsPage() {
 
   const openAddDialog = () => {
     console.log("[v0] Add Treatment button clicked")
+
+    // Check service limit
+    if (!canAddService) {
+      toast({
+        title: "Service Limit Reached",
+        description: `Your ${currentPlan.toUpperCase()} plan allows up to ${serviceLimit} services. Please upgrade to add more.`,
+        variant: "destructive",
+      })
+      return
+    }
+
     resetForm()
     setShowAddDialog(true)
     console.log("[v0] Dialog should be open, showAddDialog:", true)
@@ -639,10 +668,76 @@ export default function TreatmentsPage() {
             <h1 className="text-3xl font-bold text-foreground">Products & Services</h1>
             <p className="text-muted-foreground">Manage your product catalog and service offerings</p>
           </div>
-          <AddButton onClick={openAddDialog}>
-            Add Product
-          </AddButton>
+          <div className="flex items-center gap-3">
+            {/* Usage Indicator */}
+            <div className="flex items-center gap-2 text-sm">
+              <span className={`font-medium ${isAtLimit ? 'text-red-600' : 'text-muted-foreground'}`}>
+                {currentServiceCount}/{serviceLimit === 999999 ? '∞' : serviceLimit}
+              </span>
+              <Badge variant={isAtLimit ? "destructive" : "secondary"} className="text-xs">
+                {currentPlan.toUpperCase()}
+              </Badge>
+            </div>
+            {isAtLimit ? (
+              <Button
+                onClick={() => router.push('/subscription/manage')}
+                className="bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] hover:from-[#7C3AED] hover:to-[#DB2777] text-white"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Upgrade Plan
+              </Button>
+            ) : (
+              <AddButton onClick={openAddDialog}>
+                Add Product
+              </AddButton>
+            )}
+          </div>
         </div>
+
+        {/* Limit Warning Banner */}
+        {isAtLimit && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 rounded-full">
+                <Lock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-amber-800">Service Limit Reached</h4>
+                <p className="text-sm text-amber-700">
+                  You've reached the maximum of {serviceLimit} services on your {currentPlan.toUpperCase()} plan.
+                  {currentPlan === 'free' && ' Upgrade to PRO for up to 50 services.'}
+                  {currentPlan === 'pro' && ' Upgrade to ENTERPRISE for unlimited services.'}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => router.push('/subscription/manage')}
+                className="border-amber-300 text-amber-700 hover:bg-amber-100"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Upgrade
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Approaching Limit Warning */}
+        {!isAtLimit && currentServiceCount >= serviceLimit * 0.8 && serviceLimit !== 999999 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-sm text-blue-700">
+              <AlertCircle className="h-4 w-4" />
+              <span>
+                You're approaching your service limit ({currentServiceCount}/{serviceLimit}).
+                <button
+                  onClick={() => router.push('/subscription/manage')}
+                  className="ml-1 font-medium underline hover:no-underline"
+                >
+                  Consider upgrading
+                </button>
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
